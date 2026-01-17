@@ -538,3 +538,390 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+// Job CRUD operations
+export async function createJob(data: {
+  customerId: number;
+  serviceAreaId: string;
+  serviceType: "HAUL_AWAY" | "LABOR_ONLY";
+  status: string;
+  pickupAddress: string;
+  pickupLat: string;
+  pickupLon: string;
+  scheduledFor: Date | null;
+  specialInstructions?: string;
+  subtotal: string;
+  platformFee: string;
+  totalAmount: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = `job_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  
+  // Get customer info for contact details
+  const customer = await getCustomerById(data.customerId);
+  const user = customer ? await getUserById(customer.userId) : null;
+  
+  await db.insert(jobs).values({
+    id,
+    customerId: data.customerId,
+    serviceAreaId: data.serviceAreaId,
+    jobType: data.serviceType,
+    status: data.status as any,
+    contactName: user?.name || "Customer",
+    contactPhone: user?.phone || "N/A",
+    contactEmail: user?.email || null,
+    pickupAddress: data.pickupAddress,
+    pickupLat: data.pickupLat,
+    pickupLng: data.pickupLon,
+    pickupNotes: data.specialInstructions || null,
+    servicePrice: data.subtotal,
+    total: data.totalAmount,
+    platformFee: data.platformFee,
+    scheduledFor: data.scheduledFor,
+  });
+
+  return await getJobById(id);
+}
+
+export async function updateJob(id: string, updates: {
+  status?: string;
+  paidAt?: Date;
+  completedAt?: Date;
+  cancelledAt?: Date;
+  cancellationReason?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: any = {};
+  if (updates.status) updateData.status = updates.status;
+  if (updates.paidAt) updateData.paidAt = updates.paidAt;
+  if (updates.completedAt) updateData.completedAt = updates.completedAt;
+  // Note: cancelledAt and cancellationReason not in schema, using notes field
+  if (updates.cancellationReason) updateData.pickupNotes = updates.cancellationReason;
+
+  await db.update(jobs).set(updateData).where(eq(jobs.id, id));
+  return await getJobById(id);
+}
+
+export async function getAllJobs(filters?: {
+  status?: string;
+  customerId?: number;
+  driverId?: number;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(jobs);
+
+  // Apply filters
+  const conditions = [];
+  if (filters?.status) {
+    conditions.push(eq(jobs.status, filters.status as any));
+  }
+  if (filters?.customerId) {
+    conditions.push(eq(jobs.customerId, filters.customerId));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  // Apply pagination
+  const limit = filters?.limit || 20;
+  const offset = filters?.offset || 0;
+
+  return await query.orderBy(desc(jobs.createdAt)).limit(limit).offset(offset);
+}
+
+export async function createHaulAwayDetails(data: {
+  jobId: string;
+  volumeCubicYards: string;
+  volumeTier: "1_8" | "1_4" | "1_2" | "3_4" | "full";
+  disposalCostActual: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(haulAwayDetails).values({
+    jobId: data.jobId,
+    volumeTier: data.volumeTier,
+    disposalCap: data.disposalCostActual,
+    sameDay: false,
+  });
+}
+
+export async function createLaborOnlyDetails(data: {
+  jobId: string;
+  estimatedHours: string;
+  actualHours: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const hours = parseInt(data.estimatedHours);
+  
+  await db.insert(laborOnlyDetails).values({
+    jobId: data.jobId,
+    helpersCount: 1,
+    hoursBooked: hours,
+  });
+}
+
+export async function createPayment(data: {
+  jobId: string;
+  customerId: number;
+  amount: string;
+  provider: string;
+  providerRef?: string;
+  status: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = `pay_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  await db.insert(payments).values({
+    id,
+    jobId: data.jobId,
+    customerId: data.customerId,
+    amount: data.amount,
+    provider: data.provider,
+    providerRef: data.providerRef || null,
+    status: data.status as any,
+  });
+
+  const result = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.id, id))
+    .limit(1);
+  return result[0];
+}
+
+export async function getCustomerByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(customers).where(eq(customers.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getCustomerById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createCustomer(data: {
+  userId: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(customers).values({
+    userId: data.userId,
+  });
+
+  return await getCustomerByUserId(data.userId);
+}
+
+export async function createJobPhoto(data: {
+  jobId: string;
+  photoType: string;
+  url: string;
+  uploadedBy: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(jobPhotos).values({
+    jobId: data.jobId,
+    photoType: data.photoType as any,
+    fileUrl: data.url,
+    storageKey: data.url, // Use URL as key for now
+    uploadedBy: parseInt(data.uploadedBy),
+  });
+
+  // Get the inserted record
+  const photos = await db
+    .select()
+    .from(jobPhotos)
+    .where(eq(jobPhotos.jobId, data.jobId))
+    .orderBy(desc(jobPhotos.createdAt))
+    .limit(1);
+  return photos[0];
+}
+
+// Driver operations
+export async function createDriver(data: {
+  userId: number;
+  licenseNumber: string;
+  licenseState: string;
+  licenseExpiry: Date;
+  insuranceProvider: string;
+  insurancePolicy: string;
+  insuranceExpiry: Date;
+  status: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(drivers).values({
+    userId: data.userId,
+    insuranceProvider: data.insuranceProvider,
+    insurancePolicyNumber: data.insurancePolicy,
+    insuranceExpiresAt: data.insuranceExpiry,
+    status: data.status as any,
+  });
+
+  return await getDriverByUserId(data.userId);
+}
+
+export async function updateDriver(id: number, updates: {
+  status?: string;
+  approvedAt?: Date;
+  isOnline?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: any = {};
+  if (updates.status) updateData.status = updates.status;
+  if (updates.isOnline !== undefined) updateData.isOnline = updates.isOnline;
+
+  await db.update(drivers).set(updateData).where(eq(drivers.id, id));
+  return await getDriverById(id);
+}
+
+export async function createDriverVehicle(data: {
+  driverId: number;
+  vehicleType: string;
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  state: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Store vehicle info in driver record for now (schema doesn't have separate vehicles table)
+  await db.update(drivers).set({
+    vehicleType: data.vehicleType,
+  }).where(eq(drivers.id, data.driverId));
+}
+
+export async function getDriverVehicles(driverId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const driver = await getDriverById(driverId);
+  if (!driver || !driver.vehicleType) return [];
+
+  // Return vehicle info from driver record
+  return [{
+    vehicleType: driver.vehicleType,
+  }];
+}
+
+// Job offers and assignments
+export async function createJobOffer(data: {
+  jobId: string;
+  driverId: number;
+  wave: number;
+  expiresAt: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = `offer_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  await db.insert(jobOffers).values({
+    id,
+    jobId: data.jobId,
+    driverId: data.driverId,
+    wave: data.wave,
+    expiresAt: data.expiresAt,
+  });
+
+  const result = await db.select().from(jobOffers).where(eq(jobOffers.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getJobOffers(jobId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(jobOffers).where(eq(jobOffers.jobId, jobId));
+}
+
+export async function updateJobOffer(id: string, updates: {
+  status?: string;
+  respondedAt?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: any = {};
+  if (updates.status) updateData.status = updates.status;
+  if (updates.respondedAt) updateData.respondedAt = updates.respondedAt;
+
+  await db.update(jobOffers).set(updateData).where(eq(jobOffers.id, id));
+
+  const result = await db.select().from(jobOffers).where(eq(jobOffers.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createJobAssignment(data: {
+  jobId: string;
+  driverId: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(jobAssignments).values({
+    jobId: data.jobId,
+    driverId: data.driverId,
+  });
+
+  const result = await db
+    .select()
+    .from(jobAssignments)
+    .where(eq(jobAssignments.jobId, data.jobId))
+    .limit(1);
+  return result[0];
+}
+
+// Payouts
+export async function createPayout(data: {
+  jobId: string;
+  driverId: number;
+  driverPayout: string;
+  disposalReimbursement: string;
+  totalAmount: string;
+  disposalReceiptUrl?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = `payout_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  await db.insert(payouts).values({
+    id,
+    jobId: data.jobId,
+    driverId: data.driverId,
+    driverPayout: data.driverPayout,
+    disposalReimbursement: data.disposalReimbursement,
+    totalAmount: data.totalAmount,
+  });
+
+  const result = await db.select().from(payouts).where(eq(payouts.id, id)).limit(1);
+  return result[0];
+}

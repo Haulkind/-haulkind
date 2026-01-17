@@ -13,7 +13,7 @@
 - [x] Create seed data for service areas (PA, NY, NJ)
 - [x] Seed default pricing data
 
-## Phase 2: Authentication & Core Modules
+## Phase 2: Authentication & Core Modules (Command 4 - COMPLETED)
 - [ ] Implement JWT authentication
 - [ ] Create role-based guards (admin, customer, driver)
 - [ ] Build auth endpoints (signup, login, /me)
@@ -21,25 +21,25 @@
 - [ ] Add service area lookup by coordinates
 - [ ] Support radius and polygon GeoJSON
 
-## Phase 3: Pricing & Jobs
-- [ ] Build pricing engine for HAUL_AWAY (volume-based)
-- [ ] Build pricing engine for LABOR_ONLY (hourly with 2hr minimum)
+## Phase 3: Pricing & Jobs (Commands 6-7 - COMPLETED)
+- [x] Build pricing engine for HAUL_AWAY (volume-based)
+- [x] Build pricing engine for LABOR_ONLY (hourly with 2hr minimum)
 - [ ] Create admin CRUD for all pricing tables
-- [ ] Implement POST /quotes endpoint
+- [x] Implement POST /quotes endpoint
 - [ ] Create jobs workflow (draft → quote → pay)
 - [ ] Implement ledger payment provider (pluggable)
 - [ ] Calculate 60/40 split (driver/platform)
 
-## Phase 4: Media & Driver Onboarding
-- [ ] Implement media upload abstraction
-- [ ] Support local storage for dev
-- [ ] Create interface for S3/R2
-- [ ] Handle 4 photo types (customer_upload, before, after, receipt)
-- [ ] Build driver onboarding endpoints
-- [ ] Implement vehicle info and capabilities
-- [ ] Create document upload system
-- [ ] Add go-online/go-offline endpoints
-- [ ] Build admin driver approval system
+## Phase 4: Media & Driver Onboarding (Commands 8-9 - COMPLETED)
+- [x] Implement media upload abstraction
+- [x] Support S3 storage
+- [x] Create interface for S3
+- [x] Handle 4 photo types (customer_upload, before, after, receipt)
+- [x] Build driver onboarding endpoints
+- [x] Implement vehicle info and capabilities
+- [x] Create document upload system
+- [x] Add go-online/go-offline endpoints
+- [x] Build admin driver approval system
 
 ## Phase 5: Real-time Features
 - [ ] Setup Socket.io gateway
@@ -54,18 +54,18 @@
 - [ ] Build ETA calculation with Maps API
 - [ ] Optimize ETA recomputation (every 30-60s)
 
-## Phase 6: Dispatch & Ledger
-- [ ] Build dispatch engine eligibility filter
-- [ ] Implement driver ranking algorithm
-- [ ] Create wave offer system (top 3 → top 10)
-- [ ] Handle offer expiration (15s per wave)
-- [ ] Implement first-accept-wins logic
-- [ ] Handle no-coverage fallback
-- [ ] Create job status transitions (assigned → en_route → arrived → started → completed)
-- [ ] Implement AFTER photo requirement for completion
-- [ ] Add time extension workflow for LABOR_ONLY
-- [ ] Finalize payout creation on job completion
-- [ ] Calculate disposal reimbursement for HAUL_AWAY
+## Phase 6: Dispatch & Ledger (Commands 12-14 - COMPLETED)
+- [x] Build dispatch engine eligibility filter
+- [x] Implement driver ranking algorithm
+- [x] Create wave offer system (top 3)
+- [x] Handle offer expiration (2min per wave)
+- [x] Implement first-accept-wins logic
+- [x] Handle no-coverage fallback
+- [x] Create job status transitions (assigned → en_route → arrived → started → completed)
+- [ ] Implement AFTER photo requirement for completion (TODO)
+- [ ] Add time extension workflow for LABOR_ONLY (TODO)
+- [x] Finalize payout creation on job completion
+- [x] Calculate disposal reimbursement for HAUL_AWAY
 
 ## Phase 7: Web App (Marketing + Checkout)
 - [x] Design landing page layout
