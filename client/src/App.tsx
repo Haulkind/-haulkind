@@ -4,13 +4,21 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import Home from "@/pages/Home";
+import Quote from "@/pages/Quote";
+import QuoteHaulAway from "@/pages/QuoteHaulAway";
+import QuoteLabor from "@/pages/QuoteLabor";
+import QuoteReview from "@/pages/QuoteReview";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+        <Route path="/" component={Home} />
+      <Route path="/quote" component={Quote} />
+      <Route path="/quote/haul-away" component={QuoteHaulAway} />
+      <Route path="/quote/labor" component={QuoteLabor} />
+      <Route path="/quote/review" component={QuoteReview} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

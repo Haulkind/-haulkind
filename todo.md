@@ -68,12 +68,12 @@
 - [ ] Calculate disposal reimbursement for HAUL_AWAY
 
 ## Phase 7: Web App (Marketing + Checkout)
-- [ ] Design landing page layout
-- [ ] Implement service area lookup UI
-- [ ] Build volume calculator for HAUL_AWAY
-- [ ] Create labor hours selector for LABOR_ONLY
-- [ ] Display quote with line items
-- [ ] Show "Includes disposal up to $X" copy
+- [x] Design landing page layout
+- [x] Implement service area lookup UI
+- [x] Build volume calculator for HAUL_AWAY
+- [x] Create labor hours selector for LABOR_ONLY
+- [x] Display quote with line items
+- [x] Show "Includes disposal up to $X" copy
 - [ ] Implement checkout flow
 - [ ] Add payment integration
 - [ ] Create job tracking page

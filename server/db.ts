@@ -430,3 +430,111 @@ export async function getDriverRatings(driverId: number) {
     .where(eq(ratings.driverId, driverId))
     .orderBy(desc(ratings.createdAt));
 }
+
+// Service Area CRUD operations
+export async function createServiceArea(data: {
+  name: string;
+  state: string;
+  type: "radius" | "polygon";
+  centerLat: number;
+  centerLng: number;
+  radiusMiles?: number;
+  polygonGeoJson?: any;
+  isActive?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const id = `sa_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  await db.insert(serviceAreas).values({
+    id,
+    name: data.name,
+    state: data.state,
+    type: data.type,
+    centerLat: data.centerLat.toString(),
+    centerLng: data.centerLng.toString(),
+    radiusMiles: data.radiusMiles ? data.radiusMiles.toString() : null,
+    polygonGeoJson: data.polygonGeoJson || null,
+    isActive: data.isActive ?? true,
+  });
+
+  return await getServiceAreaById(id);
+}
+
+export async function updateServiceArea(
+  id: string,
+  updates: {
+    name?: string;
+    state?: string;
+    type?: "radius" | "polygon";
+    centerLat?: number;
+    centerLng?: number;
+    radiusMiles?: number;
+    polygonGeoJson?: any;
+    isActive?: boolean;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: any = {};
+  if (updates.name) updateData.name = updates.name;
+  if (updates.state) updateData.state = updates.state;
+  if (updates.type) updateData.type = updates.type;
+  if (updates.centerLat) updateData.centerLat = updates.centerLat.toString();
+  if (updates.centerLng) updateData.centerLng = updates.centerLng.toString();
+  if (updates.radiusMiles) updateData.radiusMiles = updates.radiusMiles.toString();
+  if (updates.polygonGeoJson !== undefined) updateData.polygonGeoJson = updates.polygonGeoJson;
+  if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
+
+  await db.update(serviceAreas).set(updateData).where(eq(serviceAreas.id, id));
+  return await getServiceAreaById(id);
+}
+
+export async function deleteServiceArea(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(serviceAreas).set({ isActive: false }).where(eq(serviceAreas.id, id));
+  return { success: true };
+}
+
+export async function findServiceAreaByCoordinates(lat: number, lon: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  // Get all active service areas
+  const areas = await db.select().from(serviceAreas).where(eq(serviceAreas.isActive, true));
+
+  // Simple radius-based check (for production, use PostGIS or proper geospatial library)
+  for (const area of areas) {
+    if (area.radiusMiles && area.centerLat && area.centerLng) {
+      const centerLat = parseFloat(area.centerLat);
+      const centerLng = parseFloat(area.centerLng);
+      const radiusMiles = parseFloat(area.radiusMiles);
+      
+      const distance = calculateDistance(lat, lon, centerLat, centerLng);
+      if (distance <= radiusMiles) {
+        return area;
+      }
+    }
+    // TODO: Add polygon check for polygonGeoJson
+  }
+
+  return undefined;
+}
+
+// Helper: Calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
