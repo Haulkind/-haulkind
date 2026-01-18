@@ -348,3 +348,14 @@ Notes:
 - Mobile-first UI confirmed in web app
 - Critical path stability verified in QA (Command 21)
 
+
+
+## Home Page Conversion Polish
+- [x] Add mini quote form in hero (ZIP + service selector + CTA)
+- [x] Add starting prices under form
+- [x] Reduce vertical whitespace across all sections
+- [x] Update services section CTAs
+- [x] Tighten how-it-works copy
+- [x] Optimize pricing preview section
+- [x] Improve bottom CTA section
+- [x] Test mobile-first above-the-fold
