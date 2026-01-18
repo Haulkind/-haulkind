@@ -11,7 +11,11 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "db:seed": "tsx drizzle/seed.ts"
+    "db:seed": "tsx drizzle/seed.ts",
+    "seed-test": "node scripts/seed-test-data.mjs",
+    "seed-test:clean": "node scripts/seed-test-data.mjs --clean",
+    "smoke-test": "./scripts/smoke-test.sh",
+    "smoke-test:verbose": "./scripts/smoke-test.sh --verbose"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
