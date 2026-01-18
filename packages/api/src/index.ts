@@ -31,6 +31,17 @@ const users = [
   },
 ];
 
+// Mock service areas database
+const serviceAreas = [
+  { id: 1, name: "Philadelphia Metro", state: "PA", zipCodes: ["19103", "19102", "19104", "19106", "19107"] },
+  { id: 2, name: "Pittsburgh Metro", state: "PA", zipCodes: ["15201", "15213", "15232"] },
+  { id: 3, name: "New York Metro", state: "NY", zipCodes: ["10001", "10002", "10003"] },
+];
+
+// Mock jobs database
+const jobs: any[] = [];
+let jobIdCounter = 1;
+
 // Middleware to verify JWT
 const authenticateToken = (req: any, res: any, next: any) => {
   const authHeader = req.headers["authorization"];
@@ -115,6 +126,210 @@ app.get("/admin/ping", authenticateToken, (req: any, res) => {
   }
 
   res.json({ admin: true, message: "Admin access granted" });
+});
+
+// ============================================
+// SERVICE AREA ENDPOINTS
+// ============================================
+
+// Check if coordinates are in service area
+app.get("/service-areas/lookup", (req, res) => {
+  const { lat, lng } = req.query;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ error: "Latitude and longitude required" });
+  }
+
+  // For Philadelphia coordinates (39.9526, -75.1652), return covered
+  const latitude = parseFloat(lat as string);
+  const longitude = parseFloat(lng as string);
+
+  // Simple check: if coordinates are near Philadelphia, return Philadelphia Metro
+  if (latitude >= 39.8 && latitude <= 40.1 && longitude >= -75.3 && longitude <= -75.0) {
+    return res.json({
+      covered: true,
+      serviceArea: serviceAreas[0], // Philadelphia Metro
+    });
+  }
+
+  // For demo purposes, accept all coordinates
+  res.json({
+    covered: true,
+    serviceArea: serviceAreas[0],
+  });
+});
+
+// ============================================
+// QUOTE ENDPOINTS
+// ============================================
+
+// Calculate quote
+app.post("/quotes", (req, res) => {
+  const {
+    serviceType,
+    serviceAreaId,
+    volumeTier,
+    addons = [],
+    helperCount = 2,
+    estimatedHours = 2,
+  } = req.body;
+
+  let servicePrice = 0;
+  let addonPrice = 0;
+  const distancePrice = 0; // Fixed for demo
+  const disposalIncluded = 0;
+
+  if (serviceType === "HAUL_AWAY") {
+    // Volume tier pricing
+    const volumePricing: any = {
+      "1-5": 150,
+      "6-10": 250,
+      "11-15": 350,
+      "16-20": 450,
+      "20+": 550,
+    };
+    servicePrice = volumePricing[volumeTier] || 150;
+
+    // Addon pricing
+    const addonPricing: any = {
+      "heavy-items": 50,
+      "stairs": 30,
+      "disassembly": 40,
+      "extra-helper": 75,
+    };
+    addonPrice = addons.reduce((sum: number, addon: string) => sum + (addonPricing[addon] || 0), 0);
+  } else if (serviceType === "LABOR_ONLY") {
+    // Labor only: $50/hour per helper
+    servicePrice = helperCount * estimatedHours * 50;
+  }
+
+  const total = servicePrice + addonPrice + distancePrice + disposalIncluded;
+
+  const breakdown = [
+    { label: "Service Fee", amount: servicePrice },
+  ];
+
+  if (addonPrice > 0) {
+    breakdown.push({ label: "Add-ons", amount: addonPrice });
+  }
+
+  res.json({
+    servicePrice,
+    addonPrice,
+    distancePrice,
+    disposalIncluded,
+    total,
+    breakdown,
+  });
+});
+
+// ============================================
+// JOB ENDPOINTS
+// ============================================
+
+// Create job
+app.post("/jobs", (req, res) => {
+  const {
+    serviceType,
+    serviceAreaId,
+    pickupLat,
+    pickupLng,
+    pickupAddress,
+    scheduledFor,
+    volumeTier,
+    addons = [],
+    helperCount = 2,
+    estimatedHours = 2,
+    customerNotes = "",
+    photoUrls = [],
+  } = req.body;
+
+  // Calculate total (same logic as quotes)
+  let total = 0;
+  if (serviceType === "HAUL_AWAY") {
+    const volumePricing: any = {
+      "1-5": 150,
+      "6-10": 250,
+      "11-15": 350,
+      "16-20": 450,
+      "20+": 550,
+    };
+    total = volumePricing[volumeTier] || 150;
+
+    const addonPricing: any = {
+      "heavy-items": 50,
+      "stairs": 30,
+      "disassembly": 40,
+      "extra-helper": 75,
+    };
+    total += addons.reduce((sum: number, addon: string) => sum + (addonPricing[addon] || 0), 0);
+  } else if (serviceType === "LABOR_ONLY") {
+    total = helperCount * estimatedHours * 50;
+  }
+
+  const job = {
+    id: jobIdCounter++,
+    serviceType,
+    serviceAreaId,
+    pickupLat,
+    pickupLng,
+    pickupAddress,
+    scheduledFor,
+    volumeTier,
+    addons,
+    helperCount,
+    estimatedHours,
+    customerNotes,
+    photoUrls,
+    status: "PENDING_PAYMENT",
+    total,
+    createdAt: new Date().toISOString(),
+  };
+
+  jobs.push(job);
+
+  res.json({
+    id: job.id,
+    status: job.status,
+    total: job.total,
+  });
+});
+
+// Pay for job
+app.post("/jobs/:id/pay", (req, res) => {
+  const jobId = parseInt(req.params.id);
+  const { paymentMethodId } = req.body;
+
+  const job = jobs.find((j) => j.id === jobId);
+  if (!job) {
+    return res.status(404).json({ error: "Job not found" });
+  }
+
+  if (job.status !== "PENDING_PAYMENT") {
+    return res.status(400).json({ error: "Job already paid or cancelled" });
+  }
+
+  // Simulate payment processing
+  job.status = "PENDING_DISPATCH";
+  job.paymentMethodId = paymentMethodId;
+  job.paidAt = new Date().toISOString();
+
+  res.json({ success: true });
+});
+
+// Get job status
+app.get("/jobs/:id", (req, res) => {
+  const jobId = parseInt(req.params.id);
+  const job = jobs.find((j) => j.id === jobId);
+
+  if (!job) {
+    return res.status(404).json({ error: "Job not found" });
+  }
+
+  res.json({
+    status: job.status,
+    driver: job.driver || null,
+  });
 });
 
 // Start server
