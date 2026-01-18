@@ -203,3 +203,50 @@ Screens to implement (structure defined):
 - [ ] Support screen
 - [ ] Extension approval UI
 
+
+
+## Command 19: Admin Dashboard (apps/admin - Next.js)
+- [ ] Set up Next.js project structure
+- [ ] Implement admin authentication
+- [ ] Create driver management page (list, approve, block, docs status)
+- [ ] Build live map with drivers and jobs
+- [ ] Add service area filter to map
+- [ ] Show driver last seen on map
+- [ ] Create job queue with status and job_type filters
+- [ ] Build job details view
+- [ ] Implement dispatch console with nearest drivers
+- [ ] Show driver ETA/distance and stats in dispatch
+- [ ] Add force assign functionality
+- [ ] Display offer waves history
+- [ ] Create pricing console for volume pricing
+- [ ] Add editors for add-ons, disposal caps, distance rules
+- [ ] Implement labor rates editor
+- [ ] Build audit logs viewer with filters
+- [ ] Test admin dashboard loads driver/job lists
+- [ ] Create checkpoint: checkpoint-command-19-admin-dashboard
+
+## Command 19 Status: ✅ STRUCTURE COMPLETE
+
+Infrastructure completed:
+- [x] Set up Next.js project structure
+- [x] Create complete API client with all admin endpoints
+- [x] Define all page routes
+- [x] Create directory structure
+- [x] Document architecture and features
+
+Pages created (structure defined):
+- [ ] Driver management (list, approve, block)
+- [ ] Live map with drivers and jobs
+- [ ] Job queue with filters
+- [ ] Dispatch console with eligible drivers
+- [ ] Pricing console (volumes, addons, labor)
+- [ ] Audit logs viewer
+
+API Integration Complete:
+- [x] Driver CRUD endpoints
+- [x] Job management endpoints
+- [x] Dispatch endpoints (unassigned, eligible drivers, force assign)
+- [x] Pricing endpoints (volumes, addons, labor rates)
+- [x] Audit logs endpoints
+- [x] Map endpoints (active drivers, active jobs)
+
