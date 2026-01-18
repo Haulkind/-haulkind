@@ -1,0 +1,7 @@
+{
+  "extends": "../../packages/shared/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-native"
+  }
+}

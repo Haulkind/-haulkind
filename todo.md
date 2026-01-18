@@ -129,3 +129,36 @@ All tasks completed:
 - [x] Add post-payment status tracking (Socket.io or polling)
 - [x] Test complete flow from service selection to paid job
 - [x] Create checkpoint: checkpoint-command-16-web-checkout
+
+
+## Command 17: Driver Mobile App (apps/driver - Expo)
+- [ ] Set up Expo project structure
+- [ ] Implement auth screens (login/signup)
+- [ ] Create onboarding flow (profile, documents, vehicle info)
+- [ ] Add service toggles (can_haul_away, can_labor_only)
+- [ ] Build online/offline toggle
+- [ ] Implement real-time offer system with Socket.io
+- [ ] Create offer card UI with accept/decline timer
+- [ ] Build job management screens
+- [ ] Add status update buttons (EN_ROUTE → ARRIVED → STARTED → COMPLETED)
+- [ ] Implement photo upload (before/after, receipts)
+- [ ] Add location streaming during active jobs
+- [ ] Test app with backend integration
+- [ ] Create checkpoint: checkpoint-command-17-driver-app
+
+## Command 17 Status: ✅ COMPLETED
+
+All tasks completed:
+- [x] Set up Expo project structure
+- [x] Implement auth screens (login/signup)
+- [x] Create onboarding flow (profile, documents, vehicle info)
+- [x] Add service toggles (can_haul_away, can_labor_only)
+- [x] Build online/offline toggle
+- [x] Implement real-time offer system with Socket.io
+- [x] Create offer card UI with accept/decline timer
+- [x] Build job management screens
+- [x] Add status update buttons (EN_ROUTE → ARRIVED → STARTED → COMPLETED)
+- [x] Implement photo upload (before/after, receipts)
+- [x] Add location streaming during active jobs
+- [x] Test app with backend integration
+- [x] Create checkpoint: checkpoint-command-17-driver-app
