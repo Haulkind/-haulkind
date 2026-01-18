@@ -13,6 +13,10 @@ interface QuoteData {
   serviceAreaId: number | null
   serviceAreaName: string
   scheduledFor: string
+  serviceDate: string
+  timeWindow: 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
+  asap: boolean
+  preferredDateTime: string
   
   // Haul Away specific
   volumeTier: string
@@ -45,6 +49,10 @@ const initialData: QuoteData = {
   serviceAreaId: null,
   serviceAreaName: '',
   scheduledFor: '',
+  serviceDate: '',
+  timeWindow: 'ALL_DAY',
+  asap: false,
+  preferredDateTime: '',
   volumeTier: '',
   addons: [],
   photoUrls: [],
