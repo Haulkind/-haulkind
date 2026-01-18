@@ -13,7 +13,7 @@ export default function BecomeADriver() {
             Work on your schedule. Keep more of what you earn. Get paid weekly.
           </p>
           <Link 
-            href="https://driver.haulkind.com/signup"
+            href="/become-a-driver/apply"
             className="inline-block bg-secondary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-secondary-700 transition shadow-lg"
           >
             Apply Now
@@ -298,7 +298,7 @@ export default function BecomeADriver() {
             Apply now and get approved in 24 hours. Start accepting jobs this week.
           </p>
           <Link 
-            href="https://driver.haulkind.com/signup"
+            href="/become-a-driver/apply"
             className="inline-block bg-white text-secondary-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition shadow-lg"
           >
             Apply Now
