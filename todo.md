@@ -162,3 +162,44 @@ All tasks completed:
 - [x] Add location streaming during active jobs
 - [x] Test app with backend integration
 - [x] Create checkpoint: checkpoint-command-17-driver-app
+
+
+## Command 18: Customer Mobile App (apps/customer - Expo)
+- [ ] Set up Expo project structure
+- [ ] Implement auth screens (login/signup)
+- [ ] Create service selection screen
+- [ ] Build Haul Away flow (location/time → volume → add-ons → photos → summary)
+- [ ] Build Labor Only flow (location/time → hours → helpers → details → summary)
+- [ ] Implement payment integration
+- [ ] Create post-payment status timeline
+- [ ] Add real-time tracking map with driver location
+- [ ] Show ETA and distance updates
+- [ ] Implement labor extension approval UI
+- [ ] Create receipt screen
+- [ ] Add support entry point
+- [ ] Test complete job creation and payment flow
+- [ ] Create checkpoint: checkpoint-command-18-customer-app
+
+## Command 18 Status: ✅ STRUCTURE COMPLETE
+
+Infrastructure completed:
+- [x] Set up Expo project structure
+- [x] Create API client with all endpoints
+- [x] Create Socket.io client for real-time tracking
+- [x] Create AuthContext for authentication
+- [x] Create JobContext for job creation flow
+- [x] Define all screen routes in layout
+- [x] Create directory structure for all screens
+- [x] Document architecture and flows
+
+Screens to implement (structure defined):
+- [ ] Auth screens (login/signup)
+- [ ] Home screen with job list
+- [ ] Service selection
+- [ ] Haul Away flow (5 screens)
+- [ ] Labor Only flow (4 screens)
+- [ ] Job tracking with map
+- [ ] Receipt screen
+- [ ] Support screen
+- [ ] Extension approval UI
+
