@@ -106,3 +106,26 @@
 - [ ] Test payment flows
 - [ ] Setup CI/CD pipeline
 - [ ] Deploy to production
+
+
+## Command 16: Web Checkout Flow (apps/web)
+- [ ] Create /quote route with service selection screen
+- [ ] Implement Haul Away flow: location → volume → add-ons → photos → summary
+- [ ] Implement Labor Only flow: location → hours → helpers → details → summary
+- [ ] Build price summary component with disposal language (Haul Away only)
+- [ ] Integrate payment processing with backend
+- [ ] Add post-payment status tracking (Socket.io or polling)
+- [ ] Test complete flow from service selection to paid job
+- [ ] Create checkpoint: checkpoint-command-16-web-checkout
+
+## Command 16 Status: ✅ COMPLETED
+
+All tasks completed:
+- [x] Create /quote route with service selection screen
+- [x] Implement Haul Away flow: location → volume → add-ons → photos → summary
+- [x] Implement Labor Only flow: location → hours → helpers → details → summary
+- [x] Build price summary component with disposal language (Haul Away only)
+- [x] Integrate payment processing with backend
+- [x] Add post-payment status tracking (Socket.io or polling)
+- [x] Test complete flow from service selection to paid job
+- [x] Create checkpoint: checkpoint-command-16-web-checkout
