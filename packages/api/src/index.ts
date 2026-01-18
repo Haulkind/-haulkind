@@ -53,6 +53,10 @@ const serviceAreas = [
 const jobs: any[] = [];
 let jobIdCounter = 1;
 
+// Mock driver applications database
+const driverApplications: any[] = [];
+let applicationIdCounter = 1;
+
 // Middleware to verify JWT
 const authenticateToken = (req: any, res: any, next: any) => {
   const authHeader = req.headers["authorization"];
@@ -340,6 +344,65 @@ app.get("/jobs/:id", (req, res) => {
   res.json({
     status: job.status,
     driver: job.driver || null,
+  });
+});
+
+// ============================================
+// DRIVER APPLICATION ENDPOINTS
+// ============================================
+
+// Submit driver application
+app.post("/drivers/apply", (req, res) => {
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    zip,
+    vehicleType,
+    availability,
+    canLift75,
+    hasEquipment,
+    experience,
+    consents,
+  } = req.body;
+
+  // Validation
+  if (!firstName || !lastName || !email || !phone || !zip) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (!vehicleType || !availability || !consents) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (!consents.independentContractor || !consents.backgroundCheck) {
+    return res.status(400).json({ error: "All consents are required" });
+  }
+
+  // Create application
+  const application = {
+    id: applicationIdCounter++,
+    firstName,
+    lastName,
+    email,
+    phone,
+    zip,
+    vehicleType,
+    availability,
+    canLift75: canLift75 || false,
+    hasEquipment: hasEquipment || false,
+    experience: experience || "",
+    consents,
+    status: "PENDING_REVIEW",
+    createdAt: new Date().toISOString(),
+  };
+
+  driverApplications.push(application);
+
+  res.status(201).json({
+    ok: true,
+    applicationId: application.id,
   });
 });
 
