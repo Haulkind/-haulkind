@@ -68,6 +68,9 @@ export const drivers = mysqlTable("drivers", {
   averageRating: decimal("averageRating", { precision: 3, scale: 2 }),
   totalRatings: int("totalRatings").default(0).notNull(),
   stripeAccountId: varchar("stripeAccountId", { length: 255 }),
+  stripeOnboardingComplete: boolean("stripeOnboardingComplete").default(false).notNull(),
+  stripeChargesEnabled: boolean("stripeChargesEnabled").default(false).notNull(),
+  stripePayoutsEnabled: boolean("stripePayoutsEnabled").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -308,6 +311,7 @@ export const payouts = mysqlTable("payouts", {
   driverPayout: decimal("driverPayout", { precision: 10, scale: 2 }).notNull(),
   disposalReimbursement: decimal("disposalReimbursement", { precision: 10, scale: 2 }).default("0").notNull(),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  stripeTransferId: varchar("stripeTransferId", { length: 255 }),
   status: mysqlEnum("status", ["eligible", "completed", "failed"]).default("eligible").notNull(),
   completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
