@@ -114,7 +114,8 @@ export default function HaulAwayLocationPage() {
       router.push('/quote/haul-away/volume')
     } catch (err: any) {
       console.error('[ERROR] Full error:', err)
-      setError(`Error: ${err.message || 'Failed to check service area. Please try again.'}`)
+      const message = err.message || 'Unable to verify service area'
+      setError(`We couldn't verify the service area right now. Please try again in a minute or enter a full address.`)
       setLoading(false)
     }
   }

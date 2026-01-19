@@ -57,16 +57,17 @@ export interface JobResponse {
 }
 
 export async function checkServiceArea(lat: number, lng: number): Promise<ServiceAreaResponse> {
-  const url = `${API_BASE_URL}/service-areas/lookup?lat=${lat}&lng=${lng}`
+  // Use server-side proxy to avoid CORS and get better error logging
+  const url = `/api/service-area-lookup?lat=${lat}&lng=${lng}`
   console.log('[API] checkServiceArea URL:', url)
   
   const response = await fetch(url)
   console.log('[API] checkServiceArea status:', response.status, response.statusText)
   
   if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[API] checkServiceArea error:', response.status, errorText)
-    throw new Error(`Service area lookup failed: ${response.status} ${errorText.substring(0, 100)}`)
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.error('[API] checkServiceArea error:', response.status, errorData)
+    throw new Error(errorData.error || `Service area lookup failed: ${response.status}`)
   }
   
   const data = await response.json()
