@@ -57,11 +57,21 @@ export interface JobResponse {
 }
 
 export async function checkServiceArea(lat: number, lng: number): Promise<ServiceAreaResponse> {
-  const response = await fetch(`${API_BASE_URL}/service-areas/lookup?lat=${lat}&lng=${lng}`)
+  const url = `${API_BASE_URL}/service-areas/lookup?lat=${lat}&lng=${lng}`
+  console.log('[API] checkServiceArea URL:', url)
+  
+  const response = await fetch(url)
+  console.log('[API] checkServiceArea status:', response.status, response.statusText)
+  
   if (!response.ok) {
-    throw new Error('Service area lookup failed')
+    const errorText = await response.text()
+    console.error('[API] checkServiceArea error:', response.status, errorText)
+    throw new Error(`Service area lookup failed: ${response.status} ${errorText.substring(0, 100)}`)
   }
-  return response.json()
+  
+  const data = await response.json()
+  console.log('[API] checkServiceArea result:', data)
+  return data
 }
 
 export async function getQuote(request: QuoteRequest): Promise<QuoteResponse> {

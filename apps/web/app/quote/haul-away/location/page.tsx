@@ -45,18 +45,27 @@ export default function HaulAwayLocationPage() {
 
     try {
       // Geocode the address/ZIP to get coordinates
-      const geocodeResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressValue)}&countrycodes=us&limit=1`,
-        { headers: { 'User-Agent': 'Haulkind/1.0' } }
-      )
+      console.log('[GEOCODING] Starting for:', addressValue)
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressValue)}&countrycodes=us&limit=1`
+      const geocodeResponse = await fetch(geocodeUrl, {
+        headers: { 'User-Agent': 'Haulkind/1.0' }
+      })
+      
+      console.log('[GEOCODING] Response status:', geocodeResponse.status)
       
       if (!geocodeResponse.ok) {
-        throw new Error('Geocoding failed')
+        const errorText = await geocodeResponse.text()
+        console.error('[GEOCODING] HTTP Error:', geocodeResponse.status, errorText)
+        setError(`Geocoding failed: ${geocodeResponse.status} ${errorText.substring(0, 100)}`)
+        setLoading(false)
+        return
       }
       
       const geocodeData = await geocodeResponse.json()
+      console.log('[GEOCODING] Results:', geocodeData.length, 'items')
       
       if (!geocodeData || geocodeData.length === 0) {
+        console.error('[GEOCODING] No results for:', addressValue)
         setError('Address not found. Please enter a valid US address or ZIP code.')
         setLoading(false)
         return
@@ -64,8 +73,11 @@ export default function HaulAwayLocationPage() {
       
       const lat = parseFloat(geocodeData[0].lat)
       const lng = parseFloat(geocodeData[0].lon)
+      console.log('[GEOCODING] Coordinates:', { lat, lng })
 
+      console.log('[SERVICE_AREA] Checking coverage for:', { lat, lng })
       const result = await checkServiceArea(lat, lng)
+      console.log('[SERVICE_AREA] Result:', result)
       
       if (!result.covered) {
         setError('Sorry, we do not serve this area yet.')
@@ -100,8 +112,9 @@ export default function HaulAwayLocationPage() {
       })
 
       router.push('/quote/haul-away/volume')
-    } catch (err) {
-      setError('Failed to check service area. Please try again.')
+    } catch (err: any) {
+      console.error('[ERROR] Full error:', err)
+      setError(`Error: ${err.message || 'Failed to check service area. Please try again.'}`)
       setLoading(false)
     }
   }
