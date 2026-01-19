@@ -31,9 +31,26 @@ export default function HaulAwayLocationPage() {
     setError('')
 
     try {
-      // For demo: use a fixed coordinate (Philadelphia)
-      const lat = 39.9526
-      const lng = -75.1652
+      // Geocode the address to get coordinates
+      const geocodeResponse = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=us&limit=1`,
+        { headers: { 'User-Agent': 'Haulkind/1.0' } }
+      )
+      
+      if (!geocodeResponse.ok) {
+        throw new Error('Geocoding failed')
+      }
+      
+      const geocodeData = await geocodeResponse.json()
+      
+      if (!geocodeData || geocodeData.length === 0) {
+        setError('Address not found. Please enter a valid US address or ZIP code.')
+        setLoading(false)
+        return
+      }
+      
+      const lat = parseFloat(geocodeData[0].lat)
+      const lng = parseFloat(geocodeData[0].lon)
 
       const result = await checkServiceArea(lat, lng)
       
