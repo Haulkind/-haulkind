@@ -149,29 +149,45 @@ app.get("/admin/ping", authenticateToken, (req: any, res) => {
 
 // Check if coordinates are in service area
 app.get("/service-areas/lookup", (req, res) => {
-  const { lat, lng } = req.query;
+  try {
+    const { lat, lng } = req.query;
+    console.log('[SERVICE_AREA_LOOKUP] Request:', { lat, lng, origin: req.headers.origin });
 
-  if (!lat || !lng) {
-    return res.status(400).json({ error: "Latitude and longitude required" });
-  }
+    if (!lat || !lng) {
+      console.error('[SERVICE_AREA_LOOKUP] Missing parameters');
+      return res.status(400).json({ error: "Latitude and longitude required" });
+    }
 
-  // For Philadelphia coordinates (39.9526, -75.1652), return covered
-  const latitude = parseFloat(lat as string);
-  const longitude = parseFloat(lng as string);
+    // Validate and parse coordinates
+    const latitude = parseFloat(lat as string);
+    const longitude = parseFloat(lng as string);
 
-  // Simple check: if coordinates are near Philadelphia, return Philadelphia Metro
-  if (latitude >= 39.8 && latitude <= 40.1 && longitude >= -75.3 && longitude <= -75.0) {
-    return res.json({
+    if (isNaN(latitude) || isNaN(longitude)) {
+      console.error('[SERVICE_AREA_LOOKUP] Invalid coordinates:', { lat, lng });
+      return res.status(400).json({ error: "Invalid coordinates" });
+    }
+
+    console.log('[SERVICE_AREA_LOOKUP] Parsed coordinates:', { latitude, longitude });
+
+    // Simple check: if coordinates are near Philadelphia, return Philadelphia Metro
+    if (latitude >= 39.8 && latitude <= 40.1 && longitude >= -75.3 && longitude <= -75.0) {
+      console.log('[SERVICE_AREA_LOOKUP] Covered: Philadelphia Metro');
+      return res.json({
+        covered: true,
+        serviceArea: serviceAreas[0], // Philadelphia Metro
+      });
+    }
+
+    // For demo purposes, accept all coordinates
+    console.log('[SERVICE_AREA_LOOKUP] Covered: Default (demo mode)');
+    res.json({
       covered: true,
-      serviceArea: serviceAreas[0], // Philadelphia Metro
+      serviceArea: serviceAreas[0],
     });
+  } catch (error: any) {
+    console.error('[SERVICE_AREA_LOOKUP] Unexpected error:', error.message, error.stack);
+    res.status(500).json({ error: "Service area lookup failed", details: error.message });
   }
-
-  // For demo purposes, accept all coordinates
-  res.json({
-    covered: true,
-    serviceArea: serviceAreas[0],
-  });
 });
 
 // ============================================
