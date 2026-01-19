@@ -22,8 +22,21 @@ export default function HaulAwayLocationPage() {
   const [error, setError] = useState('')
 
   const handleContinue = async () => {
-    if (!address || !serviceDate) {
-      setError('Please enter both address and date')
+    // Get current values from inputs directly (not from state)
+    const addressInput = document.querySelector('input[type="text"]') as HTMLInputElement
+    const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement
+    
+    const addressValue = addressInput?.value?.trim() || ''
+    const dateValue = dateInput?.value?.trim() || ''
+    
+    // Validate: need (ZIP OR Address) + Date
+    if (!addressValue || addressValue.length < 3) {
+      setError('Please enter a valid address or ZIP code')
+      return
+    }
+    
+    if (!dateValue) {
+      setError('Please select a service date')
       return
     }
 
@@ -31,9 +44,9 @@ export default function HaulAwayLocationPage() {
     setError('')
 
     try {
-      // Geocode the address to get coordinates
+      // Geocode the address/ZIP to get coordinates
       const geocodeResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=us&limit=1`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressValue)}&countrycodes=us&limit=1`,
         { headers: { 'User-Agent': 'Haulkind/1.0' } }
       )
       
@@ -60,6 +73,9 @@ export default function HaulAwayLocationPage() {
         return
       }
 
+      // Use the full address from geocoding result
+      const finalAddress = geocodeData[0].display_name || addressValue
+      
       // Calculate preferredDateTime based on timeWindow
       const timeMap = {
         MORNING: '09:00',
@@ -67,16 +83,16 @@ export default function HaulAwayLocationPage() {
         EVENING: '17:00',
         ALL_DAY: '09:00'
       }
-      const preferredDateTime = `${serviceDate}T${timeMap[timeWindow]}:00`
+      const preferredDateTime = `${dateValue}T${timeMap[timeWindow]}:00`
 
       updateData({
         serviceType: 'HAUL_AWAY',
-        pickupAddress: address,
+        pickupAddress: finalAddress,
         pickupLat: lat,
         pickupLng: lng,
         serviceAreaId: result.serviceArea?.id || null,
         serviceAreaName: result.serviceArea?.name || '',
-        serviceDate,
+        serviceDate: dateValue,
         timeWindow,
         asap,
         scheduledFor: preferredDateTime,
