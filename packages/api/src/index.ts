@@ -75,9 +75,15 @@ const authenticateToken = (req: any, res: any, next: any) => {
   });
 };
 
-// Health check endpoint
+// Health check endpoint with version info
 app.get("/health", (req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || "unknown",
+    env: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || "unknown",
+    timestamp: new Date().toISOString(),
+    service: "haulkind-api"
+  });
 });
 
 // Auth endpoints
