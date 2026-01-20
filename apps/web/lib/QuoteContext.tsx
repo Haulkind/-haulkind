@@ -6,6 +6,11 @@ interface QuoteData {
   // Service
   serviceType: 'HAUL_AWAY' | 'LABOR_ONLY' | null
   
+  // Customer Info
+  customerName: string
+  customerPhone: string
+  customerEmail: string
+  
   // Location & Time
   pickupAddress: string
   pickupLat: number | null
@@ -43,6 +48,9 @@ interface QuoteContextType {
 
 const initialData: QuoteData = {
   serviceType: null,
+  customerName: '',
+  customerPhone: '',
+  customerEmail: '',
   pickupAddress: '',
   pickupLat: null,
   pickupLng: null,
