@@ -87,8 +87,7 @@ export default function HaulAwayLocationPage() {
       city.trim().length > 0 &&
       state.trim().length === 2 &&
       zip.trim().length === 5 &&
-      serviceDate.trim().length > 0 &&
-      addressSelected // Must have selected address from autocomplete
+      serviceDate.trim().length > 0
     )
   }
 
@@ -108,11 +107,6 @@ export default function HaulAwayLocationPage() {
     
     if (!email.trim() || !email.includes('@')) {
       setError('Please enter a valid email address')
-      return
-    }
-    
-    if (!addressSelected) {
-      setError('Please select a valid address from the suggestions')
       return
     }
     
