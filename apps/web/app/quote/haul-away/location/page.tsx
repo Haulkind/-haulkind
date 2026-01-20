@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
-import { format } from 'date-fns'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
@@ -12,30 +11,89 @@ export default function HaulAwayLocationPage() {
   const router = useRouter()
   const { data, updateData } = useQuote()
   
-  const [address, setAddress] = useState(data.pickupAddress || '')
-  const [serviceDate, setServiceDate] = useState(
-    data.serviceDate || ''
-  )
+  // TASK 4: Customer Info fields (required)
+  const [fullName, setFullName] = useState(data.customerName || '')
+  const [phone, setPhone] = useState(data.customerPhone || '')
+  const [email, setEmail] = useState(data.customerEmail || '')
+  
+  // TASK 5: Structured address fields (required)
+  const [street, setStreet] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zip, setZip] = useState('')
+  
+  const [serviceDate, setServiceDate] = useState(data.serviceDate || '')
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(data.timeWindow || 'ALL_DAY')
   const [asap, setAsap] = useState(data.asap || false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  
+  // TASK 3: Track if user has attempted to continue (for error display)
+  const [hasAttemptedContinue, setHasAttemptedContinue] = useState(false)
+
+  // TASK 2: Pre-fill ZIP from sessionStorage on mount
+  useEffect(() => {
+    const storedZip = sessionStorage.getItem('hk_zip')
+    if (storedZip && !zip) {
+      setZip(storedZip)
+    }
+  }, [])
+
+  // TASK 6: Check if all required fields are filled
+  const isFormValid = () => {
+    return (
+      fullName.trim().length > 0 &&
+      phone.trim().length >= 10 &&
+      email.trim().length > 0 &&
+      email.includes('@') &&
+      street.trim().length > 0 &&
+      city.trim().length > 0 &&
+      state.trim().length === 2 &&
+      zip.trim().length === 5 &&
+      serviceDate.trim().length > 0
+    )
+  }
 
   const handleContinue = async () => {
-    // Get current values from inputs directly (not from state)
-    const addressInput = document.querySelector('input[type="text"]') as HTMLInputElement
-    const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement
+    setHasAttemptedContinue(true)
     
-    const addressValue = addressInput?.value?.trim() || ''
-    const dateValue = dateInput?.value?.trim() || ''
-    
-    // Validate: need (ZIP OR Address) + Date
-    if (!addressValue || addressValue.length < 3) {
-      setError('Please enter a valid address or ZIP code')
+    // Validate all required fields
+    if (!fullName.trim()) {
+      setError('Please enter your full name')
       return
     }
     
-    if (!dateValue) {
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 10) {
+      setError('Please enter a valid phone number')
+      return
+    }
+    
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+    
+    if (!street.trim()) {
+      setError('Please enter your street address')
+      return
+    }
+    
+    if (!city.trim()) {
+      setError('Please enter your city')
+      return
+    }
+    
+    if (!state.trim() || state.length !== 2) {
+      setError('Please enter a valid 2-letter state code')
+      return
+    }
+    
+    if (!zip.trim() || zip.length !== 5) {
+      setError('Please enter a valid 5-digit ZIP code')
+      return
+    }
+    
+    if (!serviceDate.trim()) {
       setError('Please select a service date')
       return
     }
@@ -44,9 +102,12 @@ export default function HaulAwayLocationPage() {
     setError('')
 
     try {
-      // Geocode the address/ZIP to get coordinates
-      console.log('[GEOCODING] Starting for:', addressValue)
-      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressValue)}&countrycodes=us&limit=1`
+      // TASK 5: Build serviceAddress string from structured fields (backend expects single string)
+      const serviceAddress = `${street.trim()}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
+      
+      // Geocode the address to get coordinates
+      console.log('[GEOCODING] Starting for:', serviceAddress)
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(serviceAddress)}&countrycodes=us&limit=1`
       const geocodeResponse = await fetch(geocodeUrl, {
         headers: { 'User-Agent': 'Haulkind/1.0' }
       })
@@ -56,7 +117,7 @@ export default function HaulAwayLocationPage() {
       if (!geocodeResponse.ok) {
         const errorText = await geocodeResponse.text()
         console.error('[GEOCODING] HTTP Error:', geocodeResponse.status, errorText)
-        setError(`Geocoding failed: ${geocodeResponse.status} ${errorText.substring(0, 100)}`)
+        setError(`Unable to verify address. Please check your address and try again.`)
         setLoading(false)
         return
       }
@@ -65,8 +126,8 @@ export default function HaulAwayLocationPage() {
       console.log('[GEOCODING] Results:', geocodeData.length, 'items')
       
       if (!geocodeData || geocodeData.length === 0) {
-        console.error('[GEOCODING] No results for:', addressValue)
-        setError('Address not found. Please enter a valid US address or ZIP code.')
+        console.error('[GEOCODING] No results for:', serviceAddress)
+        setError('Address not found. Please check your address and try again.')
         setLoading(false)
         return
       }
@@ -85,9 +146,6 @@ export default function HaulAwayLocationPage() {
         return
       }
 
-      // Use the full address from geocoding result
-      const finalAddress = geocodeData[0].display_name || addressValue
-      
       // Calculate preferredDateTime based on timeWindow
       const timeMap = {
         MORNING: '09:00',
@@ -95,16 +153,22 @@ export default function HaulAwayLocationPage() {
         EVENING: '17:00',
         ALL_DAY: '09:00'
       }
-      const preferredDateTime = `${dateValue}T${timeMap[timeWindow]}:00`
+      const preferredDateTime = `${serviceDate}T${timeMap[timeWindow]}:00`
 
       updateData({
         serviceType: 'HAUL_AWAY',
-        pickupAddress: finalAddress,
+        // Customer info
+        customerName: fullName.trim(),
+        customerPhone: phone.trim(),
+        customerEmail: email.trim(),
+        // Address (send as single string to backend)
+        pickupAddress: serviceAddress,
         pickupLat: lat,
         pickupLng: lng,
         serviceAreaId: result.serviceArea?.id || null,
         serviceAreaName: result.serviceArea?.name || '',
-        serviceDate: dateValue,
+        // Date/time
+        serviceDate,
         timeWindow,
         asap,
         scheduledFor: preferredDateTime,
@@ -114,8 +178,7 @@ export default function HaulAwayLocationPage() {
       router.push('/quote/haul-away/volume')
     } catch (err: any) {
       console.error('[ERROR] Full error:', err)
-      const message = err.message || 'Unable to verify service area'
-      setError(`We couldn't verify the service area right now. Please try again in a minute or enter a full address.`)
+      setError(`We couldn't verify the service area right now. Please try again in a minute.`)
       setLoading(false)
     }
   }
@@ -127,39 +190,138 @@ export default function HaulAwayLocationPage() {
           <h1 className="text-2xl font-bold mb-2">Junk Removal - Location & Time</h1>
           <p className="text-sm text-gray-600 mb-5">Where and when do you need service?</p>
 
-          {error && (
+          {/* TASK 3: Only show error after user has attempted to continue */}
+          {hasAttemptedContinue && error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Service Address *
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="123 Main St, Philadelphia, PA 19103"
-                className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                We will check if we serve your area
-              </p>
+          <div className="space-y-6">
+            {/* TASK 4: Customer Info Section */}
+            <div className="border-b pb-6">
+              <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="John Smith"
+                    className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(215) 555-0123"
+                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="john@example.com"
+                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                When would you like your items picked up? *
-              </label>
+            {/* TASK 5: Structured Address Section */}
+            <div className="border-b pb-6">
+              <h2 className="text-lg font-semibold mb-4">Service Address</h2>
               
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Street Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    placeholder="123 Main St"
+                    className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Philadelphia"
+                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      State *
+                    </label>
+                    <input
+                      type="text"
+                      value={state}
+                      onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
+                      placeholder="PA"
+                      maxLength={2}
+                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent uppercase"
+                    />
+                  </div>
+
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      ZIP Code *
+                    </label>
+                    <input
+                      type="text"
+                      value={zip}
+                      onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      placeholder="19103"
+                      maxLength={5}
+                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-500">
+                  We will check if we serve your area
+                </p>
+              </div>
+            </div>
+
+            {/* Date & Time Section */}
+            <div>
+              <h2 className="text-lg font-semibold mb-4">When would you like your items picked up?</h2>
+              
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
                 {/* Service Date */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1.5">
-                    1. Select your pickup date
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Pickup Date *
                   </label>
                   <input
                     type="date"
@@ -172,8 +334,8 @@ export default function HaulAwayLocationPage() {
 
                 {/* Time Window */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1.5">
-                    2. Select your pickup time
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Pickup Time
                   </label>
                   <select
                     value={timeWindow}
@@ -188,26 +350,27 @@ export default function HaulAwayLocationPage() {
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 mb-4">
                 We allow scheduling for next day up to 90 days in advance! Dates that are grey are unavailable.
               </p>
+
+              {/* ASAP Checkbox */}
+              <div className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  id="asap"
+                  checked={asap}
+                  onChange={(e) => setAsap(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-secondary-600 focus:ring-secondary-500 border-gray-300 rounded"
+                />
+                <label htmlFor="asap" className="text-xs text-gray-700 leading-relaxed">
+                  ⚡ Would you like us to complete your order as soon as possible?
+                  If we can accommodate an earlier time and/or date, we will contact you to verify the time your booking is placed. If we are unable to come sooner, we will work your order according to your scheduled date/time you've selected.
+                </label>
+              </div>
             </div>
 
-            {/* ASAP Checkbox */}
-            <div className="flex items-start gap-2.5 max-w-[680px]">
-              <input
-                type="checkbox"
-                id="asap"
-                checked={asap}
-                onChange={(e) => setAsap(e.target.checked)}
-                className="mt-0.5 h-4 w-4 text-secondary-600 focus:ring-secondary-500 border-gray-300 rounded"
-              />
-              <label htmlFor="asap" className="text-xs text-gray-700 leading-relaxed">
-                ⚡ Would you like us to complete your order as soon as possible?
-                If we can accommodate an earlier time and/or date, we will contact you to verify the time your booking is placed. If we are unable to come sooner, we will work your order according to your scheduled date/time you've selected.
-              </label>
-            </div>
-
+            {/* TASK 6: Continue button gated by form validation */}
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
@@ -219,7 +382,7 @@ export default function HaulAwayLocationPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                disabled={loading}
+                disabled={loading || !isFormValid()}
                 className="flex-[3] h-11 px-6 text-sm font-medium text-white bg-secondary-600 rounded-lg hover:bg-secondary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Checking...' : 'Continue'}

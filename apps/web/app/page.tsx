@@ -12,6 +12,8 @@ export default function Home() {
   const handleQuoteSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (zipCode.length >= 5) {
+      // TASK 1: Store ZIP in sessionStorage for pre-filling on location page
+      sessionStorage.setItem('hk_zip', zipCode)
       router.push(`/quote?service=${service}&zip=${zipCode}`)
     }
   }
