@@ -199,6 +199,45 @@ app.get("/service-areas/lookup", (req, res) => {
   }
 });
 
+// Address autocomplete using Nominatim
+app.get("/geocode/autocomplete", async (req, res) => {
+  try {
+    const { q } = req.query;
+    console.log('[AUTOCOMPLETE] Request:', { q, origin: req.headers.origin });
+
+    if (!q || typeof q !== 'string' || q.length < 3) {
+      return res.status(400).json({ error: "Query must be at least 3 characters" });
+    }
+
+    // Call Nominatim API
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(q)}&` +
+      `format=json&` +
+      `addressdetails=1&` +
+      `countrycodes=us&` +
+      `limit=5`;
+
+    const response = await fetch(nominatimUrl, {
+      headers: {
+        'User-Agent': 'Haulkind/1.0 (contact@haulkind.com)'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('[AUTOCOMPLETE] Nominatim error:', response.status, response.statusText);
+      return res.status(502).json({ error: "Geocoding service unavailable" });
+    }
+
+    const data = await response.json();
+    console.log('[AUTOCOMPLETE] Found', data.length, 'results');
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('[AUTOCOMPLETE] Unexpected error:', error.message, error.stack);
+    res.status(500).json({ error: "Autocomplete failed", details: error.message });
+  }
+});
+
 // ============================================
 // QUOTE ENDPOINTS
 // ============================================

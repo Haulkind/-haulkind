@@ -68,18 +68,10 @@ export default function AddressAutocomplete({
     debounceRef.current = setTimeout(async () => {
       setIsLoading(true)
       try {
+        // Use backend proxy to avoid CORS and rate limiting issues
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-api-production.up.railway.app'
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?` +
-          `q=${encodeURIComponent(value)}&` +
-          `format=json&` +
-          `addressdetails=1&` +
-          `countrycodes=us&` +
-          `limit=5`,
-          {
-            headers: {
-              'User-Agent': 'Haulkind/1.0'
-            }
-          }
+          `${apiUrl}/geocode/autocomplete?q=${encodeURIComponent(value)}`
         )
 
         if (!response.ok) {
