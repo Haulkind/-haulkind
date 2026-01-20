@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
+import AddressAutocomplete from '@/components/AddressAutocomplete'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
@@ -22,6 +23,12 @@ export default function HaulAwayLocationPage() {
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
   
+  // Address autocomplete state
+  const [addressSelected, setAddressSelected] = useState(false)
+  const [fieldsLocked, setFieldsLocked] = useState(false)
+  const [selectedLat, setSelectedLat] = useState<number | null>(null)
+  const [selectedLng, setSelectedLng] = useState<number | null>(null)
+  
   const [serviceDate, setServiceDate] = useState(data.serviceDate || '')
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(data.timeWindow || 'ALL_DAY')
   const [asap, setAsap] = useState(data.asap || false)
@@ -39,6 +46,36 @@ export default function HaulAwayLocationPage() {
     }
   }, [])
 
+  // Handle address selection from autocomplete
+  const handleAddressSelect = (components: any) => {
+    console.log('[ADDRESS SELECT]', components)
+    setStreet(components.street)
+    setCity(components.city)
+    setState(components.state)
+    setZip(components.zip)
+    setSelectedLat(components.lat)
+    setSelectedLng(components.lng)
+    setAddressSelected(true)
+    setFieldsLocked(true)
+    setError('') // Clear any previous errors
+  }
+
+  // Handle manual street address change (resets selection)
+  const handleStreetChange = (value: string) => {
+    setStreet(value)
+    if (addressSelected) {
+      setAddressSelected(false)
+      setFieldsLocked(false)
+      setSelectedLat(null)
+      setSelectedLng(null)
+    }
+  }
+
+  // Unlock fields for editing
+  const handleUnlockFields = () => {
+    setFieldsLocked(false)
+  }
+
   // TASK 6: Check if all required fields are filled
   const isFormValid = () => {
     return (
@@ -50,7 +87,8 @@ export default function HaulAwayLocationPage() {
       city.trim().length > 0 &&
       state.trim().length === 2 &&
       zip.trim().length === 5 &&
-      serviceDate.trim().length > 0
+      serviceDate.trim().length > 0 &&
+      addressSelected // Must have selected address from autocomplete
     )
   }
 
@@ -70,6 +108,11 @@ export default function HaulAwayLocationPage() {
     
     if (!email.trim() || !email.includes('@')) {
       setError('Please enter a valid email address')
+      return
+    }
+    
+    if (!addressSelected) {
+      setError('Please select a valid address from the suggestions')
       return
     }
     
@@ -253,32 +296,34 @@ export default function HaulAwayLocationPage() {
               <h2 className="text-base font-semibold mb-3">Service Address</h2>
               
               <div className="space-y-2.5">
-                {/* Row 1: Street Address (100%) */}
+                {/* Row 1: Street Address (100%) with Autocomplete */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Street Address *
+                    Street Address * {addressSelected && <span className="text-green-600 text-[10px]">(✓ Verified)</span>}
                   </label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
                     value={street}
-                    onChange={(e) => setStreet(e.target.value)}
-                    placeholder="123 Main St"
+                    onChange={handleStreetChange}
+                    onAddressSelect={handleAddressSelect}
+                    placeholder="Start typing your address..."
                     className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                   />
+                  <p className="text-[11px] text-gray-400 mt-1">Start typing and select your address from the suggestions</p>
                 </div>
 
                 {/* Row 2: City (50%) + State (20%) + ZIP (30%) */}
                 <div className="grid grid-cols-10 gap-3">
                   <div className="col-span-5">
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      City *
+                      City * {fieldsLocked && <button type="button" onClick={handleUnlockFields} className="text-[10px] text-blue-600 hover:underline">(Edit)</button>}
                     </label>
                     <input
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Philadelphia"
-                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                      disabled={fieldsLocked}
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
                     />
                   </div>
 
@@ -292,7 +337,8 @@ export default function HaulAwayLocationPage() {
                       onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
                       placeholder="PA"
                       maxLength={2}
-                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent uppercase"
+                      disabled={fieldsLocked}
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent uppercase disabled:bg-gray-50 disabled:text-gray-600"
                     />
                   </div>
 
@@ -305,6 +351,7 @@ export default function HaulAwayLocationPage() {
                       value={zip}
                       onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
                       placeholder="19103"
+                      disabled={fieldsLocked}
                       maxLength={5}
                       className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                     />
