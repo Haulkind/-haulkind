@@ -175,7 +175,7 @@ export default function LaborOnlyLocationPage() {
         preferredDateTime,
       })
 
-      router.push('/quote/labor-only/hours')
+      router.push('/quote/labor-only/details')
     } catch (err: any) {
       console.error('[ERROR] Full error:', err)
       setError(`We couldn't verify the service area right now. Please try again in a minute.`)
@@ -188,7 +188,7 @@ export default function LaborOnlyLocationPage() {
       <div className="container mx-auto px-4 max-w-[760px]">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h1 className="text-2xl font-bold mb-2">Labor Only - Location & Time</h1>
-          <p className="text-sm text-gray-600 mb-5">Where and when do you need help?</p>
+          <p className="text-sm text-gray-600 mb-5">Where and when do you need service?</p>
 
           {/* TASK 3: Only show error after user has attempted to continue */}
           {hasAttemptedContinue && error && (
@@ -197,28 +197,29 @@ export default function LaborOnlyLocationPage() {
             </div>
           )}
 
-          <div className="space-y-6">
-            {/* TASK 4: Customer Info Section */}
-            <div className="border-b pb-6">
-              <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
+          <div className="space-y-4">
+            {/* TASK 4: Customer Info Section - COMPACTED */}
+            <div className="border-b pb-4">
+              <h2 className="text-base font-semibold mb-3">Customer Information</h2>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="John Smith"
-                    className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                  />
-                </div>
+              <div className="space-y-2.5">
+                {/* Row 1: Full Name (60%) + Phone (40%) */}
+                <div className="grid grid-cols-5 gap-3">
+                  <div className="col-span-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Smith"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Phone *
                     </label>
                     <input
@@ -226,33 +227,35 @@ export default function LaborOnlyLocationPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="(215) 555-0123"
-                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="john@example.com"
-                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                    />
-                  </div>
+                {/* Row 2: Email (100%) */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="john@example.com"
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* TASK 5: Structured Address Section */}
-            <div className="border-b pb-6">
-              <h2 className="text-lg font-semibold mb-4">Service Address</h2>
+            {/* TASK 5: Structured Address Section - COMPACTED */}
+            <div className="border-b pb-4">
+              <h2 className="text-base font-semibold mb-3">Service Address</h2>
               
-              <div className="space-y-4">
+              <div className="space-y-2.5">
+                {/* Row 1: Street Address (100%) */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Street Address *
                   </label>
                   <input
@@ -260,13 +263,14 @@ export default function LaborOnlyLocationPage() {
                     value={street}
                     onChange={(e) => setStreet(e.target.value)}
                     placeholder="123 Main St"
-                    className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                   />
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                {/* Row 2: City (50%) + State (20%) + ZIP (30%) */}
+                <div className="grid grid-cols-10 gap-3">
+                  <div className="col-span-5">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       City *
                     </label>
                     <input
@@ -274,12 +278,12 @@ export default function LaborOnlyLocationPage() {
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Philadelphia"
-                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                     />
                   </div>
 
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       State *
                     </label>
                     <input
@@ -288,12 +292,12 @@ export default function LaborOnlyLocationPage() {
                       onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
                       placeholder="PA"
                       maxLength={2}
-                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent uppercase"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent uppercase"
                     />
                   </div>
 
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <div className="col-span-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       ZIP Code *
                     </label>
                     <input
@@ -302,45 +306,44 @@ export default function LaborOnlyLocationPage() {
                       onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
                       placeholder="19103"
                       maxLength={5}
-                      className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500">
+                <p className="text-[11px] text-gray-400">
                   We will check if we serve your area
                 </p>
               </div>
             </div>
 
-            {/* Date & Time Section */}
+            {/* Date & Time Section - COMPACTED */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">When do you need help?</h2>
+              <h2 className="text-base font-semibold mb-3">When would you like your items picked up?</h2>
               
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
-                {/* Service Date */}
+              {/* Row: Pickup Date (50%) + Pickup Time (50%) */}
+              <div className="grid grid-cols-2 gap-3 mb-2.5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Service Date *
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Pickup Date *
                   </label>
                   <input
                     type="date"
                     value={serviceDate}
                     onChange={(e) => setServiceDate(e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                   />
                 </div>
 
-                {/* Time Window */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Preferred Time
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Pickup Time
                   </label>
                   <select
                     value={timeWindow}
                     onChange={(e) => setTimeWindow(e.target.value as TimeWindow)}
-                    className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent bg-white"
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent bg-white"
                   >
                     <option value="ALL_DAY">All Day (8AM - 8PM)</option>
                     <option value="MORNING">Morning (8AM - 12PM)</option>
@@ -350,22 +353,21 @@ export default function LaborOnlyLocationPage() {
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500 mb-4">
-                We allow scheduling for next day up to 90 days in advance! Dates that are grey are unavailable.
+              <p className="text-[11px] text-gray-400 mb-2.5">
+                Schedule next day up to 90 days in advance.
               </p>
 
-              {/* ASAP Checkbox */}
-              <div className="flex items-start gap-2.5">
+              {/* ASAP Checkbox - More compact */}
+              <div className="flex items-start gap-2">
                 <input
                   type="checkbox"
                   id="asap"
                   checked={asap}
                   onChange={(e) => setAsap(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 text-secondary-600 focus:ring-secondary-500 border-gray-300 rounded"
+                  className="mt-0.5 h-3.5 w-3.5 text-secondary-600 focus:ring-secondary-500 border-gray-300 rounded"
                 />
-                <label htmlFor="asap" className="text-xs text-gray-700 leading-relaxed">
-                  ⚡ Would you like us to complete your order as soon as possible?
-                  If we can accommodate an earlier time and/or date, we will contact you to verify the time your booking is placed. If we are unable to come sooner, we will work your order according to your scheduled date/time you've selected.
+                <label htmlFor="asap" className="text-[11px] text-gray-600 leading-snug">
+                  ⚡ Complete order ASAP if possible (we'll contact you to confirm earlier time)
                 </label>
               </div>
             </div>
