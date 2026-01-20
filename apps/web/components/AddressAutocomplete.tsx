@@ -108,8 +108,8 @@ export default function AddressAutocomplete({
           }
         }
 
-        const lat = place.geometry.location.lat()
-        const lng = place.geometry.location.lng()
+        const lat = place.geometry.location?.lat() || 0
+        const lng = place.geometry.location?.lng() || 0
 
         console.log('[AUTOCOMPLETE] Address selected:', {
           street,
