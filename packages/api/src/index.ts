@@ -175,20 +175,23 @@ app.get("/service-areas/lookup", (req, res) => {
 
     console.log('[SERVICE_AREA_LOOKUP] Parsed coordinates:', { latitude, longitude });
 
-    // Simple check: if coordinates are near Philadelphia, return Philadelphia Metro
-    if (latitude >= 39.8 && latitude <= 40.1 && longitude >= -75.3 && longitude <= -75.0) {
-      console.log('[SERVICE_AREA_LOOKUP] Covered: Philadelphia Metro');
+    // Expanded coverage: Philadelphia metro area and surrounding counties
+    // Covers Philadelphia, Montgomery, Delaware, Chester, Bucks counties
+    // Latitude: 39.7 to 40.3 (approx 40 miles north-south)
+    // Longitude: -75.6 to -74.9 (approx 40 miles east-west)
+    if (latitude >= 39.7 && latitude <= 40.3 && longitude >= -75.6 && longitude <= -74.9) {
+      console.log('[SERVICE_AREA_LOOKUP] Covered: Philadelphia Metro (expanded)');
       return res.json({
         covered: true,
         serviceArea: serviceAreas[0], // Philadelphia Metro
       });
     }
 
-    // For demo purposes, accept all coordinates
-    console.log('[SERVICE_AREA_LOOKUP] Covered: Default (demo mode)');
+    // Outside service area
+    console.log('[SERVICE_AREA_LOOKUP] Not covered:', { latitude, longitude });
     res.json({
-      covered: true,
-      serviceArea: serviceAreas[0],
+      covered: false,
+      serviceArea: null,
     });
   } catch (error: any) {
     console.error('[SERVICE_AREA_LOOKUP] Unexpected error:', error.message, error.stack);
