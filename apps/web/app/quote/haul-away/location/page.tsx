@@ -63,12 +63,29 @@ export default function HaulAwayLocationPage() {
   // Handle manual street address change (resets selection)
   const handleStreetChange = (value: string) => {
     setStreet(value)
+    setError('') // Clear error when user edits address
     if (addressSelected) {
       setAddressSelected(false)
       setFieldsLocked(false)
       setSelectedLat(null)
       setSelectedLng(null)
     }
+  }
+
+  // Clear error when any address field changes
+  const handleCityChange = (value: string) => {
+    setCity(value)
+    setError('') // Clear error when user edits address
+  }
+
+  const handleStateChange = (value: string) => {
+    setState(value.toUpperCase().slice(0, 2))
+    setError('') // Clear error when user edits address
+  }
+
+  const handleZipChange = (value: string) => {
+    setZip(value.replace(/\D/g, '').slice(0, 5))
+    setError('') // Clear error when user edits address
   }
 
   // Unlock fields for editing
@@ -314,7 +331,7 @@ export default function HaulAwayLocationPage() {
                     <input
                       type="text"
                       value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      onChange={(e) => handleCityChange(e.target.value)}
                       placeholder="Philadelphia"
                       disabled={fieldsLocked}
                       className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-600"
@@ -328,7 +345,7 @@ export default function HaulAwayLocationPage() {
                     <input
                       type="text"
                       value={state}
-                      onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
+                      onChange={(e) => handleStateChange(e.target.value)}
                       placeholder="PA"
                       maxLength={2}
                       disabled={fieldsLocked}
@@ -343,7 +360,7 @@ export default function HaulAwayLocationPage() {
                     <input
                       type="text"
                       value={zip}
-                      onChange={(e) => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      onChange={(e) => handleZipChange(e.target.value)}
                       placeholder="19103"
                       disabled={fieldsLocked}
                       maxLength={5}
