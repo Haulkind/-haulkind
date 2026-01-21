@@ -129,6 +129,7 @@ export default function HaulAwayLocationPage() {
   }
 
   const handleContinue = async () => {
+    console.log('[handleContinue] CALLED!')
     setHasAttemptedContinue(true)
     
     // Validate all required fields
