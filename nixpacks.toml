@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ['nodejs-18_x', 'pnpm']
+
+[phases.install]
+cmds = ['pnpm install --frozen-lockfile']
+
+[phases.build]
+cmds = ['pnpm build:backend']
+
+[start]
+cmd = 'node dist/server/_core/index.js'
