@@ -95,7 +95,7 @@ export default function HaulAwayLocationPage() {
 
   // TASK 6: Check if all required fields are filled
   const isFormValid = () => {
-    return (
+    const valid = (
       fullName.trim().length > 0 &&
       phone.trim().length >= 10 &&
       email.trim().length > 0 &&
@@ -106,6 +106,8 @@ export default function HaulAwayLocationPage() {
       zip.trim().length === 5 &&
       serviceDate.trim().length > 0
     )
+    console.log('[isFormValid]', { fullName, phone, email, street, city, state, zip, serviceDate, valid })
+    return valid
   }
 
   const handleContinue = async () => {
