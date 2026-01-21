@@ -392,6 +392,69 @@ export const ratings = mysqlTable("ratings", {
 }));
 
 // ============================================================================
+// ITEMS & PRICING (LoadUp-inspired features)
+// ============================================================================
+
+export const items = mysqlTable("items", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  parentId: int("parentId").references((): any => items.id),
+  basePrice: decimal("basePrice", { precision: 10, scale: 2 }).notNull(),
+  iconUrl: text("iconUrl"),
+  imageUrl: text("imageUrl"),
+  isPopular: boolean("isPopular").default(false).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  parentIdIdx: index("items_parentId_idx").on(table.parentId),
+  isPopularIdx: index("items_isPopular_idx").on(table.isPopular),
+}));
+
+export const promoCodes = mysqlTable("promoCodes", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  discountType: mysqlEnum("discountType", ["percentage", "fixed"]).notNull(),
+  discountValue: decimal("discountValue", { precision: 10, scale: 2 }).notNull(),
+  minOrderValue: decimal("minOrderValue", { precision: 10, scale: 2 }),
+  maxDiscount: decimal("maxDiscount", { precision: 10, scale: 2 }),
+  validFrom: timestamp("validFrom").notNull(),
+  validUntil: timestamp("validUntil").notNull(),
+  maxUses: int("maxUses"),
+  currentUses: int("currentUses").default(0).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  isActiveIdx: index("promoCodes_isActive_idx").on(table.isActive),
+}));
+
+export const savedQuotes = mysqlTable("savedQuotes", {
+  id: int("id").autoincrement().primaryKey(),
+  quoteId: varchar("quoteId", { length: 100 }).notNull().unique(),
+  customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
+  customerName: varchar("customerName", { length: 255 }),
+  customerPhone: varchar("customerPhone", { length: 20 }),
+  serviceType: mysqlEnum("serviceType", ["HAUL_AWAY", "LABOR_ONLY"]).notNull(),
+  itemsJson: json("itemsJson").notNull(),
+  locationJson: json("locationJson").notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
+  promoCodeUsed: varchar("promoCodeUsed", { length: 50 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  convertedToJobId: varchar("convertedToJobId", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  customerEmailIdx: index("savedQuotes_customerEmail_idx").on(table.customerEmail),
+  expiresAtIdx: index("savedQuotes_expiresAt_idx").on(table.expiresAt),
+}));
+
+// ============================================================================
 // AUDIT & STRIKES
 // ============================================================================
 
@@ -434,3 +497,9 @@ export type ServiceArea = typeof serviceAreas.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Payout = typeof payouts.$inferSelect;
+export type Item = typeof items.$inferSelect;
+export type InsertItem = typeof items.$inferInsert;
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type InsertPromoCode = typeof promoCodes.$inferInsert;
+export type SavedQuote = typeof savedQuotes.$inferSelect;
+export type InsertSavedQuote = typeof savedQuotes.$inferInsert;
