@@ -1,19 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-interface Item {
-  id: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  parentId: number | null;
-  basePrice: string;
-  iconUrl: string | null;
-  imageUrl: string | null;
-  isPopular: boolean;
-  sortOrder: number;
-}
+import { trpc } from "@/lib/trpc";
 
 interface SelectedItem {
   id: number;
@@ -27,68 +15,40 @@ interface ItemPickerProps {
 }
 
 export default function ItemPicker({ onItemsChange }: ItemPickerProps) {
-  const [categories, setCategories] = useState<Item[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Item | null>(null);
-  const [categoryItems, setCategoryItems] = useState<Item[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<Map<number, SelectedItem>>(
     new Map()
   );
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingItems, setIsLoadingItems] = useState(false);
 
-  // Load main categories on mount
-  useEffect(() => {
-    loadCategories();
-  }, []);
+  // Load main categories (parentId = null)
+  const { data: categoriesData, isLoading: isLoadingCategories } = trpc.items.list.useQuery({
+    parentId: null,
+  });
+
+  // Load items for selected category
+  const { data: itemsData, isLoading: isLoadingItems } = trpc.items.list.useQuery(
+    { parentId: selectedCategoryId! },
+    { enabled: selectedCategoryId !== null }
+  );
+
+  const categories = categoriesData?.items || [];
+  const categoryItems = itemsData?.items || [];
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
 
   // Notify parent when selected items change
   useEffect(() => {
     onItemsChange(Array.from(selectedItems.values()));
   }, [selectedItems, onItemsChange]);
 
-  const loadCategories = async () => {
-    setIsLoadingCategories(true);
-    try {
-      const response = await fetch("/api/items?parentId=null");
-      const data = await response.json();
-      
-      if (data.success) {
-        setCategories(data.items);
-      }
-    } catch (error) {
-      console.error("Error loading categories:", error);
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
-
-  const loadCategoryItems = async (categoryId: number) => {
-    setIsLoadingItems(true);
-    try {
-      const response = await fetch(`/api/items?parentId=${categoryId}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setCategoryItems(data.items);
-      }
-    } catch (error) {
-      console.error("Error loading category items:", error);
-    } finally {
-      setIsLoadingItems(false);
-    }
-  };
-
-  const handleCategoryClick = (category: Item) => {
-    setSelectedCategory(category);
-    loadCategoryItems(category.id);
+  const handleCategoryClick = (categoryId: number) => {
+    setSelectedCategoryId(categoryId);
   };
 
   const handleBackToCategories = () => {
-    setSelectedCategory(null);
-    setCategoryItems([]);
+    setSelectedCategoryId(null);
   };
 
-  const handleItemClick = (item: Item) => {
+  const handleItemClick = (item: typeof categoryItems[0]) => {
     const newSelectedItems = new Map(selectedItems);
     
     if (newSelectedItems.has(item.id)) {
@@ -184,7 +144,7 @@ export default function ItemPicker({ onItemsChange }: ItemPickerProps) {
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => handleCategoryClick(category)}
+                onClick={() => handleCategoryClick(category.id)}
                 className="flex flex-col items-center p-6 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all"
               >
                 {/* Icon placeholder */}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 
 interface SelectedItem {
   id: number;
@@ -27,7 +28,8 @@ export default function OrderSummary({
     code: string;
     discount: number;
   } | null>(null);
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+
+  const applyPromoMutation = trpc.items.applyPromoCode.useMutation();
 
   // Calculate subtotal
   const subtotal = selectedItems.reduce(
@@ -51,45 +53,28 @@ export default function OrderSummary({
       return;
     }
 
-    setIsApplyingPromo(true);
     setPromoError("");
     setPromoSuccess("");
 
     try {
-      const response = await fetch("/api/apply-promo-code", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code: promoCode.toUpperCase(),
-          subtotal,
-        }),
+      const result = await applyPromoMutation.mutateAsync({
+        code: promoCode.toUpperCase(),
+        subtotal,
       });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setPromoError(data.error || "Invalid promo code");
-        setAppliedPromo(null);
-        return;
-      }
 
       // Apply promo
       setAppliedPromo({
-        code: data.promo.code,
-        discount: data.promo.discount,
+        code: result.code,
+        discount: result.discountAmount,
       });
-      setPromoSuccess(`Promo code applied! You saved $${data.promo.discount.toFixed(2)}`);
+      setPromoSuccess(`Promo code applied! You saved $${result.discountAmount.toFixed(2)}`);
       
       if (onPromoCodeApplied) {
-        onPromoCodeApplied(data.promo.discount, data.promo.code);
+        onPromoCodeApplied(result.discountAmount, result.code);
       }
-    } catch (error) {
-      console.error("Error applying promo code:", error);
-      setPromoError("Failed to apply promo code");
-    } finally {
-      setIsApplyingPromo(false);
+    } catch (error: any) {
+      setPromoError(error.message || "Invalid promo code");
+      setAppliedPromo(null);
     }
   };
 
@@ -162,14 +147,14 @@ export default function OrderSummary({
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 placeholder="Enter code"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                disabled={isApplyingPromo}
+                disabled={applyPromoMutation.isPending}
               />
               <button
                 onClick={handleApplyPromo}
-                disabled={isApplyingPromo || !promoCode.trim()}
+                disabled={applyPromoMutation.isPending || !promoCode.trim()}
                 className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-md hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {isApplyingPromo ? "..." : "APPLY"}
+                {applyPromoMutation.isPending ? "..." : "APPLY"}
               </button>
             </div>
             {promoError && (

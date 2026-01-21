@@ -9,6 +9,7 @@ import { mediaRouter } from "./routers/media";
 import { driversRouter } from "./routers/drivers";
 import { dispatchRouter } from "./routers/dispatch";
 import { ledgerRouter } from "./routers/ledger";
+import { itemsRouter } from "./routers/items";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -32,6 +33,7 @@ export const appRouter = router({
   drivers: driversRouter,
   dispatch: dispatchRouter,
   ledger: ledgerRouter,
+  items: itemsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -4,6 +4,7 @@ import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { QuoteProvider } from '@/lib/QuoteContext'
+import { TRPCProvider } from '@/lib/trpc-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,13 +23,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <QuoteProvider>
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-        </QuoteProvider>
+        <TRPCProvider>
+          <QuoteProvider>
+            <Header />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Footer />
+          </QuoteProvider>
+        </TRPCProvider>
       </body>
     </html>
   )
