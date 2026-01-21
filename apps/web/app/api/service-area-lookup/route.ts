@@ -3,10 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 const RAILWAY_BASE_URL = 'https://haulkind-production.up.railway.app';
 const TIMEOUT_MS = 8000;
 
+// Approved states - all addresses in these states are automatically covered
+const APPROVED_STATES = ['NJ', 'MA', 'PA', 'NY'];
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const lat = searchParams.get('lat');
   const lng = searchParams.get('lng');
+  const state = searchParams.get('state'); // Optional state parameter
   
   if (!lat || !lng) {
     console.error('[SERVICE_AREA_PROXY] Missing parameters:', { lat, lng });
@@ -16,8 +20,64 @@ export async function GET(request: NextRequest) {
     );
   }
   
+  // If state is provided and is in approved list, auto-approve
+  if (state && APPROVED_STATES.includes(state.toUpperCase())) {
+    console.log('[SERVICE_AREA_PROXY] Auto-approved state:', state);
+    return NextResponse.json({
+      covered: true,
+      state: state.toUpperCase(),
+      message: 'Service available in this area'
+    });
+  }
+  
+  // Otherwise, use geocoding to determine state from coordinates
+  try {
+    // Reverse geocode to get state from coordinates
+    const geocodeUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en-US`;
+    console.log('[SERVICE_AREA_PROXY] Reverse geocoding:', geocodeUrl);
+    
+    const geocodeResponse = await fetch(geocodeUrl, {
+      headers: {
+        'User-Agent': 'Haulkind/1.0'
+      }
+    });
+    
+    if (geocodeResponse.ok) {
+      const geocodeData = await geocodeResponse.json();
+      const addressState = geocodeData.address?.state;
+      
+      console.log('[SERVICE_AREA_PROXY] Detected state:', addressState);
+      
+      // Check if detected state is in approved list
+      if (addressState) {
+        // Map full state names to abbreviations
+        const stateMap: { [key: string]: string } = {
+          'New Jersey': 'NJ',
+          'Massachusetts': 'MA',
+          'Pennsylvania': 'PA',
+          'New York': 'NY'
+        };
+        
+        const stateAbbr = stateMap[addressState] || addressState;
+        
+        if (APPROVED_STATES.includes(stateAbbr)) {
+          console.log('[SERVICE_AREA_PROXY] Auto-approved by geocoding:', stateAbbr);
+          return NextResponse.json({
+            covered: true,
+            state: stateAbbr,
+            message: 'Service available in this area'
+          });
+        }
+      }
+    }
+  } catch (geocodeError) {
+    console.error('[SERVICE_AREA_PROXY] Geocoding failed:', geocodeError);
+    // Continue to Railway fallback
+  }
+  
+  // Fallback: Call Railway backend for other states or if geocoding fails
   const url = `${RAILWAY_BASE_URL}/service-areas/lookup?lat=${lat}&lng=${lng}`;
-  console.log('[SERVICE_AREA_PROXY] Calling Railway:', url);
+  console.log('[SERVICE_AREA_PROXY] Calling Railway fallback:', url);
   
   try {
     const controller = new AbortController();

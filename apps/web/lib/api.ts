@@ -56,9 +56,10 @@ export interface JobResponse {
   total: number
 }
 
-export async function checkServiceArea(lat: number, lng: number): Promise<ServiceAreaResponse> {
+export async function checkServiceArea(lat: number, lng: number, state?: string): Promise<ServiceAreaResponse> {
   // Use server-side proxy to avoid CORS and get better error logging
-  const url = `/api/service-area-lookup?lat=${lat}&lng=${lng}`
+  const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
+  const url = `/api/service-area-lookup?lat=${lat}&lng=${lng}${stateParam}`
   console.log('[API] checkServiceArea URL:', url)
   
   const response = await fetch(url)

@@ -208,8 +208,8 @@ export default function LaborOnlyLocationPage() {
       const lng = parseFloat(geocodeData[0].lon)
       console.log('[GEOCODING] Coordinates:', { lat, lng })
 
-      console.log('[SERVICE_AREA] Checking coverage for:', { lat, lng })
-      const result = await checkServiceArea(lat, lng)
+      console.log('[SERVICE_AREA] Checking coverage for:', { lat, lng, state })
+      const result = await checkServiceArea(lat, lng, state)
       console.log('[SERVICE_AREA] Result:', result)
       
       if (!result.covered) {
