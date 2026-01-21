@@ -460,8 +460,7 @@ export default function LaborOnlyLocationPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                disabled={loading || !formIsValid}
-                className="flex-[3] h-11 px-6 text-sm font-medium text-white bg-secondary-600 rounded-lg hover:bg-secondary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-[3] h-11 px-6 text-sm font-medium text-white bg-secondary-600 rounded-lg hover:bg-secondary-700 transition"
               >
                 {loading ? 'Checking...' : 'Continue'}
               </button>
