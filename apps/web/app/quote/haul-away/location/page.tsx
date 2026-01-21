@@ -37,6 +37,24 @@ export default function HaulAwayLocationPage() {
   
   // TASK 3: Track if user has attempted to continue (for error display)
   const [hasAttemptedContinue, setHasAttemptedContinue] = useState(false)
+  const [formIsValid, setFormIsValid] = useState(false)
+
+  // Force re-validation whenever form fields change
+  useEffect(() => {
+    const valid = (
+      fullName.trim().length > 0 &&
+      phone.trim().length >= 10 &&
+      email.trim().length > 0 &&
+      email.includes('@') &&
+      street.trim().length > 0 &&
+      city.trim().length > 0 &&
+      state.trim().length === 2 &&
+      zip.trim().length === 5 &&
+      serviceDate.trim().length > 0
+    )
+    console.log('[useEffect validation]', { fullName, phone, email, street, city, state, zip, serviceDate, valid })
+    setFormIsValid(valid)
+  }, [fullName, phone, email, street, city, state, zip, serviceDate])
 
   // TASK 2: Pre-fill ZIP from sessionStorage on mount
   useEffect(() => {
@@ -444,7 +462,7 @@ export default function HaulAwayLocationPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                disabled={loading || !isFormValid()}
+                disabled={loading || !formIsValid}
                 className="flex-[3] h-11 px-6 text-sm font-medium text-white bg-secondary-600 rounded-lg hover:bg-secondary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Checking...' : 'Continue'}
