@@ -30,9 +30,37 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // CORS configuration
+  app.use((req, res, next) => {
+    const allowedOrigins = [
+      'https://haulkind.com',
+      'https://www.haulkind.com',
+      'http://localhost:5173', // dev
+      'http://localhost:3000'  // dev
+    ];
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
