@@ -65,10 +65,11 @@ export default function AddressAutocomplete({
       // Use Nominatim API directly - it's free and doesn't require API key
       // Adding countrycodes=us to limit to US addresses
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&limit=5&q=${encodeURIComponent(query)}`,
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&limit=5&accept-language=en-US&q=${encodeURIComponent(query)}`,
         {
           headers: {
             'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
             'User-Agent': 'HaulKind/1.0 (https://haulkind.com)'
           }
         }
@@ -156,7 +157,21 @@ export default function AddressAutocomplete({
       'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
       'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC'
     }
-    return states[stateName] || stateName
+    // Try exact match first
+    if (states[stateName]) return states[stateName]
+    
+    // Try case-insensitive match
+    const normalizedName = stateName.trim()
+    const matchedState = Object.keys(states).find(
+      key => key.toLowerCase() === normalizedName.toLowerCase()
+    )
+    if (matchedState) return states[matchedState]
+    
+    // If already 2 letters, assume it's already an abbreviation
+    if (normalizedName.length === 2) return normalizedName.toUpperCase()
+    
+    // Return original if no match found
+    return stateName
   }
 
   // Handle keyboard navigation

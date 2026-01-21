@@ -359,3 +359,10 @@ Notes:
 - [x] Optimize pricing preview section
 - [x] Improve bottom CTA section
 - [x] Test mobile-first above-the-fold
+
+
+## CRITICAL BUGS (2026-01-20)
+
+- [ ] Continue button disabled despite all fields filled on location page
+- [ ] Portuguese text appearing in autocomplete ("NOVA JERSEI" should be "NEW JERSEY")
+- [ ] Audit entire site for Portuguese text - MUST be 100% American English
