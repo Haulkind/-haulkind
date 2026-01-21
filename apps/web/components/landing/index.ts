@@ -1,0 +1,8 @@
+export { default as HeroSection } from './HeroSection'
+export { default as WhyDifferent } from './WhyDifferent'
+export { default as HowItWorks } from './HowItWorks'
+export { default as Guarantees } from './Guarantees'
+export { default as Testimonials } from './Testimonials'
+export { default as ServicesGrid } from './ServicesGrid'
+export { default as PriceCalculator } from './PriceCalculator'
+export { default as CTASection } from './CTASection'
