@@ -228,7 +228,7 @@ app.get("/geocode/autocomplete", async (req, res) => {
       return res.status(502).json({ error: "Geocoding service unavailable" });
     }
 
-    const data = await response.json();
+    const data = await response.json() as any[];
     console.log('[AUTOCOMPLETE] Found', data.length, 'results');
 
     res.json(data);
