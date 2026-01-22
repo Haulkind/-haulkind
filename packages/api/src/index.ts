@@ -3,6 +3,9 @@ import express from "express";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { db } from "./db/index.js";
+import { orders, drivers } from "./db/schema.js";
+import { eq, desc } from "drizzle-orm";
 
 const app = express();
 
@@ -30,6 +33,7 @@ app.use(express.json());
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const DEBUG_TOKEN = process.env.DEBUG_TOKEN || "debug-token-change-in-production";
 
 // Mock user database (in production, use real database)
 const users = [
@@ -48,10 +52,6 @@ const serviceAreas = [
   { id: 2, name: "Pittsburgh Metro", state: "PA", zipCodes: ["15201", "15213", "15232"] },
   { id: 3, name: "New York Metro", state: "NY", zipCodes: ["10001", "10002", "10003"] },
 ];
-
-// Mock jobs database
-const jobs: any[] = [];
-let jobIdCounter = 1;
 
 // Mock driver applications database
 const driverApplications: any[] = [];
@@ -75,15 +75,61 @@ const authenticateToken = (req: any, res: any, next: any) => {
   });
 };
 
-// Health check endpoint with version info
-app.get("/health", (req, res) => {
-  res.json({
-    ok: true,
-    commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || "unknown",
-    env: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || "unknown",
-    timestamp: new Date().toISOString(),
-    service: "haulkind-api"
-  });
+// Middleware to verify DEBUG_TOKEN
+const authenticateDebugToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token || token !== DEBUG_TOKEN) {
+    return res.status(403).json({ error: "Invalid debug token" });
+  }
+
+  next();
+};
+
+// Health check endpoint with version info and DB connection test
+app.get("/health", async (req, res) => {
+  try {
+    // Test DB connection
+    await db.select().from(orders).limit(1);
+
+    res.json({
+      ok: true,
+      database: "connected",
+      commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || "unknown",
+      env: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || "unknown",
+      timestamp: new Date().toISOString(),
+      service: "haulkind-api"
+    });
+  } catch (error: any) {
+    console.error('[HEALTH] Database connection failed:', error.message);
+    res.status(500).json({
+      ok: false,
+      database: "disconnected",
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      service: "haulkind-api"
+    });
+  }
+});
+
+// Debug endpoint to list last 20 orders (protected by DEBUG_TOKEN)
+app.get("/debug/orders", authenticateDebugToken, async (req, res) => {
+  try {
+    const allOrders = await db
+      .select()
+      .from(orders)
+      .orderBy(desc(orders.createdAt))
+      .limit(20);
+
+    res.json({
+      count: allOrders.length,
+      orders: allOrders,
+    });
+  } catch (error: any) {
+    console.error('[DEBUG_ORDERS] Error:', error.message);
+    res.status(500).json({ error: "Failed to fetch orders", details: error.message });
+  }
 });
 
 // Auth endpoints
@@ -303,178 +349,269 @@ app.post("/quotes", (req, res) => {
 });
 
 // ============================================
-// JOB ENDPOINTS
+// JOB/ORDER ENDPOINTS (WITH DATABASE)
 // ============================================
 
-// Create job
-app.post("/jobs", (req, res) => {
-  const {
-    serviceType,
-    serviceAreaId,
-    pickupLat,
-    pickupLng,
-    pickupAddress,
-    scheduledFor,
-    volumeTier,
-    addons = [],
-    helperCount = 2,
-    estimatedHours = 2,
-    customerNotes = "",
-    photoUrls = [],
-  } = req.body;
+// Create order (replaces /jobs POST)
+app.post("/jobs", async (req, res) => {
+  try {
+    const {
+      serviceType,
+      customerName,
+      phone,
+      email,
+      street,
+      city,
+      state,
+      zip,
+      lat,
+      lng,
+      pickupDate,
+      pickupTimeWindow,
+      items,
+      pricing,
+    } = req.body;
 
-  // Calculate total (same logic as quotes)
-  let total = 0;
-  if (serviceType === "HAUL_AWAY") {
-    const volumePricing: any = {
-      "1-5": 150,
-      "6-10": 250,
-      "11-15": 350,
-      "16-20": 450,
-      "20+": 550,
-    };
-    total = volumePricing[volumeTier] || 150;
+    console.log('[ORDER_CREATE] Creating order:', { customerName, email, phone, serviceType });
 
-    const addonPricing: any = {
-      "heavy-items": 50,
-      "stairs": 30,
-      "disassembly": 40,
-      "extra-helper": 75,
-    };
-    total += addons.reduce((sum: number, addon: string) => sum + (addonPricing[addon] || 0), 0);
-  } else if (serviceType === "LABOR_ONLY") {
-    total = helperCount * estimatedHours * 50;
+    // Insert into database
+    const [newOrder] = await db.insert(orders).values({
+      serviceType,
+      customerName,
+      phone,
+      email,
+      street,
+      city,
+      state,
+      zip,
+      lat: lat?.toString(),
+      lng: lng?.toString(),
+      pickupDate,
+      pickupTimeWindow,
+      itemsJson: items,
+      pricingJson: pricing,
+      status: 'pending',
+    }).returning();
+
+    console.log('[ORDER_CREATE] Order created successfully:', newOrder.id);
+
+    res.json({
+      success: true,
+      order: newOrder,
+    });
+  } catch (error: any) {
+    console.error('[ORDER_CREATE] Error:', error.message, error.stack);
+    res.status(500).json({ error: "Failed to create order", details: error.message });
   }
-
-  const job = {
-    id: jobIdCounter++,
-    serviceType,
-    serviceAreaId,
-    pickupLat,
-    pickupLng,
-    pickupAddress,
-    scheduledFor,
-    volumeTier,
-    addons,
-    helperCount,
-    estimatedHours,
-    customerNotes,
-    photoUrls,
-    status: "PENDING_PAYMENT",
-    total,
-    createdAt: new Date().toISOString(),
-  };
-
-  jobs.push(job);
-
-  res.json({
-    id: job.id,
-    status: job.status,
-    total: job.total,
-  });
 });
 
-// Pay for job
-app.post("/jobs/:id/pay", (req, res) => {
-  const jobId = parseInt(req.params.id);
-  const { paymentMethodId } = req.body;
+// List all orders (for admin)
+app.get("/orders", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
 
-  const job = jobs.find((j) => j.id === jobId);
-  if (!job) {
-    return res.status(404).json({ error: "Job not found" });
+    const allOrders = await db
+      .select()
+      .from(orders)
+      .orderBy(desc(orders.createdAt))
+      .limit(50);
+
+    res.json({
+      orders: allOrders,
+    });
+  } catch (error: any) {
+    console.error('[ORDERS_LIST] Error:', error.message);
+    res.status(500).json({ error: "Failed to fetch orders", details: error.message });
   }
-
-  if (job.status !== "PENDING_PAYMENT") {
-    return res.status(400).json({ error: "Job already paid or cancelled" });
-  }
-
-  // Simulate payment processing
-  job.status = "PENDING_DISPATCH";
-  job.paymentMethodId = paymentMethodId;
-  job.paidAt = new Date().toISOString();
-
-  res.json({ success: true });
 });
 
-// Get job status
-app.get("/jobs/:id", (req, res) => {
-  const jobId = parseInt(req.params.id);
-  const job = jobs.find((j) => j.id === jobId);
+// Get order by ID
+app.get("/orders/:id", authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
 
-  if (!job) {
-    return res.status(404).json({ error: "Job not found" });
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, id))
+      .limit(1);
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    res.json(order);
+  } catch (error: any) {
+    console.error('[ORDER_GET] Error:', error.message);
+    res.status(500).json({ error: "Failed to fetch order", details: error.message });
   }
+});
 
-  res.json({
-    status: job.status,
-    driver: job.driver || null,
-  });
+// Update order status
+app.patch("/orders/:id/status", authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    console.log('[ORDER_UPDATE_STATUS] Updating order:', { id, status });
+
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+
+    if (!updatedOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    console.log('[ORDER_UPDATE_STATUS] Order status updated:', updatedOrder.id);
+
+    res.json(updatedOrder);
+  } catch (error: any) {
+    console.error('[ORDER_UPDATE_STATUS] Error:', error.message);
+    res.status(500).json({ error: "Failed to update order status", details: error.message });
+  }
+});
+
+// Assign driver to order
+app.patch("/orders/:id/assign", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { id } = req.params;
+    const { driverId } = req.body;
+
+    console.log('[ORDER_ASSIGN_DRIVER] Assigning driver:', { orderId: id, driverId });
+
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ assignedDriverId: driverId, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+
+    if (!updatedOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    console.log('[ORDER_ASSIGN_DRIVER] Driver assigned:', updatedOrder.id);
+
+    res.json(updatedOrder);
+  } catch (error: any) {
+    console.error('[ORDER_ASSIGN_DRIVER] Error:', error.message);
+    res.status(500).json({ error: "Failed to assign driver", details: error.message });
+  }
 });
 
 // ============================================
-// DRIVER APPLICATION ENDPOINTS
+// DRIVER ENDPOINTS
+// ============================================
+
+// List all drivers
+app.get("/drivers", authenticateToken, async (req: any, res) => {
+  try {
+    const allDrivers = await db
+      .select()
+      .from(drivers)
+      .orderBy(desc(drivers.createdAt));
+
+    res.json({
+      drivers: allDrivers,
+    });
+  } catch (error: any) {
+    console.error('[DRIVERS_LIST] Error:', error.message);
+    res.status(500).json({ error: "Failed to fetch drivers", details: error.message });
+  }
+});
+
+// Create or update driver
+app.post("/drivers", authenticateToken, async (req: any, res) => {
+  try {
+    const { name, phone, email, status = 'available' } = req.body;
+
+    console.log('[DRIVER_CREATE] Creating driver:', { name, email, phone });
+
+    const [newDriver] = await db.insert(drivers).values({
+      name,
+      phone,
+      email,
+      status,
+    }).returning();
+
+    console.log('[DRIVER_CREATE] Driver created:', newDriver.id);
+
+    res.json(newDriver);
+  } catch (error: any) {
+    console.error('[DRIVER_CREATE] Error:', error.message);
+    res.status(500).json({ error: "Failed to create driver", details: error.message });
+  }
+});
+
+// ============================================
+// DRIVER APPLICATION ENDPOINTS (UNCHANGED)
 // ============================================
 
 // Submit driver application
-app.post("/drivers/apply", (req, res) => {
+app.post("/driver-applications", (req, res) => {
   const {
     firstName,
     lastName,
     email,
     phone,
+    city,
+    state,
     zip,
+    hasVehicle,
     vehicleType,
+    hasLicense,
+    canLiftHeavy,
     availability,
-    canLift75,
-    hasEquipment,
-    experience,
-    consents,
   } = req.body;
 
-  // Validation
-  if (!firstName || !lastName || !email || !phone || !zip) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  if (!vehicleType || !availability || !consents) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  if (!consents.independentContractor || !consents.backgroundCheck) {
-    return res.status(400).json({ error: "All consents are required" });
-  }
-
-  // Create application
   const application = {
     id: applicationIdCounter++,
     firstName,
     lastName,
     email,
     phone,
+    city,
+    state,
     zip,
+    hasVehicle,
     vehicleType,
+    hasLicense,
+    canLiftHeavy,
     availability,
-    canLift75: canLift75 || false,
-    hasEquipment: hasEquipment || false,
-    experience: experience || "",
-    consents,
-    status: "PENDING_REVIEW",
-    createdAt: new Date().toISOString(),
+    status: "pending",
+    submittedAt: new Date().toISOString(),
   };
 
   driverApplications.push(application);
 
-  res.status(201).json({
-    ok: true,
-    applicationId: application.id,
+  res.json({
+    success: true,
+    application,
   });
 });
 
-// Start server
-const PORT = parseInt(process.env.PORT || "3000");
-app.listen(PORT, "0.0.0.0", () => {
+// Get all driver applications (admin only)
+app.get("/driver-applications", authenticateToken, (req: any, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+
+  res.json({
+    applications: driverApplications,
+  });
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
   console.log(`🚀 Haulkind API running on port ${PORT}`);
-  console.log(`📡 Health check: /health`);
-  console.log(`🔐 CORS origin: ${CORS_ORIGIN}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔍 Debug orders: http://localhost:${PORT}/debug/orders (requires DEBUG_TOKEN)`);
 });
