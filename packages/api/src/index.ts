@@ -203,7 +203,6 @@ app.get("/admin/ping", authenticateToken, (req: any, res) => {
 app.get("/service-areas/lookup", (req, res) => {
   try {
     const { lat, lng } = req.query;
-    console.log('[SERVICE_AREA_LOOKUP] Request:', { lat, lng, origin: req.headers.origin });
 
     if (!lat || !lng) {
       console.error('[SERVICE_AREA_LOOKUP] Missing parameters');
@@ -219,14 +218,12 @@ app.get("/service-areas/lookup", (req, res) => {
       return res.status(400).json({ error: "Invalid coordinates" });
     }
 
-    console.log('[SERVICE_AREA_LOOKUP] Parsed coordinates:', { latitude, longitude });
 
     // Expanded coverage: Philadelphia metro area and surrounding counties
     // Covers Philadelphia, Montgomery, Delaware, Chester, Bucks counties
     // Latitude: 39.7 to 40.3 (approx 40 miles north-south)
     // Longitude: -75.6 to -74.9 (approx 40 miles east-west)
     if (latitude >= 39.7 && latitude <= 40.3 && longitude >= -75.6 && longitude <= -74.9) {
-      console.log('[SERVICE_AREA_LOOKUP] Covered: Philadelphia Metro (expanded)');
       return res.json({
         covered: true,
         serviceArea: serviceAreas[0], // Philadelphia Metro
@@ -234,7 +231,6 @@ app.get("/service-areas/lookup", (req, res) => {
     }
 
     // Outside service area
-    console.log('[SERVICE_AREA_LOOKUP] Not covered:', { latitude, longitude });
     res.json({
       covered: false,
       serviceArea: null,
@@ -249,7 +245,6 @@ app.get("/service-areas/lookup", (req, res) => {
 app.get("/geocode/autocomplete", async (req, res) => {
   try {
     const { q } = req.query;
-    console.log('[AUTOCOMPLETE] Request:', { q, origin: req.headers.origin });
 
     if (!q || typeof q !== 'string' || q.length < 3) {
       return res.status(400).json({ error: "Query must be at least 3 characters" });
@@ -275,7 +270,6 @@ app.get("/geocode/autocomplete", async (req, res) => {
     }
 
     const data = await response.json() as any[];
-    console.log('[AUTOCOMPLETE] Found', data.length, 'results');
 
     res.json(data);
   } catch (error: any) {
@@ -372,7 +366,6 @@ app.post("/jobs", async (req, res) => {
       pricing,
     } = req.body;
 
-    console.log('[ORDER_CREATE] Creating order:', { customerName, email, phone, serviceType });
 
     // Insert into database
     const [newOrder] = await db.insert(orders).values({
@@ -393,7 +386,6 @@ app.post("/jobs", async (req, res) => {
       status: 'pending',
     }).returning();
 
-    console.log('[ORDER_CREATE] Order created successfully:', newOrder.id);
 
     res.json({
       success: true,
@@ -455,7 +447,6 @@ app.patch("/orders/:id/status", authenticateToken, async (req: any, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    console.log('[ORDER_UPDATE_STATUS] Updating order:', { id, status });
 
     const [updatedOrder] = await db
       .update(orders)
@@ -467,7 +458,6 @@ app.patch("/orders/:id/status", authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    console.log('[ORDER_UPDATE_STATUS] Order status updated:', updatedOrder.id);
 
     res.json(updatedOrder);
   } catch (error: any) {
@@ -486,7 +476,6 @@ app.patch("/orders/:id/assign", authenticateToken, async (req: any, res) => {
     const { id } = req.params;
     const { driverId } = req.body;
 
-    console.log('[ORDER_ASSIGN_DRIVER] Assigning driver:', { orderId: id, driverId });
 
     const [updatedOrder] = await db
       .update(orders)
@@ -498,7 +487,6 @@ app.patch("/orders/:id/assign", authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    console.log('[ORDER_ASSIGN_DRIVER] Driver assigned:', updatedOrder.id);
 
     res.json(updatedOrder);
   } catch (error: any) {
@@ -533,7 +521,6 @@ app.post("/drivers", authenticateToken, async (req: any, res) => {
   try {
     const { name, phone, email, status = 'available' } = req.body;
 
-    console.log('[DRIVER_CREATE] Creating driver:', { name, email, phone });
 
     const [newDriver] = await db.insert(drivers).values({
       name,
@@ -542,7 +529,6 @@ app.post("/drivers", authenticateToken, async (req: any, res) => {
       status,
     }).returning();
 
-    console.log('[DRIVER_CREATE] Driver created:', newDriver.id);
 
     res.json(newDriver);
   } catch (error: any) {
@@ -611,7 +597,4 @@ app.get("/driver-applications", authenticateToken, (req: any, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 Haulkind API running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔍 Debug orders: http://localhost:${PORT}/debug/orders (requires DEBUG_TOKEN)`);
 });
