@@ -46,6 +46,11 @@
           "photosPermission": "Allow Haulkind to access your photos to upload job images."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "14738afe-ef3e-4d4c-a4a1-c2d5e7f8b9c0"
+      }
+    }
   }
 }
