@@ -1,67 +1,59 @@
-name: Android Release APK (Customer)
+name: Android Release APK (Customer) - Fixed
 
 on:
   workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/customer
+  jobs:
+    build:
+        runs-on: ubuntu-latest
+            defaults:
+                  run:
+                          working-directory: apps/customer
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: release/mobile-wrapper
+                              steps:
+                                    - name: Checkout
+                                            uses: actions/checkout@v4
+                                                    with:
+                                                              ref: release/mobile-wrapper
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Install dependencies (repo root)
-        run: |
-          cd ../..
-          npm ci || npm install
-
-      - name: Install dependencies (apps/customer)
-        run: npm install
-
-      - name: Expo prebuild (android)
-        run: npx expo prebuild --platform android --no-install --clean
-
-      - name: Force Kotlin 1.9.25 init script
-        run: |
-          cat > /tmp/force-kotlin.gradle <<'EOF'
-          allprojects {
-            configurations.all {
-              resolutionStrategy.eachDependency { details ->
-                if (details.requested.group == "org.jetbrains.kotlin" &&
-                    details.requested.name.startsWith("kotlin")) {
-                  details.useVersion("1.9.25")
-                }
-              }
-            }
-          }
-          EOF
-
-      - name: Build Release APK
-        working-directory: apps/customer/android
-        run: |
-          ./gradlew --stop || true
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace -I /tmp/force-kotlin.gradle
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: apps/customer/android/app/build/outputs/apk/release/app-release.apk
+                                                                    - name: Setup Node
+                                                                            uses: actions/setup-node@v4
+                                                                                    with:
+                                                                                              node-version: 20
+                                                                                                        cache: npm
+                                                                                                        
+                                                                                                              - name: Setup Java 17
+                                                                                                                      uses: actions/setup-java@v4
+                                                                                                                              with:
+                                                                                                                                        distribution: temurin
+                                                                                                                                                  java-version: "17"ig.xml << 'EOF'
+                                                                                                                                                            <?xml version="1.0" encoding="utf-8"?>
+                                                                                                                                                                      <network-security-config>
+                                                                                                                                                                                    <base-config cleartextTrafficPermitted="true">
+                                                                                                                                                                                                      <trust-anchors>
+                                                                                                                                                                                                                            <certificates src="system" />
+                                                                                                                                                                                                                                              </trust-anchors>
+                                                                                                                                                                                                                                                            </base-config>
+                                                                                                                                                                                                                                                                      </netwo
+                                                                                                                                                  
+                                                                                                                                                        - name: Install dependencies (repo root)
+                                                                                                                                                                run: |
+                                                                                                                                                                          cd ../..
+                                                                                                                                                                                    npm ci || npm install
+                                                                                                                                                                                    
+                                                                                                                                                                                          - name: Install dependencies (apps/customer)
+                                                                                                                                                                                                  run: npm install
+                                                                                                                                                                                                  
+                                                                                                                                                                                                        - name: Apply crash fixes
+                                                                                                                                                                                                                run: |
+                                                                                                                                                                                                                          echo "=== Aplicando correcoes para prevenir crash ==="
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                              cat > lib/ErrorBoundary.tsx << 'ERROREOF'
+                                                                                                                                                                                                                                                        import React, { Component, ReactNode } from 'react'
+                                                                                                                                                                                                                                                                  import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+                                                                                                                                                                                                                                                                            interface Props { children: ReactNode }
+                                                                                                                                                                                                                                                                                      interface State { hasError: boolean; error: Error | null }
+                                                                                                                                                                                                                                                                                                export class ErrorBoundary extends Component<Props, State> {
+                                                                                                                                                                                                                                                                                                            constructor(props: Props) { super(props); this.state = { hasError: false, error: null } }
+                                                                                                                                                                                                                                                                                                                        static getDerivedStateFromError(error: Error): State { return { hasError: true, error } }
+                                                                                                                                                                                                                                                                                                                                    componentDidCatch(error: E
