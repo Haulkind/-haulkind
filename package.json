@@ -121,5 +121,10 @@
     "overrides": {
       "tailwindcss>nanoid": "3.3.7"
     }
+  },
+  "overrides": {
+    "metro": "0.81.0",
+    "metro-config": "0.81.0",
+    "metro-resolver": "0.81.0"
   }
 }
