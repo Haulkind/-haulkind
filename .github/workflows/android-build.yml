@@ -1,4 +1,4 @@
-name: Android Debug APK (Customer)
+name: Android Release APK (Customer)
 
 on:
   workflow_dispatch:
@@ -54,14 +54,14 @@ jobs:
           }
           EOF
 
-      - name: Build Debug APK
+      - name: Build Release APK
         working-directory: apps/customer/android
         run: |
           ./gradlew --stop || true
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace -I /tmp/force-kotlin.gradle
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace -I /tmp/force-kotlin.gradle
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: apps/customer/android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-release-apk
+          path: apps/customer/android/app/build/outputs/apk/release/app-release.apk
