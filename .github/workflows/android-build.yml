@@ -1,4 +1,4 @@
-name: Android Release APK (Customer) - Fixed
+name: Android Release APK - Complete
 on:
   workflow_dispatch:
 jobs:
@@ -8,95 +8,559 @@ jobs:
       run:
         working-directory: apps/customer
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: release/mobile-wrapper
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-      - name: Install dependencies (repo root)
+      - run: cd ../.. && npm ci || npm install
+        name: Install root deps
+      - run: npm install
+        name: Install customer deps
+      - name: Create all missing screens
         run: |
-          cd ../..
-          npm ci || npm install
-      - name: Install dependencies (apps/customer)
-        run: npm install
-      - name: Apply crash fixes
-        run: |
-          echo "=== Aplicando correcoes para prevenir crash ==="
-          cat > lib/ErrorBoundary.tsx << 'ERROREOF'
-          import React, { Component, ReactNode } from 'react'
-          import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
-          interface Props { children: ReactNode }
-          interface State { hasError: boolean; error: Error | null }
-          export class ErrorBoundary extends Component<Props, State> {
-            constructor(props: Props) { super(props); this.state = { hasError: false, error: null } }
-            static getDerivedStateFromError(error: Error): State { return { hasError: true, error } }
-            componentDidCatch(error: Error, errorInfo: any) { console.error('ErrorBoundary caught:', error, errorInfo) }
-            handleReset = () => { this.setState({ hasError: false, error: null }) }
-            render() {
-              if (this.state.hasError) {
-                return (<View style={styles.container}><Text style={styles.title}>Oops!</Text><Text style={styles.message}>Erro no app</Text><TouchableOpacity style={styles.button} onPress={this.handleReset}><Text style={styles.buttonText}>Tentar</Text></TouchableOpacity></View>)
-              }
-              return this.props.children
-            }
+          mkdir -p app/auth app/new-job/haul-away app/new-job/labor-only app/job app/receipt
+          
+          cat > app/index.tsx << 'INDEXEOF'
+          import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useAuth } from '../lib/AuthContext'
+          import { useEffect } from 'react'
+          export default function Index() {
+            const router = useRouter()
+            const { token, isLoading } = useAuth()
+            useEffect(() => { if (!isLoading && token) { router.replace('/home') } }, [isLoading, token])
+            if (isLoading) { return <SafeAreaView style={s.c}><View style={s.l}><Text style={s.lt}>Loading...</Text></View></SafeAreaView> }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <View style={s.logo}><Text style={s.h}>H</Text></View>
+                  <Text style={s.title}>Haulkind</Text>
+                  <Text style={s.sub}>Junk removal made easy</Text>
+                  <View style={s.btns}>
+                    <TouchableOpacity style={s.pb} onPress={() => router.push('/auth/login')}><Text style={s.pt}>Sign In</Text></TouchableOpacity>
+                    <TouchableOpacity style={s.sb} onPress={() => router.push('/auth/signup')}><Text style={s.st}>Create Account</Text></TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+            )
           }
-          const styles = StyleSheet.create({ container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' }, title: { fontSize: 24, fontWeight: 'bold', marginBottom: 12, color: '#1f2937' }, message: { fontSize: 16, textAlign: 'center', marginBottom: 20, color: '#6b7280' }, button: { backgroundColor: '#2563eb', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }, buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' } })
-          ERROREOF
-          sed -i "s/from '..\/lib\/JobContext'/from '..\/lib\/JobContext'\nimport { ErrorBoundary } from '..\/lib\/ErrorBoundary'/g" app/_layout.tsx || true
-          sed -i 's/return (/return (\n    <ErrorBoundary>/g' app/_layout.tsx || true
-          sed -i 's/<\/AuthProvider>/<\/AuthProvider>\n    <\/ErrorBoundary>/g' app/_layout.tsx || true
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#2563eb' },
+            l: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+            lt: { color: '#fff', fontSize: 18 },
+            m: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+            logo: { width: 100, height: 100, borderRadius: 25, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+            h: { fontSize: 48, fontWeight: 'bold', color: '#2563eb' },
+            title: { fontSize: 36, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
+            sub: { fontSize: 18, color: '#bfdbfe', marginBottom: 60 },
+            btns: { width: '100%', gap: 16 },
+            pb: { backgroundColor: '#fff', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+            pt: { color: '#2563eb', fontSize: 18, fontWeight: '600' },
+            sb: { backgroundColor: 'transparent', paddingVertical: 16, borderRadius: 12, alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+            st: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          INDEXEOF
+
+          cat > app/auth/login.tsx << 'LOGINEOF'
+          import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useState } from 'react'
+          import { useAuth } from '../../lib/AuthContext'
+          import { login } from '../../lib/api'
+          export default function Login() {
+            const router = useRouter()
+            const { login: authLogin } = useAuth()
+            const [email, setEmail] = useState('')
+            const [password, setPassword] = useState('')
+            const [loading, setLoading] = useState(false)
+            const handleLogin = async () => {
+              if (!email || !password) { Alert.alert('Error', 'Please fill in all fields'); return }
+              setLoading(true)
+              try {
+                const response = await login({ email, password })
+                await authLogin(response.token, response.customer)
+                router.replace('/home')
+              } catch (error) { Alert.alert('Error', 'Invalid email or password') }
+              finally { setLoading(false) }
+            }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Welcome Back</Text>
+                  <View style={s.f}>
+                    <TextInput style={s.i} placeholder="Email" placeholderTextColor="#94a3b8" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                    <TextInput style={s.i} placeholder="Password" placeholderTextColor="#94a3b8" value={password} onChangeText={setPassword} secureTextEntry />
+                    <TouchableOpacity style={[s.btn, loading && s.dis]} onPress={handleLogin} disabled={loading}><Text style={s.btt}>{loading ? 'Signing in...' : 'Sign In'}</Text></TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 32, fontWeight: 'bold', color: '#1e293b', marginBottom: 40 },
+            f: { gap: 16 },
+            i: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 16, fontSize: 16 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+            dis: { opacity: 0.7 },
+            btt: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          LOGINEOF
+
+          cat > app/auth/signup.tsx << 'SIGNUPEOF'
+          import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert, ScrollView } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useState } from 'react'
+          import { useAuth } from '../../lib/AuthContext'
+          import { signup } from '../../lib/api'
+          export default function Signup() {
+            const router = useRouter()
+            const { login: authLogin } = useAuth()
+            const [name, setName] = useState('')
+            const [email, setEmail] = useState('')
+            const [phone, setPhone] = useState('')
+            const [password, setPassword] = useState('')
+            const [loading, setLoading] = useState(false)
+            const handleSignup = async () => {
+              if (!name || !email || !phone || !password) { Alert.alert('Error', 'Please fill in all fields'); return }
+              setLoading(true)
+              try {
+                const response = await signup({ name, email, phone, password })
+                await authLogin(response.token, response.customer)
+                router.replace('/home')
+              } catch (error) { Alert.alert('Error', 'Failed to create account') }
+              finally { setLoading(false) }
+            }
+            return (
+              <SafeAreaView style={s.c}>
+                <ScrollView style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Create Account</Text>
+                  <View style={s.f}>
+                    <TextInput style={s.i} placeholder="Full Name" placeholderTextColor="#94a3b8" value={name} onChangeText={setName} />
+                    <TextInput style={s.i} placeholder="Email" placeholderTextColor="#94a3b8" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                    <TextInput style={s.i} placeholder="Phone" placeholderTextColor="#94a3b8" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+                    <TextInput style={s.i} placeholder="Password" placeholderTextColor="#94a3b8" value={password} onChangeText={setPassword} secureTextEntry />
+                    <TouchableOpacity style={[s.btn, loading && s.dis]} onPress={handleSignup} disabled={loading}><Text style={s.btt}>{loading ? 'Creating...' : 'Create Account'}</Text></TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 32, fontWeight: 'bold', color: '#1e293b', marginBottom: 40 },
+            f: { gap: 16, marginBottom: 40 },
+            i: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 16, fontSize: 16 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+            dis: { opacity: 0.7 },
+            btt: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          SIGNUPEOF
+
+          cat > app/home.tsx << 'HOMEEOF'
+          import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useAuth } from '../lib/AuthContext'
+          export default function Home() {
+            const router = useRouter()
+            const { customer, logout } = useAuth()
+            const handleLogout = async () => { await logout(); router.replace('/') }
+            return (
+              <SafeAreaView style={s.c}>
+                <ScrollView style={s.m}>
+                  <View style={s.hd}>
+                    <View>
+                      <Text style={s.g}>Hello,</Text>
+                      <Text style={s.n}>{customer?.name || 'Guest'}</Text>
+                    </View>
+                    <TouchableOpacity onPress={handleLogout}><Text style={s.lo}>Logout</Text></TouchableOpacity>
+                  </View>
+                  <Text style={s.sec}>What do you need?</Text>
+                  <View style={s.cards}>
+                    <TouchableOpacity style={s.card} onPress={() => router.push('/new-job/service')}>
+                      <View style={s.icon}><Text style={s.it}>🚛</Text></View>
+                      <Text style={s.ct}>Haul Away</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.card} onPress={() => router.push('/new-job/service')}>
+                      <View style={s.icon}><Text style={s.it}>💪</Text></View>
+                      <Text style={s.ct}>Labor Only</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            hd: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
+            g: { fontSize: 16, color: '#64748b' },
+            n: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
+            lo: { color: '#ef4444', fontSize: 16 },
+            sec: { fontSize: 20, fontWeight: '600', color: '#1e293b', marginBottom: 16 },
+            cards: { flexDirection: 'row', gap: 16 },
+            card: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
+            icon: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+            it: { fontSize: 24 },
+            ct: { fontSize: 16, fontWeight: '600', color: '#1e293b' }
+          })
+          HOMEEOF
+
+          cat > app/new-job/service.tsx << 'SERVICEEOF'
+          import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useJob } from '../../lib/JobContext'
+          export default function Service() {
+            const router = useRouter()
+            const { updateJobData } = useJob()
+            const selectService = (type) => {
+              updateJobData({ serviceType: type })
+              if (type === 'HAUL_AWAY') { router.push('/new-job/haul-away/location') }
+              else { router.push('/new-job/labor-only/location') }
+            }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Choose Service</Text>
+                  <View style={s.opts}>
+                    <TouchableOpacity style={s.opt} onPress={() => selectService('HAUL_AWAY')}>
+                      <Text style={s.ot}>Haul Away</Text>
+                      <Text style={s.op}>Starting at $99</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.opt} onPress={() => selectService('LABOR_ONLY')}>
+                      <Text style={s.ot}>Labor Only</Text>
+                      <Text style={s.op}>Starting at $60/hr</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 30 },
+            opts: { gap: 16 },
+            opt: { backgroundColor: '#fff', borderRadius: 16, padding: 24 },
+            ot: { fontSize: 20, fontWeight: '600', color: '#1e293b', marginBottom: 8 },
+            op: { fontSize: 16, fontWeight: '600', color: '#2563eb' }
+          })
+          SERVICEEOF
+
+          cat > app/new-job/haul-away/location.tsx << 'HALEOF'
+          import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useState } from 'react'
+          import { useJob } from '../../../lib/JobContext'
+          export default function Location() {
+            const router = useRouter()
+            const { updateJobData } = useJob()
+            const [address, setAddress] = useState('')
+            const handleNext = () => {
+              if (!address.trim()) { Alert.alert('Error', 'Please enter address'); return }
+              updateJobData({ pickupAddress: address })
+              router.push('/new-job/haul-away/volume')
+            }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Pickup Location</Text>
+                  <TextInput style={s.i} placeholder="Enter address" placeholderTextColor="#94a3b8" value={address} onChangeText={setAddress} multiline />
+                  <TouchableOpacity style={s.btn} onPress={handleNext}><Text style={s.btt}>Next</Text></TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 30 },
+            i: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 16, fontSize: 16, minHeight: 100, marginBottom: 20 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+            btt: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          HALEOF
+
+          cat > app/new-job/haul-away/volume.tsx << 'VOLEOF'
+          import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useJob } from '../../../lib/JobContext'
+          export default function Volume() {
+            const router = useRouter()
+            const { updateJobData } = useJob()
+            const selectVolume = (id) => { updateJobData({ volumeTier: id }); router.push('/new-job/haul-away/summary') }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Load Size</Text>
+                  <View style={s.opts}>
+                    <TouchableOpacity style={s.opt} onPress={() => selectVolume('SMALL')}><Text style={s.ot}>Small - $99</Text></TouchableOpacity>
+                    <TouchableOpacity style={s.opt} onPress={() => selectVolume('MEDIUM')}><Text style={s.ot}>Medium - $149</Text></TouchableOpacity>
+                    <TouchableOpacity style={s.opt} onPress={() => selectVolume('LARGE')}><Text style={s.ot}>Large - $249</Text></TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 30 },
+            opts: { gap: 12 },
+            opt: { backgroundColor: '#fff', borderRadius: 12, padding: 20 },
+            ot: { fontSize: 18, fontWeight: '600', color: '#1e293b' }
+          })
+          VOLEOF
+
+          cat > app/new-job/haul-away/summary.tsx << 'HSUMEOF'
+          import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useJob } from '../../../lib/JobContext'
+          export default function Summary() {
+            const router = useRouter()
+            const { jobData, resetJobData } = useJob()
+            const handleBook = () => { Alert.alert('Success', 'Job booked!', [{ text: 'OK', onPress: () => { resetJobData(); router.replace('/home') } }]) }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Summary</Text>
+                  <View style={s.card}>
+                    <Text style={s.l}>Service: Haul Away</Text>
+                    <Text style={s.l}>Location: {jobData.pickupAddress || 'Not set'}</Text>
+                    <Text style={s.total}>Total: $149</Text>
+                  </View>
+                  <TouchableOpacity style={s.btn} onPress={handleBook}><Text style={s.btt}>Book Now</Text></TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 30 },
+            card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 30 },
+            l: { fontSize: 16, color: '#64748b', marginBottom: 8 },
+            total: { fontSize: 24, fontWeight: 'bold', color: '#2563eb', marginTop: 16 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+            btt: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          HSUMEOF
+
+          cat > app/new-job/labor-only/location.tsx << 'LLEOF'
+          import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useState } from 'react'
+          import { useJob } from '../../../lib/JobContext'
+          export default function Location() {
+            const router = useRouter()
+            const { updateJobData } = useJob()
+            const [address, setAddress] = useState('')
+            const handleNext = () => {
+              if (!address.trim()) { Alert.alert('Error', 'Please enter address'); return }
+              updateJobData({ pickupAddress: address })
+              router.push('/new-job/labor-only/summary')
+            }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Location</Text>
+                  <TextInput style={s.i} placeholder="Enter address" placeholderTextColor="#94a3b8" value={address} onChangeText={setAddress} multiline />
+                  <TouchableOpacity style={s.btn} onPress={handleNext}><Text style={s.btt}>Next</Text></TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 30 },
+            i: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 16, fontSize: 16, minHeight: 100, marginBottom: 20 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+            btt: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          LLEOF
+
+          cat > app/new-job/labor-only/summary.tsx << 'LSUMEOF'
+          import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native'
+          import { useRouter } from 'expo-router'
+          import { useJob } from '../../../lib/JobContext'
+          export default function Summary() {
+            const router = useRouter()
+            const { jobData, resetJobData } = useJob()
+            const handleBook = () => { Alert.alert('Success', 'Job booked!', [{ text: 'OK', onPress: () => { resetJobData(); router.replace('/home') } }]) }
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Summary</Text>
+                  <View style={s.card}>
+                    <Text style={s.l}>Service: Labor Only</Text>
+                    <Text style={s.l}>Location: {jobData.pickupAddress || 'Not set'}</Text>
+                    <Text style={s.total}>Total: $60/hr</Text>
+                  </View>
+                  <TouchableOpacity style={s.btn} onPress={handleBook}><Text style={s.btt}>Book Now</Text></TouchableOpacity>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 30 },
+            card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 30 },
+            l: { fontSize: 16, color: '#64748b', marginBottom: 8 },
+            total: { fontSize: 24, fontWeight: 'bold', color: '#2563eb', marginTop: 16 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+            btt: { color: '#fff', fontSize: 18, fontWeight: '600' }
+          })
+          LSUMEOF
+
+          cat > 'app/job/[id].tsx' << 'JIDEOF'
+          import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native'
+          import { useRouter, useLocalSearchParams } from 'expo-router'
+          export default function JobDetail() {
+            const router = useRouter()
+            const { id } = useLocalSearchParams()
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Job {id}</Text>
+                  <View style={s.card}><Text style={s.ct}>Job details</Text></View>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 20 },
+            card: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
+            ct: { fontSize: 16, color: '#64748b', textAlign: 'center' }
+          })
+          JIDEOF
+
+          cat > 'app/receipt/[id].tsx' << 'RIDEOF'
+          import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native'
+          import { useRouter, useLocalSearchParams } from 'expo-router'
+          export default function Receipt() {
+            const router = useRouter()
+            const { id } = useLocalSearchParams()
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Receipt {id}</Text>
+                  <View style={s.card}><Text style={s.ct}>Receipt details</Text></View>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 20 },
+            card: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
+            ct: { fontSize: 16, color: '#64748b', textAlign: 'center' }
+          })
+          RIDEOF
+
+          cat > app/support.tsx << 'SUPEOF'
+          import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Linking } from 'react-native'
+          import { useRouter } from 'expo-router'
+          export default function Support() {
+            const router = useRouter()
+            return (
+              <SafeAreaView style={s.c}>
+                <View style={s.m}>
+                  <TouchableOpacity style={s.b} onPress={() => router.back()}><Text style={s.bt}>Back</Text></TouchableOpacity>
+                  <Text style={s.t}>Support</Text>
+                  <View style={s.card}>
+                    <Text style={s.ct}>Need Help?</Text>
+                    <TouchableOpacity style={s.btn} onPress={() => Linking.openURL('mailto:support@haulkind.com')}><Text style={s.btt}>Email Support</Text></TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+            )
+          }
+          const s = StyleSheet.create({
+            c: { flex: 1, backgroundColor: '#f8fafc' },
+            m: { flex: 1, padding: 20 },
+            b: { marginBottom: 20 },
+            bt: { color: '#2563eb', fontSize: 16 },
+            t: { fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 20 },
+            card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
+            ct: { fontSize: 20, fontWeight: '600', color: '#1e293b', marginBottom: 20 },
+            btn: { backgroundColor: '#2563eb', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
+            btt: { color: '#fff', fontSize: 16, fontWeight: '600' }
+          })
+          SUPEOF
+
           sed -i "s|'http://localhost:3000'|'https://api.haulkind.com'|g" lib/api.ts || true
-          sed -i "s|'http://localhost:3000'|'https://api.haulkind.com'|g" lib/socket.ts || true
-          echo "Correcoes aplicadas!"
-      - name: Expo prebuild (android)
-        run: npx expo prebuild --platform android --no-install --clean
-      - name: Add network security config
+          echo "=== All screens created ==="
+      - run: npx expo prebuild --platform android --no-install --clean
+        name: Expo prebuild
+      - name: Network security
         run: |
           mkdir -p android/app/src/main/res/xml
-          cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <network-security-config>
-            <base-config cleartextTrafficPermitted="true">
-              <trust-anchors>
-                <certificates src="system" />
-              </trust-anchors>
-            </base-config>
-          </network-security-config>
-          EOF
-          sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config"/g' android/app/src/main/AndroidManifest.xml || true
-      - name: Force Kotlin 1.9.25 init script
-        run: |
-          cat > /tmp/force-kotlin.gradle <<'EOF'
-          allprojects {
-            configurations.all {
-              resolutionStrategy.eachDependency { details ->
-                if (details.requested.group == "org.jetbrains.kotlin" &&
-                    details.requested.name.startsWith("kotlin")) {
-                  details.useVersion("1.9.25")
-                }
-              }
-            }
-          }
-          EOF
+          echo '<?xml version="1.0" encoding="utf-8"?><network-security-config><base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system"/></trust-anchors></base-config></network-security-config>' > android/app/src/main/res/xml/network_security_config.xml
+          sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config"/' android/app/src/main/AndroidManifest.xml || true
       - name: Disable minify
         run: |
           sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle || true
           sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle || true
-      - name: Build Release APK
-        working-directory: apps/customer/android
+      - name: Kotlin script
         run: |
-          ./gradlew --stop || true
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace -I /tmp/force-kotlin.gradle
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+          cat > /tmp/force-kotlin.gradle << 'KOTLINEOF'
+          allprojects {
+            configurations.all {
+              resolutionStrategy {
+                force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.25'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.25'
+              }
+            }
+          }
+          KOTLINEOF
+      - name: Build Release
+        run: cd android && ./gradlew :app:assembleRelease --no-daemon --stacktrace -I /tmp/force-kotlin.gradle
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk-fixed
+          name: app-release-apk-complete
           path: apps/customer/android/app/build/outputs/apk/release/app-release.apk
