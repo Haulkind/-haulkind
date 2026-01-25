@@ -1,6 +1,7 @@
 {
   "cli": {
-    "appVersionSource": "remote"
+    "appVersionSource": "remote",
+    "appRoot": "apps/customer"
   },
   "build": {
     "preview": {
