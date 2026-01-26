@@ -11,6 +11,19 @@ jobs:
         working-directory: apps/customer
 
     steps:
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer
+
+    steps:
+      
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -44,28 +57,23 @@ jobs:
 
       - name: Fix Kotlin and Compose Compiler compatibility
         run: |
-          # Suppress Kotlin version compatibility check
           echo "suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
           echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
           echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
-          
-          # Force Compose Compiler 1.5.14 which is compatible with Kotlin 1.9.24
-          cat >> android/build.gradle << 'EOF'
-
-subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android {
-                if (it.hasProperty('composeOptions')) {
-                    composeOptions {
-                        kotlinCompilerExtensionVersion = '1.5.14'
-                    }
-                }
-            }
-        }
-    }
-}
-EOF
+          echo "" >> android/build.gradle
+          echo "subprojects {" >> android/build.gradle
+          echo "    afterEvaluate { project ->" >> android/build.gradle
+          echo "        if (project.hasProperty('android')) {" >> android/build.gradle
+          echo "            project.android {" >> android/build.gradle
+          echo "                if (it.hasProperty('composeOptions')) {" >> android/build.gradle
+          echo "                    composeOptions {" >> android/build.gradle
+          echo "                        kotlinCompilerExtensionVersion = '1.5.14'" >> android/build.gradle
+          echo "                    }" >> android/build.gradle
+          echo "                }" >> android/build.gradle
+          echo "            }" >> android/build.gradle
+          echo "        }" >> android/build.gradle
+          echo "    }" >> android/build.gradle
+          echo "}" >> android/build.gradle
 
       - name: Disable minify for release
         run: |
