@@ -47,7 +47,7 @@ jobs:
           echo "suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
           echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
 
-      - name: Force Kotlin 1.9.25
+      - name: Force Kotlin 1.9.25 and Compose Compiler compatibility
         run: |
           cat >> android/build.gradle << 'KOTLINEOF'
           
@@ -62,6 +62,13 @@ jobs:
             }
           }
           KOTLINEOF
+          
+          # Also set kotlinVersion in ext block
+          sed -i 's/kotlinVersion = "[^"]*"/kotlinVersion = "1.9.25"/' android/build.gradle
+          
+          # Force Kotlin version in gradle.properties
+          echo "kotlin.version=1.9.25" >> android/gradle.properties
+          echo "org.jetbrains.kotlin.version=1.9.25" >> android/gradle.properties
 
       - name: Disable minify for release
         run: |
