@@ -28,13 +28,6 @@ jobs:
           cd apps/customer
           npm install
 
-      - name: Fix Kotlin version compatibility
-        run: |
-          cd apps/customer/android
-          echo "kotlin.suppressKotlinVersionCompatibilityCheck=true" >> gradle.properties
-          echo "android.useAndroidX=true" >> gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-
       - name: Create Kotlin force script
         run: |
           cat > /tmp/force-kotlin.gradle << 'EOF'
@@ -48,16 +41,23 @@ jobs:
           }
           EOF
 
+      - name: Generate Android project
+        run: |
+          cd apps/customer
+          npx expo prebuild --platform android --clean
+
+      - name: Fix Kotlin version compatibility
+        run: |
+          cd apps/customer/android
+          echo "kotlin.suppressKotlinVersionCompatibilityCheck=true" >> gradle.properties
+          echo "android.useAndroidX=true" >> gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+
       - name: Disable minify for release
         run: |
           cd apps/customer/android/app
           sed -i 's/minifyEnabled true/minifyEnabled false/g' build.gradle 2>/dev/null || true
           sed -i 's/shrinkResources true/shrinkResources false/g' build.gradle 2>/dev/null || true
-
-      - name: Generate Android project
-        run: |
-          cd apps/customer
-          npx expo prebuild --platform android --clean
 
       - name: Build Release APK
         run: |
