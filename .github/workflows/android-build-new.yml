@@ -3,44 +3,44 @@ name: Android Release APK (Customer)
 on:
   workflow_dispatch:
 
-  jobs:
-    build:
-        runs-on: ubuntu-latest
-            defaults:
-                  run:
-                          working-directory: apps/customer
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer
 
-                              steps:
-                                    - name: Checkout
-                                            uses: actions/checkout@v4
-                                                    with:
-                                                              ref: release/mobile-wrapper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: release/mobile-wrapper
 
-                                                                    - name: Setup Node.js
-                                                                            uses: actions/setup-node@v4
-                                                                                    with:
-                                                                                              node-version: "18"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
 
-                                                                                                    - name: Setup Java
-                                                                                                            uses: actions/setup-java@v4
-                                                                                                                    with:
-                                                                                                                              distribution: temurin
-                                                                                                                                        java-version: "17"
-                                                                                                                                        
-                                                                                                                                              - name: Install dependencies (repo root)
-                                                                                                                                                      run: npm install
-                                                                                                                                                              working-directory: .
-                                                                                                                                                              
-                                                                                                                                                                    - name: Install dependencies (customer)
-                                                                                                                                                                            run: npm install
-                                                                                                                                                                            
-                                                                                                                                                                                  - name: Install expo-linking
-                                                                                                                                                                                          run: |
-                                                                                                                                                                                                    npx expo install expo-linking
-                                                                                                                                                                                                              npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
-                                                                                                                                                                                                              
-                                                                                                                                                                                                                    - name: Generate Android project
-                                                                                                                                                                                                                            run: npx expo prebuild --platform android --clean
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies (repo root)
+        run: npm install
+        working-directory: .
+
+      - name: Install dependencies (customer)
+        run: npm install
+
+      - name: Install expo-linking
+        run: |
+          npx expo install expo-linking
+          npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean
 
       - name: Create force-kotlin.gradle init script
         run: |
