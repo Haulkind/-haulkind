@@ -3,6 +3,11 @@ name: Android Release APK (Customer)
 on:
   workflow_dispatch:
 
+on:
+  workflow_dispatch:
+
+
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,31 +40,23 @@ jobs:
         run: npm install
 
       - name: Install expo-linking
-        run: |
-          npx expo install expo-linking
-          npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
+        run: npx expo install expo-linking
 
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean
 
-      - name: Force Kotlin 1.9.25 in all gradle files
+      - name: Patch Kotlin version to 1.9.25
         run: |
-          # Force Kotlin version in root build.gradle
+          # Add suppress flag to gradle.properties
+          echo "" >> android/gradle.properties
+          echo "# Kotlin/Compose compatibility" >> android/gradle.properties
+          echo "kotlin.suppressKotlinVersionCompatibilityCheck=1.9.25" >> android/gradle.properties
+          
+          # Force Kotlin 1.9.25 in build.gradle
           sed -i 's/kotlinVersion = "1.9.24"/kotlinVersion = "1.9.25"/' android/build.gradle
-          sed -i 's/ext.kotlinVersion = "1.9.24"/ext.kotlinVersion = "1.9.25"/' android/build.gradle
           
-          # Add kotlin version to gradle.properties
-          echo "kotlinVersion=1.9.25" >> android/gradle.properties
-          echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
-          echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
-          
-          # Force Kotlin version in buildscript dependencies
-          sed -i "s/org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24/org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25/g" android/build.gradle
-          sed -i "s/org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlinVersion/org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25/g" android/build.gradle
-          
-          # Show the modified build.gradle for debugging
-          echo "=== Modified build.gradle ==="
-          cat android/build.gradle | head -50
+          # Also update in gradle-wrapper.properties if needed
+          cat android/build.gradle | grep -i kotlin || true
 
       - name: Disable minify for release
         run: |
@@ -69,7 +66,7 @@ jobs:
       - name: Build Release APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx4g"
+          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx4g" -Pkotlin.suppressKotlinVersionCompatibilityCheck=1.9.25
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
