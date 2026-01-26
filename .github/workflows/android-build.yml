@@ -1,0 +1,115 @@
+name: Android Release APK (Customer)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: release/mobile-wrapper
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/customer/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies (repo root)
+        run: npm install
+        working-directory: .
+
+      - name: Install dependencies (customer)
+        run: npm install
+
+      - name: Install expo-asset and other required packages
+        run: npm install expo-asset expo-constants expo-file-system expo-font --save
+
+      - name: Create index.tsx
+        run: |
+          mkdir -p app
+          cat > app/index.tsx << 'INDEXEOF'
+          import React from 'react';
+          import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+          import { useRouter } from 'expo-router';
+          import { useAuth } from '../lib/AuthContext';
+          export default function IndexScreen() {
+            const router = useRouter();
+            const { user, isLoading } = useAuth();
+            React.useEffect(() => {
+              if (!isLoading) {
+                if (user) {
+                  router.replace('/home');
+                } else {
+                  router.replace('/auth/login');
+                }
+              }
+            }, [user, isLoading]);
+            return (
+              <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading...</Text>
+                </View>
+              </SafeAreaView>
+            );
+          }
+          const styles = StyleSheet.create({
+            container: { flex: 1, backgroundColor: '#1a1a2e' },
+            loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+            loadingText: { color: '#fff', fontSize: 18 }
+          });
+          INDEXEOF
+
+      - name: Create Kotlin force script
+        run: |
+          cat > /tmp/force-kotlin.gradle << 'KOTLINEOF'
+          allprojects {
+            configurations.all {
+              resolutionStrategy {
+                force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24'
+              }
+            }
+          }
+          KOTLINEOF
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean
+
+      - name: Fix Kotlin version compatibility
+        run: |
+          echo "kotlin.suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+
+      - name: Disable minify for release
+        run: |
+          sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
+          sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle
+
+      - name: Build Release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace -I /tmp/force-kotlin.gradle
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: apps/customer/android/app/build/outputs/apk/release/app-release.apk
+
