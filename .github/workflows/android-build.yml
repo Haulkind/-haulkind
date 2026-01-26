@@ -1,0 +1,66 @@
+name: Android Release APK (Customer)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: release/mobile-wrapper
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies (repo root)
+        run: npm install
+        working-directory: .
+
+      - name: Install dependencies (customer)
+        run: npm install
+
+      - name: Install expo-linking
+        run: |
+          npx expo install expo-linking
+          npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean
+
+      - name: Patch Kotlin version to 1.9.25
+        run: |
+          echo "kotlin.suppressKotlinVersionCompatibilityCheck=1.9.25" >> android/gradle.properties
+          echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
+          sed -i 's/kotlinVersion = "1.9.24"/kotlinVersion = "1.9.25"/' android/build.gradle
+          sed -i 's/ext.kotlinVersion = "1.9.24"/ext.kotlinVersion = "1.9.25"/' android/build.gradle
+
+      - name: Disable minify for release
+        run: |
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx4g" -Pkotlin.suppressKotlinVersionCompatibilityCheck=1.9.25
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: haulkind-customer-release
+          path: apps/customer/android/app/build/outputs/apk/release/*.apk
