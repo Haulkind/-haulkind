@@ -1,0 +1,81 @@
+name: Android Release APK (Customer)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: release/mobile-wrapper
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies (repo root)
+        run: npm install
+        working-directory: .
+
+      - name: Install dependencies (customer)
+        run: npm install
+
+      - name: Install expo-linking and required packages
+        run: |
+          npx expo install expo-linking
+          npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
+
+      - name: Generate Android project with clean prebuild
+        run: npx expo prebuild --platform android --clean
+
+      - name: Fix Kotlin version compatibility
+        run: |
+          echo "suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
+          echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
+
+      - name: Force Kotlin 1.9.24
+        run: |
+          cat >> android/build.gradle << 'KOTLINEOF'
+          
+          allprojects {
+            configurations.all {
+              resolutionStrategy {
+                force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-reflect:1.9.24'
+              }
+            }
+          }
+          KOTLINEOF
+
+      - name: Disable minify for release
+        run: |
+          sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
+          sed -i 's/shrinkResources true/shrinkResources false/g' android/app/build.gradle
+
+      - name: Build Release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: apps/customer/android/app/build/outputs/apk/release/app-release.apk

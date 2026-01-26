@@ -33,7 +33,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      "expo-router/plugin",
       [
         "expo-location",
         {
@@ -46,6 +46,11 @@
           "photosPermission": "Allow Haulkind Driver to access your photos to upload job images."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "141f6181-7c2e-4b3c-9a1d-f3e5d7a9b0c1"
+      }
+    }
   }
 }

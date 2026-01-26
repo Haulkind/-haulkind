@@ -1,0 +1,15 @@
+{
+  "cli": {
+    "appVersionSource": "remote",
+    "appRoot": "apps/customer"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "expoCli": "latest"
+    }
+  }
+}
