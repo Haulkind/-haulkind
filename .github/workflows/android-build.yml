@@ -42,25 +42,11 @@ jobs:
       - name: Generate Android project with clean prebuild
         run: npx expo prebuild --platform android --clean
 
-      - name: Fix Kotlin and Compose Compiler compatibility
+      - name: Fix Kotlin compatibility
         run: |
           echo "suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
           echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
           echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
-          echo "" >> android/build.gradle
-          echo "subprojects {" >> android/build.gradle
-          echo "  afterEvaluate { project ->" >> android/build.gradle
-          echo "    if (project.hasProperty('android')) {" >> android/build.gradle
-          echo "      project.android {" >> android/build.gradle
-          echo "        if (it.hasProperty('composeOptions')) {" >> android/build.gradle
-          echo "          composeOptions {" >> android/build.gradle
-          echo "            kotlinCompilerExtensionVersion = '1.5.14'" >> android/build.gradle
-          echo "          }" >> android/build.gradle
-          echo "        }" >> android/build.gradle
-          echo "      }" >> android/build.gradle
-          echo "    }" >> android/build.gradle
-          echo "  }" >> android/build.gradle
-          echo "}" >> android/build.gradle
 
       - name: Disable minify for release
         run: |
