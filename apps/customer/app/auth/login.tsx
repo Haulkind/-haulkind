@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../lib/AuthContext';
+import { useAuth } from '../../lib/AuthContextNew';
 
 export default function Login() {
   const router = useRouter();
