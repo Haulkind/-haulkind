@@ -47,17 +47,17 @@ jobs:
           echo "suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
           echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
 
-      - name: Force Kotlin 1.9.24
+      - name: Force Kotlin 1.9.25
         run: |
           cat >> android/build.gradle << 'KOTLINEOF'
           
           allprojects {
             configurations.all {
               resolutionStrategy {
-                force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
-                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24'
-                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24'
-                force 'org.jetbrains.kotlin:kotlin-reflect:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.25'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.25'
+                force 'org.jetbrains.kotlin:kotlin-reflect:1.9.25'
               }
             }
           }
