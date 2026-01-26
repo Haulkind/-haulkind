@@ -1,0 +1,60 @@
+name: Android Release APK (Customer)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/customer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies (repo root)
+        run: npm install
+        working-directory: .
+
+      - name: Install dependencies (customer)
+        run: npm install
+
+      - name: Install expo-linking
+        run: npx expo install expo-linking
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean
+
+      - name: Configure Gradle
+        run: |
+          echo "org.gradle.jvmargs=-Xmx4g" >> android/gradle.properties
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle || true
+          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle || true
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: haulkind-customer-release
+          path: apps/customer/android/app/build/outputs/apk/release/*.apk
