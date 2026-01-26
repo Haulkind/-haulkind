@@ -40,18 +40,30 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean
 
-      - name: Configure Gradle
+      - name: Force Kotlin 1.9.25 in build.gradle
         run: |
-          echo "suppressKotlinVersionCompatibilityCheck=true" >> android/gradle.properties
+          # Update root build.gradle to use Kotlin 1.9.25
+          sed -i 's/kotlinVersion = .*/kotlinVersion = "1.9.25"/' android/build.gradle
+          sed -i 's/kotlin_version = .*/kotlin_version = "1.9.25"/' android/build.gradle
+          sed -i "s/ext.kotlinVersion = .*/ext.kotlinVersion = '1.9.25'/" android/build.gradle
+          
+          # Also update gradle.properties
           echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
           echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
+          
+          # Show the current kotlin version in build.gradle for debugging
+          echo "=== Current build.gradle kotlin settings ==="
+          grep -i kotlin android/build.gradle || true
+
+      - name: Disable minify for release
+        run: |
           sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
           sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
 
       - name: Build Release APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx4g" -Pkotlin.suppressKotlinVersionCompatibilityCheck=true
+          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx4g" -PkotlinVersion=1.9.25
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
