@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -35,6 +35,11 @@ app.use(express.json());
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const DEBUG_TOKEN = process.env.DEBUG_TOKEN || "debug-token-change-in-production";
 
+// Extend Express Request type
+interface AuthRequest extends Request {
+  user?: { id: string | number; email: string; role: string; name?: string };
+}
+
 // Mock user database (in production, use real database)
 const users = [
   {
@@ -54,11 +59,23 @@ const serviceAreas = [
 ];
 
 // Mock driver applications database
-const driverApplications = [];
+interface DriverApplication {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  vehicleType: string;
+  experience: string;
+  status: string;
+  createdAt: string;
+}
+const driverApplications: DriverApplication[] = [];
 let applicationIdCounter = 1;
 
 // Middleware to verify JWT
-const authenticateToken = (req, res, next) => {
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -66,7 +83,7 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: "No token provided" });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, (err: Error | null, user: any) => {
     if (err) {
       return res.status(403).json({ error: "Invalid token" });
     }
@@ -76,7 +93,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Middleware to verify DEBUG_TOKEN
-const authenticateDebugToken = (req, res, next) => {
+const authenticateDebugToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -92,7 +109,7 @@ const authenticateDebugToken = (req, res, next) => {
 // =====================================================
 
 // POST /customer/auth/signup
-app.post('/customer/auth/signup', async (req, res) => {
+app.post('/customer/auth/signup', async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
     
@@ -117,7 +134,7 @@ app.post('/customer/auth/signup', async (req, res) => {
       RETURNING id
     `);
     
-    const userId = insertResult.rows[0].id;
+    const userId = (insertResult.rows[0] as { id: number }).id;
     
     // Create customer record - using columns that exist (id, user_id)
     await db.execute(sql`
@@ -137,14 +154,15 @@ app.post('/customer/auth/signup', async (req, res) => {
       token,
       customer: { id: userId, name, email }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CUSTOMER_SIGNUP] Error:', error);
-    res.status(500).json({ error: 'Failed to create account', details: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Failed to create account', details: errorMessage });
   }
 });
 
 // POST /customer/auth/login
-app.post('/customer/auth/login', async (req, res) => {
+app.post('/customer/auth/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     
@@ -164,7 +182,7 @@ app.post('/customer/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    const user = userResult.rows[0];
+    const user = userResult.rows[0] as { id: number; email: string; password: string; name: string };
     
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -184,16 +202,21 @@ app.post('/customer/auth/login', async (req, res) => {
       token,
       customer: { id: user.id, name: user.name, email: user.email }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CUSTOMER_LOGIN] Error:', error);
-    res.status(500).json({ error: 'Login failed', details: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Login failed', details: errorMessage });
   }
 });
 
 // GET /customer/auth/me - Get current customer profile
-app.get('/customer/auth/me', authenticateToken, async (req, res) => {
+app.get('/customer/auth/me', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
     
     // Using columns that exist (id, email, password, name)
     const userResult = await db.execute(sql`
@@ -207,7 +230,7 @@ app.get('/customer/auth/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    const user = userResult.rows[0];
+    const user = userResult.rows[0] as { id: number; email: string; name: string };
     
     res.json({
       success: true,
@@ -218,9 +241,10 @@ app.get('/customer/auth/me', authenticateToken, async (req, res) => {
         role: 'user'
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CUSTOMER_ME] Error:', error);
-    res.status(500).json({ error: 'Failed to get profile', details: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Failed to get profile', details: errorMessage });
   }
 });
 
@@ -229,7 +253,7 @@ app.get('/customer/auth/me', authenticateToken, async (req, res) => {
 // =====================================================
 
 // Health check endpoint with version info and DB connection test
-app.get("/health", async (req, res) => {
+app.get("/health", async (req: Request, res: Response) => {
   try {
     // Test DB connection
     await db.select().from(orders).limit(1);
@@ -242,12 +266,13 @@ app.get("/health", async (req, res) => {
       timestamp: new Date().toISOString(),
       service: "haulkind-api"
     });
-  } catch (error) {
-    console.error('[HEALTH] Database connection failed:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[HEALTH] Database connection failed:', errorMessage);
     res.status(500).json({
       ok: false,
       database: "disconnected",
-      error: error.message,
+      error: errorMessage,
       timestamp: new Date().toISOString(),
       service: "haulkind-api"
     });
@@ -255,7 +280,7 @@ app.get("/health", async (req, res) => {
 });
 
 // Debug endpoint to list last 20 orders (protected by DEBUG_TOKEN)
-app.get("/debug/orders", authenticateDebugToken, async (req, res) => {
+app.get("/debug/orders", authenticateDebugToken, async (req: Request, res: Response) => {
   try {
     const allOrders = await db
       .select()
@@ -267,14 +292,15 @@ app.get("/debug/orders", authenticateDebugToken, async (req, res) => {
       count: allOrders.length,
       orders: allOrders,
     });
-  } catch (error) {
-    console.error('[DEBUG_ORDERS] Error:', error.message);
-    res.status(500).json({ error: "Failed to fetch orders", details: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DEBUG_ORDERS] Error:', errorMessage);
+    res.status(500).json({ error: "Failed to fetch orders", details: errorMessage });
   }
 });
 
 // Auth endpoints
-app.post("/auth/login", async (req, res) => {
+app.post("/auth/login", async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -313,8 +339,8 @@ app.post("/auth/login", async (req, res) => {
   });
 });
 
-app.get("/auth/me", authenticateToken, (req, res) => {
-  const user = users.find((u) => u.id === req.user.id);
+app.get("/auth/me", authenticateToken, (req: AuthRequest, res: Response) => {
+  const user = users.find((u) => u.id === req.user?.id?.toString());
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
@@ -328,8 +354,8 @@ app.get("/auth/me", authenticateToken, (req, res) => {
 });
 
 // Admin endpoint
-app.get("/admin/ping", authenticateToken, (req, res) => {
-  if (req.user.role !== "admin") {
+app.get("/admin/ping", authenticateToken, (req: AuthRequest, res: Response) => {
+  if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
 
@@ -340,14 +366,14 @@ app.get("/admin/ping", authenticateToken, (req, res) => {
 });
 
 // Service areas endpoint
-app.get("/service-areas", (req, res) => {
+app.get("/service-areas", (req: Request, res: Response) => {
   res.json({
     areas: serviceAreas,
   });
 });
 
 // Check service availability by zip code
-app.get("/service-areas/check/:zipCode", (req, res) => {
+app.get("/service-areas/check/:zipCode", (req: Request, res: Response) => {
   const { zipCode } = req.params;
   
   const area = serviceAreas.find(a => a.zipCodes.includes(zipCode));
@@ -370,14 +396,14 @@ app.get("/service-areas/check/:zipCode", (req, res) => {
 });
 
 // Driver application endpoint
-app.post("/driver-application", async (req, res) => {
+app.post("/driver-application", async (req: Request, res: Response) => {
   const { name, email, phone, city, state, vehicleType, experience } = req.body;
 
   if (!name || !email || !phone || !city || !state) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const application = {
+  const application: DriverApplication = {
     id: applicationIdCounter++,
     name,
     email,
@@ -399,8 +425,8 @@ app.post("/driver-application", async (req, res) => {
 });
 
 // Get all driver applications (admin only)
-app.get("/driver-applications", authenticateToken, (req, res) => {
-  if (req.user.role !== "admin") {
+app.get("/driver-applications", authenticateToken, (req: AuthRequest, res: Response) => {
+  if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
 
