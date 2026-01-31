@@ -54,11 +54,11 @@ const serviceAreas = [
 ];
 
 // Mock driver applications database
-const driverApplications: any[] = [];
+const driverApplications = [];
 let applicationIdCounter = 1;
 
 // Middleware to verify JWT
-const authenticateToken = (req: any, res: any, next: any) => {
+const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -66,7 +66,7 @@ const authenticateToken = (req: any, res: any, next: any) => {
     return res.status(401).json({ error: "No token provided" });
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ error: "Invalid token" });
     }
@@ -76,7 +76,7 @@ const authenticateToken = (req: any, res: any, next: any) => {
 };
 
 // Middleware to verify DEBUG_TOKEN
-const authenticateDebugToken = (req: any, res: any, next: any) => {
+const authenticateDebugToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -94,7 +94,7 @@ const authenticateDebugToken = (req: any, res: any, next: any) => {
 // POST /customer/auth/signup
 app.post('/customer/auth/signup', async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password } = req.body;
     
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email and password are required' });
@@ -109,21 +109,20 @@ app.post('/customer/auth/signup', async (req, res) => {
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const now = new Date();
     
-    // Insert user using raw SQL
+    // Insert user using raw SQL - using columns that exist in the table (id, email, password, name)
     const insertResult = await db.execute(sql`
-      INSERT INTO users (email, password_hash, role, full_name, phone, created_at, updated_at)
-      VALUES (${email}, ${hashedPassword}, 'user', ${name}, ${phone || null}, ${now}, ${now})
+      INSERT INTO users (email, password, name)
+      VALUES (${email}, ${hashedPassword}, ${name})
       RETURNING id
     `);
     
-    const userId = (insertResult.rows[0] as any).id;
+    const userId = insertResult.rows[0].id;
     
-    // Create customer record
+    // Create customer record - using columns that exist (id, user_id)
     await db.execute(sql`
-      INSERT INTO customers (user_id, created_at, updated_at)
-      VALUES (${userId}, ${now}, ${now})
+      INSERT INTO customers (user_id)
+      VALUES (${userId})
     `);
     
     // Generate JWT token
@@ -138,7 +137,7 @@ app.post('/customer/auth/signup', async (req, res) => {
       token,
       customer: { id: userId, name, email }
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[CUSTOMER_SIGNUP] Error:', error);
     res.status(500).json({ error: 'Failed to create account', details: error.message });
   }
@@ -153,9 +152,9 @@ app.post('/customer/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
     
-    // Find user by email using raw SQL
+    // Find user by email using raw SQL - using columns that exist (id, email, password, name)
     const userResult = await db.execute(sql`
-      SELECT id, email, password_hash, full_name as name, role 
+      SELECT id, email, password, name 
       FROM users 
       WHERE email = ${email} 
       LIMIT 1
@@ -165,17 +164,17 @@ app.post('/customer/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    const user = userResult.rows[0] as any;
+    const user = userResult.rows[0];
     
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.name },
+      { id: user.id, email: user.email, role: 'user', name: user.name },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
@@ -185,19 +184,20 @@ app.post('/customer/auth/login', async (req, res) => {
       token,
       customer: { id: user.id, name: user.name, email: user.email }
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[CUSTOMER_LOGIN] Error:', error);
     res.status(500).json({ error: 'Login failed', details: error.message });
   }
 });
 
 // GET /customer/auth/me - Get current customer profile
-app.get('/customer/auth/me', authenticateToken, async (req: any, res) => {
+app.get('/customer/auth/me', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     
+    // Using columns that exist (id, email, password, name)
     const userResult = await db.execute(sql`
-      SELECT id, email, full_name as name, phone, role, created_at
+      SELECT id, email, name
       FROM users 
       WHERE id = ${userId} 
       LIMIT 1
@@ -207,7 +207,7 @@ app.get('/customer/auth/me', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    const user = userResult.rows[0] as any;
+    const user = userResult.rows[0];
     
     res.json({
       success: true,
@@ -215,12 +215,10 @@ app.get('/customer/auth/me', authenticateToken, async (req: any, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        phone: user.phone,
-        role: user.role,
-        createdAt: user.created_at
+        role: 'user'
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[CUSTOMER_ME] Error:', error);
     res.status(500).json({ error: 'Failed to get profile', details: error.message });
   }
@@ -244,7 +242,7 @@ app.get("/health", async (req, res) => {
       timestamp: new Date().toISOString(),
       service: "haulkind-api"
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[HEALTH] Database connection failed:', error.message);
     res.status(500).json({
       ok: false,
@@ -269,7 +267,7 @@ app.get("/debug/orders", authenticateDebugToken, async (req, res) => {
       count: allOrders.length,
       orders: allOrders,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[DEBUG_ORDERS] Error:', error.message);
     res.status(500).json({ error: "Failed to fetch orders", details: error.message });
   }
@@ -315,7 +313,7 @@ app.post("/auth/login", async (req, res) => {
   });
 });
 
-app.get("/auth/me", authenticateToken, (req: any, res) => {
+app.get("/auth/me", authenticateToken, (req, res) => {
   const user = users.find((u) => u.id === req.user.id);
   if (!user) {
     return res.status(404).json({ error: "User not found" });
@@ -330,7 +328,7 @@ app.get("/auth/me", authenticateToken, (req: any, res) => {
 });
 
 // Admin endpoint
-app.get("/admin/ping", authenticateToken, (req: any, res) => {
+app.get("/admin/ping", authenticateToken, (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
@@ -401,7 +399,7 @@ app.post("/driver-application", async (req, res) => {
 });
 
 // Get all driver applications (admin only)
-app.get("/driver-applications", authenticateToken, (req: any, res) => {
+app.get("/driver-applications", authenticateToken, (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
