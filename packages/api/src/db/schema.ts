@@ -1,4 +1,24 @@
-import { pgTable, text, timestamp, uuid, jsonb, decimal } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, decimal, serial } from 'drizzle-orm/pg-core';
+
+// Users table for authentication
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  role: text('role').notNull().default('user'),
+  fullName: text('full_name'),
+  phone: text('phone'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Customers table
+export const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  userId: serial('user_id').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
 
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
