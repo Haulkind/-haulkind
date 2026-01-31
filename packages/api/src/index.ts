@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { db } from "./db/index.js";
 import { orders, drivers } from "./db/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 const app = express();
 
@@ -86,6 +86,149 @@ const authenticateDebugToken = (req: any, res: any, next: any) => {
 
   next();
 };
+
+// =====================================================
+// CUSTOMER AUTH ROUTES (for mobile app)
+// =====================================================
+
+// POST /customer/auth/signup
+app.post('/customer/auth/signup', async (req, res) => {
+  try {
+    const { name, email, password, phone } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email and password are required' });
+    }
+    
+    // Check if email already exists using raw SQL
+    const existingUsers = await db.execute(sql`SELECT id FROM users WHERE email = ${email} LIMIT 1`);
+    
+    if (existingUsers.rows && existingUsers.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const now = new Date();
+    
+    // Insert user using raw SQL
+    const insertResult = await db.execute(sql`
+      INSERT INTO users (email, password_hash, role, full_name, phone, created_at, updated_at)
+      VALUES (${email}, ${hashedPassword}, 'user', ${name}, ${phone || null}, ${now}, ${now})
+      RETURNING id
+    `);
+    
+    const userId = (insertResult.rows[0] as any).id;
+    
+    // Create customer record
+    await db.execute(sql`
+      INSERT INTO customers (user_id, created_at, updated_at)
+      VALUES (${userId}, ${now}, ${now})
+    `);
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: userId, email, role: 'user', name },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    res.json({
+      success: true,
+      token,
+      customer: { id: userId, name, email }
+    });
+  } catch (error: any) {
+    console.error('[CUSTOMER_SIGNUP] Error:', error);
+    res.status(500).json({ error: 'Failed to create account', details: error.message });
+  }
+});
+
+// POST /customer/auth/login
+app.post('/customer/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    
+    // Find user by email using raw SQL
+    const userResult = await db.execute(sql`
+      SELECT id, email, password_hash, full_name as name, role 
+      FROM users 
+      WHERE email = ${email} 
+      LIMIT 1
+    `);
+    
+    if (!userResult.rows || userResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const user = userResult.rows[0] as any;
+    
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    res.json({
+      success: true,
+      token,
+      customer: { id: user.id, name: user.name, email: user.email }
+    });
+  } catch (error: any) {
+    console.error('[CUSTOMER_LOGIN] Error:', error);
+    res.status(500).json({ error: 'Login failed', details: error.message });
+  }
+});
+
+// GET /customer/auth/me - Get current customer profile
+app.get('/customer/auth/me', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const userResult = await db.execute(sql`
+      SELECT id, email, full_name as name, phone, role, created_at
+      FROM users 
+      WHERE id = ${userId} 
+      LIMIT 1
+    `);
+    
+    if (!userResult.rows || userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = userResult.rows[0] as any;
+    
+    res.json({
+      success: true,
+      customer: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        createdAt: user.created_at
+      }
+    });
+  } catch (error: any) {
+    console.error('[CUSTOMER_ME] Error:', error);
+    res.status(500).json({ error: 'Failed to get profile', details: error.message });
+  }
+});
+
+// =====================================================
+// END CUSTOMER AUTH ROUTES
+// =====================================================
 
 // Health check endpoint with version info and DB connection test
 app.get("/health", async (req, res) => {
@@ -192,388 +335,61 @@ app.get("/admin/ping", authenticateToken, (req: any, res) => {
     return res.status(403).json({ error: "Admin access required" });
   }
 
-  res.json({ admin: true, message: "Admin access granted" });
-});
-
-// ============================================
-// SERVICE AREA ENDPOINTS
-// ============================================
-
-// Check if coordinates are in service area
-app.get("/service-areas/lookup", (req, res) => {
-  try {
-    const { lat, lng } = req.query;
-
-    if (!lat || !lng) {
-      console.error('[SERVICE_AREA_LOOKUP] Missing parameters');
-      return res.status(400).json({ error: "Latitude and longitude required" });
-    }
-
-    // Validate and parse coordinates
-    const latitude = parseFloat(lat as string);
-    const longitude = parseFloat(lng as string);
-
-    if (isNaN(latitude) || isNaN(longitude)) {
-      console.error('[SERVICE_AREA_LOOKUP] Invalid coordinates:', { lat, lng });
-      return res.status(400).json({ error: "Invalid coordinates" });
-    }
-
-
-    // Expanded coverage: Philadelphia metro area and surrounding counties
-    // Covers Philadelphia, Montgomery, Delaware, Chester, Bucks counties
-    // Latitude: 39.7 to 40.3 (approx 40 miles north-south)
-    // Longitude: -75.6 to -74.9 (approx 40 miles east-west)
-    if (latitude >= 39.7 && latitude <= 40.3 && longitude >= -75.6 && longitude <= -74.9) {
-      return res.json({
-        covered: true,
-        serviceArea: serviceAreas[0], // Philadelphia Metro
-      });
-    }
-
-    // Outside service area
-    res.json({
-      covered: false,
-      serviceArea: null,
-    });
-  } catch (error: any) {
-    console.error('[SERVICE_AREA_LOOKUP] Unexpected error:', error.message, error.stack);
-    res.status(500).json({ error: "Service area lookup failed", details: error.message });
-  }
-});
-
-// Address autocomplete using Nominatim
-app.get("/geocode/autocomplete", async (req, res) => {
-  try {
-    const { q } = req.query;
-
-    if (!q || typeof q !== 'string' || q.length < 3) {
-      return res.status(400).json({ error: "Query must be at least 3 characters" });
-    }
-
-    // Call Nominatim API
-    const nominatimUrl = `https://nominatim.openstreetmap.org/search?` +
-      `q=${encodeURIComponent(q)}&` +
-      `format=json&` +
-      `addressdetails=1&` +
-      `countrycodes=us&` +
-      `limit=5`;
-
-    const response = await fetch(nominatimUrl, {
-      headers: {
-        'User-Agent': 'Haulkind/1.0 (contact@haulkind.com)'
-      }
-    });
-
-    if (!response.ok) {
-      console.error('[AUTOCOMPLETE] Nominatim error:', response.status, response.statusText);
-      return res.status(502).json({ error: "Geocoding service unavailable" });
-    }
-
-    const data = await response.json() as any[];
-
-    res.json(data);
-  } catch (error: any) {
-    console.error('[AUTOCOMPLETE] Unexpected error:', error.message, error.stack);
-    res.status(500).json({ error: "Autocomplete failed", details: error.message });
-  }
-});
-
-// ============================================
-// QUOTE ENDPOINTS
-// ============================================
-
-// Calculate quote
-app.post("/quotes", (req, res) => {
-  const {
-    serviceType,
-    serviceAreaId,
-    volumeTier,
-    addons = [],
-    helperCount = 2,
-    estimatedHours = 2,
-  } = req.body;
-
-  let servicePrice = 0;
-  let addonPrice = 0;
-  const distancePrice = 0; // Fixed for demo
-  const disposalIncluded = 0;
-
-  if (serviceType === "HAUL_AWAY") {
-    // Volume tier pricing
-    const volumePricing: any = {
-      "1-5": 150,
-      "6-10": 250,
-      "11-15": 350,
-      "16-20": 450,
-      "20+": 550,
-    };
-    servicePrice = volumePricing[volumeTier] || 150;
-
-    // Addon pricing
-    const addonPricing: any = {
-      "heavy-items": 50,
-      "stairs": 30,
-      "disassembly": 40,
-      "extra-helper": 75,
-    };
-    addonPrice = addons.reduce((sum: number, addon: string) => sum + (addonPricing[addon] || 0), 0);
-  } else if (serviceType === "LABOR_ONLY") {
-    // Labor only: $50/hour per helper
-    servicePrice = helperCount * estimatedHours * 50;
-  }
-
-  const total = servicePrice + addonPrice + distancePrice + disposalIncluded;
-
-  const breakdown = [
-    { label: "Service Fee", amount: servicePrice },
-  ];
-
-  if (addonPrice > 0) {
-    breakdown.push({ label: "Add-ons", amount: addonPrice });
-  }
-
   res.json({
-    servicePrice,
-    addonPrice,
-    distancePrice,
-    disposalIncluded,
-    total,
-    breakdown,
+    admin: true,
+    message: "Admin access granted",
   });
 });
 
-// ============================================
-// JOB/ORDER ENDPOINTS (WITH DATABASE)
-// ============================================
+// Service areas endpoint
+app.get("/service-areas", (req, res) => {
+  res.json({
+    areas: serviceAreas,
+  });
+});
 
-// Create order (replaces /jobs POST)
-app.post("/jobs", async (req, res) => {
-  try {
-    const {
-      serviceType,
-      customerName,
-      phone,
-      email,
-      street,
-      city,
-      state,
-      zip,
-      lat,
-      lng,
-      pickupDate,
-      pickupTimeWindow,
-      items,
-      pricing,
-    } = req.body;
-
-
-    // Insert into database
-    const [newOrder] = await db.insert(orders).values({
-      serviceType,
-      customerName,
-      phone,
-      email,
-      street,
-      city,
-      state,
-      zip,
-      lat: lat?.toString(),
-      lng: lng?.toString(),
-      pickupDate,
-      pickupTimeWindow,
-      itemsJson: items,
-      pricingJson: pricing,
-      status: 'pending',
-    }).returning();
-
-
+// Check service availability by zip code
+app.get("/service-areas/check/:zipCode", (req, res) => {
+  const { zipCode } = req.params;
+  
+  const area = serviceAreas.find(a => a.zipCodes.includes(zipCode));
+  
+  if (area) {
     res.json({
-      success: true,
-      order: newOrder,
+      available: true,
+      area: {
+        id: area.id,
+        name: area.name,
+        state: area.state,
+      },
     });
-  } catch (error: any) {
-    console.error('[ORDER_CREATE] Error:', error.message, error.stack);
-    res.status(500).json({ error: "Failed to create order", details: error.message });
-  }
-});
-
-// List all orders (for admin)
-app.get("/orders", authenticateToken, async (req: any, res) => {
-  try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    const allOrders = await db
-      .select()
-      .from(orders)
-      .orderBy(desc(orders.createdAt))
-      .limit(50);
-
+  } else {
     res.json({
-      orders: allOrders,
+      available: false,
+      message: "Service not available in this area yet",
     });
-  } catch (error: any) {
-    console.error('[ORDERS_LIST] Error:', error.message);
-    res.status(500).json({ error: "Failed to fetch orders", details: error.message });
   }
 });
 
-// Get order by ID
-app.get("/orders/:id", authenticateToken, async (req: any, res) => {
-  try {
-    const { id } = req.params;
+// Driver application endpoint
+app.post("/driver-application", async (req, res) => {
+  const { name, email, phone, city, state, vehicleType, experience } = req.body;
 
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, id))
-      .limit(1);
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    res.json(order);
-  } catch (error: any) {
-    console.error('[ORDER_GET] Error:', error.message);
-    res.status(500).json({ error: "Failed to fetch order", details: error.message });
+  if (!name || !email || !phone || !city || !state) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
-});
-
-// Update order status
-app.patch("/orders/:id/status", authenticateToken, async (req: any, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-
-    const [updatedOrder] = await db
-      .update(orders)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(orders.id, id))
-      .returning();
-
-    if (!updatedOrder) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-
-    res.json(updatedOrder);
-  } catch (error: any) {
-    console.error('[ORDER_UPDATE_STATUS] Error:', error.message);
-    res.status(500).json({ error: "Failed to update order status", details: error.message });
-  }
-});
-
-// Assign driver to order
-app.patch("/orders/:id/assign", authenticateToken, async (req: any, res) => {
-  try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    const { id } = req.params;
-    const { driverId } = req.body;
-
-
-    const [updatedOrder] = await db
-      .update(orders)
-      .set({ assignedDriverId: driverId, updatedAt: new Date() })
-      .where(eq(orders.id, id))
-      .returning();
-
-    if (!updatedOrder) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-
-    res.json(updatedOrder);
-  } catch (error: any) {
-    console.error('[ORDER_ASSIGN_DRIVER] Error:', error.message);
-    res.status(500).json({ error: "Failed to assign driver", details: error.message });
-  }
-});
-
-// ============================================
-// DRIVER ENDPOINTS
-// ============================================
-
-// List all drivers
-app.get("/drivers", authenticateToken, async (req: any, res) => {
-  try {
-    const allDrivers = await db
-      .select()
-      .from(drivers)
-      .orderBy(desc(drivers.createdAt));
-
-    res.json({
-      drivers: allDrivers,
-    });
-  } catch (error: any) {
-    console.error('[DRIVERS_LIST] Error:', error.message);
-    res.status(500).json({ error: "Failed to fetch drivers", details: error.message });
-  }
-});
-
-// Create or update driver
-app.post("/drivers", authenticateToken, async (req: any, res) => {
-  try {
-    const { name, phone, email, status = 'available' } = req.body;
-
-
-    const [newDriver] = await db.insert(drivers).values({
-      name,
-      phone,
-      email,
-      status,
-    }).returning();
-
-
-    res.json(newDriver);
-  } catch (error: any) {
-    console.error('[DRIVER_CREATE] Error:', error.message);
-    res.status(500).json({ error: "Failed to create driver", details: error.message });
-  }
-});
-
-// ============================================
-// DRIVER APPLICATION ENDPOINTS (UNCHANGED)
-// ============================================
-
-// Submit driver application
-app.post("/driver-applications", (req, res) => {
-  const {
-    firstName,
-    lastName,
-    email,
-    phone,
-    city,
-    state,
-    zip,
-    hasVehicle,
-    vehicleType,
-    hasLicense,
-    canLiftHeavy,
-    availability,
-  } = req.body;
 
   const application = {
     id: applicationIdCounter++,
-    firstName,
-    lastName,
+    name,
     email,
     phone,
     city,
     state,
-    zip,
-    hasVehicle,
-    vehicleType,
-    hasLicense,
-    canLiftHeavy,
-    availability,
+    vehicleType: vehicleType || "truck",
+    experience: experience || "0-1 years",
     status: "pending",
-    submittedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
   };
 
   driverApplications.push(application);
@@ -597,4 +413,5 @@ app.get("/driver-applications", authenticateToken, (req: any, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
