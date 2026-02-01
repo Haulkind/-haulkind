@@ -3,6 +3,9 @@ name: Android Release APK (Customer)
 on:
   workflow_dispatch:
 
+env:
+  EXPO_PUBLIC_API_URL: https://haulkind-production-285b.up.railway.app
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,6 +42,12 @@ jobs:
           npx expo install expo-linking
           npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
 
+      - name: Set API URL in app.json
+        run: |
+          echo "Setting EXPO_PUBLIC_API_URL to: $EXPO_PUBLIC_API_URL"
+          echo "EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL" > .env
+          cat .env
+
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean
 
@@ -66,55 +75,6 @@ jobs:
           rm -rf android/.gradle
           rm -rf android/build
           echo "Gradle caches cleared"
-
-      - name: PROOF - Check Kotlin version before build
-        run: |
-          cd android
-          echo "=========================================="
-          echo "=== PROOF: Checking Kotlin version ==="
-          echo "=========================================="
-          
-          ./gradlew -q dependencies --configuration releaseRuntimeClasspath 2>&1 | grep -i "kotlin" | head -20 || true
-          
-          echo ""
-          echo "=== Checking kotlin-stdlib version ==="
-          ./gradlew -q :app:dependencies --configuration releaseRuntimeClasspath 2>&1 | grep "kotlin-stdlib" | head -10 || true
-          
-          echo ""
-          echo "=== Running expo-modules-core:compileDebugKotlin with init script ==="
-          ./gradlew :expo-modules-core:compileDebugKotlin --no-daemon --stacktrace --refresh-dependencies -I /tmp/force-kotlin.gradle 2>&1 | tee /tmp/kotlin-compile.log || true
-          
-          echo ""
-          echo "=========================================="
-          echo "=== CHECKING FOR KOTLIN VERSION IN LOG ==="
-          echo "=========================================="
-          
-          if grep -q "Kotlin version 1.9.24" /tmp/kotlin-compile.log; then
-            echo "!!! FAILURE: Still using Kotlin 1.9.24 !!!"
-            echo "=== Full log ==="
-            cat /tmp/kotlin-compile.log
-            exit 1
-          fi
-          
-          if grep -q "Kotlin version 1.9.25" /tmp/kotlin-compile.log; then
-            echo "SUCCESS: Using Kotlin 1.9.25"
-          fi
-          
-          if grep -q "Compose Compiler requires Kotlin version 1.9.25" /tmp/kotlin-compile.log; then
-            echo "!!! FAILURE: Compose Compiler still complaining about Kotlin version !!!"
-            echo "=== Full log ==="
-            cat /tmp/kotlin-compile.log
-            exit 1
-          fi
-          
-          if grep -q "BUILD SUCCESSFUL" /tmp/kotlin-compile.log; then
-            echo "SUCCESS: expo-modules-core compiled successfully!"
-          else
-            echo "!!! FAILURE: expo-modules-core compilation failed !!!"
-            echo "=== Full log ==="
-            cat /tmp/kotlin-compile.log
-            exit 1
-          fi
 
       - name: Disable minify for release
         run: |
