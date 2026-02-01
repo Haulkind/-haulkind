@@ -17,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: release/mobile-wrapper
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -66,28 +66,3 @@ jobs:
           }
           INITSCRIPT
           echo "=== Init script content ==="
-          cat /tmp/force-kotlin.gradle
-
-      - name: Clear Gradle caches
-        run: |
-          rm -rf ~/.gradle/caches
-          rm -rf ~/.gradle/wrapper
-          rm -rf android/.gradle
-          rm -rf android/build
-          echo "Gradle caches cleared"
-
-      - name: Disable minify for release
-        run: |
-          sed -i 's/minifyEnabled true/minifyEnabled false/' android/app/build.gradle
-          sed -i 's/shrinkResources true/shrinkResources false/' android/app/build.gradle
-
-      - name: Build Release APK
-        run: |
-          cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace -I /tmp/force-kotlin.gradle -Dorg.gradle.jvmargs="-Xmx4g"
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: haulkind-customer-release
-          path: apps/customer/android/app/build/outputs/apk/release/*.apk
