@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth } from '../lib/AuthContextFixed';
 
 export default function Home() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { customer, logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -16,19 +16,19 @@ export default function Home() {
     <SafeAreaView style={s.c}>
       <ScrollView style={s.sc}>
         <View style={s.h}>
-          <Text style={s.wt}>Welcome, {user?.name || 'User'}!</Text>
+          <Text style={s.wt}>Welcome, {customer?.name || 'User'}!</Text>
           <TouchableOpacity onPress={handleLogout}>
             <Text style={s.lo}>Logout</Text>
           </TouchableOpacity>
         </View>
         <Text style={s.st}>What would you like to do today?</Text>
         <View style={s.g}>
-          <TouchableOpacity style={s.card} onPress={() => {}}>
+          <TouchableOpacity style={s.card} onPress={() => router.push('/new-job/service')}>
             <Text style={s.ci}>🚛</Text>
             <Text style={s.ct}>Haul Away</Text>
             <Text style={s.cd}>Remove junk from your property</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.card} onPress={() => {}}>
+          <TouchableOpacity style={s.card} onPress={() => router.push('/new-job/service')}>
             <Text style={s.ci}>💪</Text>
             <Text style={s.ct}>Labor Only</Text>
             <Text style={s.cd}>Get help with heavy lifting</Text>
