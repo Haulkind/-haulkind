@@ -6,31 +6,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-          
+
       - name: Setup Expo CLI
         run: npm install -g expo-cli eas-cli
-        
+
       - name: Install dependencies
         working-directory: apps/driver
-        run: |
-          npm install
-          npm install expo-router expo-linking expo-constants expo-status-bar react-native-safe-area-context react-native-screens expo-location expo-image-picker expo-asset expo-font expo-file-system
-        
+        run: npm install --legacy-peer-deps
+
       - name: Create app.config.js with API URL
         working-directory: apps/driver
         run: |
@@ -67,125 +64,23 @@ jobs:
                   "WRITE_EXTERNAL_STORAGE"
                 ]
               },
-              web: {
-                favicon: "./assets/favicon.png"
-              },
               plugins: [
-                "expo-router",
-                [
-                  "expo-location",
-                  {
-                    locationAlwaysAndWhenInUsePermission: "Allow Haulkind Driver to use your location to track jobs."
-                  }
-                ],
-                [
-                  "expo-image-picker",
-                  {
-                    photosPermission: "Allow Haulkind Driver to access your photos to upload job images."
-                  }
-                ]
-              ],
-              extra: {
-                apiUrl: "https://haulkind-production-285b.up.railway.app",
-                eas: {
-                  projectId: "141f6181-7c2e-4b3c-9a1d-f3e5d7a9b0c1"
-                }
-              }
+                ["expo-router"]
+              ]
             }
           };
           EOF
-          
-      - name: Update API URL in api.ts
-        working-directory: apps/driver
-        run: |
-          cat > lib/api.ts << 'APIEOF'
-          const API_BASE_URL = 'https://haulkind-production-285b.up.railway.app';
 
-          interface ApiResponse<T> {
-            data?: T;
-            error?: string;
-          }
-
-          async function apiRequest<T>(
-            endpoint: string,
-            options: RequestInit = {}
-          ): Promise<ApiResponse<T>> {
-            try {
-              const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                ...options,
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...options.headers,
-                },
-              });
-
-              const data = await response.json();
-              
-              if (!response.ok) {
-                return { error: data.error || 'Request failed' };
-              }
-
-              return { data };
-            } catch (error) {
-              return { error: 'Network error' };
-            }
-          }
-
-          export const api = {
-            get: <T>(endpoint: string, headers?: Record<string, string>) =>
-              apiRequest<T>(endpoint, { method: 'GET', headers }),
-            
-            post: <T>(endpoint: string, body: any, headers?: Record<string, string>) =>
-              apiRequest<T>(endpoint, {
-                method: 'POST',
-                body: JSON.stringify(body),
-                headers,
-              }),
-            
-            put: <T>(endpoint: string, body: any, headers?: Record<string, string>) =>
-              apiRequest<T>(endpoint, {
-                method: 'PUT',
-                body: JSON.stringify(body),
-                headers,
-              }),
-            
-            delete: <T>(endpoint: string, headers?: Record<string, string>) =>
-              apiRequest<T>(endpoint, { method: 'DELETE', headers }),
-          };
-          APIEOF
-          
-      - name: Create assets directory if missing
-        working-directory: apps/driver
-        run: |
-          mkdir -p assets
-          if [ ! -f assets/icon.png ]; then
-            convert -size 1024x1024 xc:'#2563eb' -fill white -gravity center -pointsize 200 -annotate 0 'HD' assets/icon.png 2>/dev/null || echo "Using placeholder icon"
-          fi
-          if [ ! -f assets/splash.png ]; then
-            convert -size 1284x2778 xc:'#2563eb' -fill white -gravity center -pointsize 100 -annotate 0 'Haulkind Driver' assets/splash.png 2>/dev/null || echo "Using placeholder splash"
-          fi
-          if [ ! -f assets/adaptive-icon.png ]; then
-            cp assets/icon.png assets/adaptive-icon.png 2>/dev/null || echo "Using placeholder adaptive-icon"
-          fi
-          if [ ! -f assets/favicon.png ]; then
-            cp assets/icon.png assets/favicon.png 2>/dev/null || echo "Using placeholder favicon"
-          fi
-          # Create placeholder images if convert not available
-          touch assets/icon.png assets/splash.png assets/adaptive-icon.png assets/favicon.png
-          
       - name: Run Expo prebuild
         working-directory: apps/driver
-        run: npx expo prebuild --platform android --clean
-        
+        run: npx expo prebuild --clean --platform android
+
       - name: Build Android APK
-        working-directory: apps/driver/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
-          
+        working-directory: apps/driver
+        run: cd android && ./gradlew assembleRelease
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: haulkind-driver-release
           path: apps/driver/android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 30
