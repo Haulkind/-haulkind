@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Alert } from 'react-native'
 
 const API_BASE_URL = 'https://haulkind-production-285b.up.railway.app'
 
@@ -49,9 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const url = `${API_BASE_URL}/customer/auth/login`
     
-    // DEBUG: Show URL being used
-    Alert.alert('DEBUG', `Calling: ${url}\nEmail: ${email}`)
-    
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -60,9 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       
       const text = await response.text()
-      
-      // DEBUG: Show response
-      Alert.alert('DEBUG Response', `Status: ${response.status}\nBody: ${text.substring(0, 200)}`)
       
       if (!response.ok) {
         throw new Error(`Login failed: ${response.status} - ${text}`)
@@ -74,21 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token)
       setCustomer(data.customer)
       
-      // DEBUG: Show success
-      Alert.alert('DEBUG Success', 'Login successful!')
-      
     } catch (error) {
-      // DEBUG: Show exact error
-      Alert.alert('DEBUG Error', `Type: ${error.name}\nMessage: ${error.message}\nStack: ${error.stack?.substring(0, 200)}`)
+      console.error('Login error:', error)
       throw error
     }
   }
 
   const signup = async (name: string, email: string, password: string) => {
     const url = `${API_BASE_URL}/customer/auth/signup`
-    
-    // DEBUG: Show URL being used
-    Alert.alert('DEBUG', `Calling: ${url}\nName: ${name}\nEmail: ${email}`)
     
     try {
       const response = await fetch(url, {
@@ -98,9 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       
       const text = await response.text()
-      
-      // DEBUG: Show response
-      Alert.alert('DEBUG Response', `Status: ${response.status}\nBody: ${text.substring(0, 200)}`)
       
       if (!response.ok) {
         throw new Error(`Signup failed: ${response.status} - ${text}`)
@@ -112,12 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token)
       setCustomer(data.customer)
       
-      // DEBUG: Show success
-      Alert.alert('DEBUG Success', 'Signup successful!')
-      
     } catch (error) {
-      // DEBUG: Show exact error
-      Alert.alert('DEBUG Error', `Type: ${error.name}\nMessage: ${error.message}\nStack: ${error.stack?.substring(0, 200)}`)
+      console.error('Signup error:', error)
       throw error
     }
   }
