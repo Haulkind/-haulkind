@@ -1,0 +1,132 @@
+name: Build Android Driver APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Setup Expo CLI
+        run: npm install -g expo-cli eas-cli
+        
+      - name: Install dependencies
+        working-directory: apps/driver
+        run: npm install
+        
+      - name: Create app.config.js with API URL
+        working-directory: apps/driver
+        run: |
+          cat > app.config.js << 'EOF'
+          export default {
+            expo: {
+              name: "Haulkind Driver",
+              slug: "haulkind-driver",
+              version: "1.0.0",
+              orientation: "portrait",
+              icon: "./assets/icon.png",
+              userInterfaceStyle: "light",
+              splash: {
+                image: "./assets/splash.png",
+                resizeMode: "contain",
+                backgroundColor: "#2563eb"
+              },
+              ios: {
+                supportsTablet: true,
+                bundleIdentifier: "com.haulkind.driver"
+              },
+              android: {
+                adaptiveIcon: {
+                  foregroundImage: "./assets/adaptive-icon.png",
+                  backgroundColor: "#2563eb"
+                },
+                package: "com.haulkind.driver",
+                permissions: [
+                  "ACCESS_FINE_LOCATION",
+                  "ACCESS_COARSE_LOCATION",
+                  "CAMERA",
+                  "READ_EXTERNAL_STORAGE",
+                  "WRITE_EXTERNAL_STORAGE"
+                ]
+              },
+              web: {
+                favicon: "./assets/favicon.png"
+              },
+              plugins: [
+                "expo-router/plugin",
+                [
+                  "expo-location",
+                  {
+                    locationAlwaysAndWhenInUsePermission: "Allow Haulkind Driver to use your location to track jobs."
+                  }
+                ],
+                [
+                  "expo-image-picker",
+                  {
+                    photosPermission: "Allow Haulkind Driver to access your photos to upload job images."
+                  }
+                ]
+              ],
+              extra: {
+                apiUrl: "https://haulkind-production-285b.up.railway.app",
+                eas: {
+                  projectId: "141f6181-7c2e-4b3c-9a1d-f3e5d7a9b0c1"
+                }
+              }
+            }
+          };
+          EOF
+          
+      - name: Update API URL in api.ts
+        working-directory: apps/driver
+        run: |
+          sed -i "s|process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'|'https://haulkind-production-285b.up.railway.app'|g" lib/api.ts
+          
+      - name: Create assets directory if missing
+        working-directory: apps/driver
+        run: |
+          mkdir -p assets
+          if [ ! -f assets/icon.png ]; then
+            cp icon.png assets/icon.png 2>/dev/null || echo "icon.png not found"
+          fi
+          if [ ! -f assets/splash.png ]; then
+            cp splash.png assets/splash.png 2>/dev/null || echo "splash.png not found"
+          fi
+          if [ ! -f assets/adaptive-icon.png ]; then
+            cp adaptive-icon.png assets/adaptive-icon.png 2>/dev/null || echo "adaptive-icon.png not found"
+          fi
+          if [ ! -f assets/favicon.png ]; then
+            cp favicon.png assets/favicon.png 2>/dev/null || echo "favicon.png not found"
+          fi
+          
+      - name: Run Expo prebuild
+        working-directory: apps/driver
+        run: npx expo prebuild --platform android --clean
+        
+      - name: Build Android APK
+        working-directory: apps/driver/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: haulkind-driver-release
+          path: apps/driver/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
