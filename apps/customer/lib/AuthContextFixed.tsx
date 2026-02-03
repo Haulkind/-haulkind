@@ -48,54 +48,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const url = `${API_BASE_URL}/customer/auth/login`
-    console.log('LOGIN URL:', url)
+    
+    // DEBUG: Show URL being used
+    Alert.alert('DEBUG', `Calling: ${url}\nEmail: ${email}`)
+    
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
+      
       const text = await response.text()
-      console.log('LOGIN STATUS:', response.status)
-      console.log('LOGIN BODY:', text)
+      
+      // DEBUG: Show response
+      Alert.alert('DEBUG Response', `Status: ${response.status}\nBody: ${text.substring(0, 200)}`)
+      
       if (!response.ok) {
-        Alert.alert('Login error', `${response.status}\n${text}`)
-        throw new Error(`Login failed: ${response.status}`)
+        throw new Error(`Login failed: ${response.status} - ${text}`)
       }
+      
       const data = JSON.parse(text)
       await AsyncStorage.setItem('customer_token', data.token)
       await AsyncStorage.setItem('customer_data', JSON.stringify(data.customer))
       setToken(data.token)
       setCustomer(data.customer)
+      
+      // DEBUG: Show success
+      Alert.alert('DEBUG Success', 'Login successful!')
+      
     } catch (error) {
-      Alert.alert('Login error', String(error))
+      // DEBUG: Show exact error
+      Alert.alert('DEBUG Error', `Type: ${error.name}\nMessage: ${error.message}\nStack: ${error.stack?.substring(0, 200)}`)
       throw error
     }
   }
 
   const signup = async (name: string, email: string, password: string) => {
     const url = `${API_BASE_URL}/customer/auth/signup`
-    console.log('SIGNUP URL:', url)
+    
+    // DEBUG: Show URL being used
+    Alert.alert('DEBUG', `Calling: ${url}\nName: ${name}\nEmail: ${email}`)
+    
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, phone: '' }),
       })
+      
       const text = await response.text()
-      console.log('SIGNUP STATUS:', response.status)
-      console.log('SIGNUP BODY:', text)
+      
+      // DEBUG: Show response
+      Alert.alert('DEBUG Response', `Status: ${response.status}\nBody: ${text.substring(0, 200)}`)
+      
       if (!response.ok) {
-        Alert.alert('Signup error', `Status: ${response.status}\n\nResponse:\n${text}`)
-        throw new Error(`Signup failed: ${response.status}`)
+        throw new Error(`Signup failed: ${response.status} - ${text}`)
       }
+      
       const data = JSON.parse(text)
       await AsyncStorage.setItem('customer_token', data.token)
       await AsyncStorage.setItem('customer_data', JSON.stringify(data.customer))
       setToken(data.token)
       setCustomer(data.customer)
+      
+      // DEBUG: Show success
+      Alert.alert('DEBUG Success', 'Signup successful!')
+      
     } catch (error) {
-      Alert.alert('Signup error', String(error))
+      // DEBUG: Show exact error
+      Alert.alert('DEBUG Error', `Type: ${error.name}\nMessage: ${error.message}\nStack: ${error.stack?.substring(0, 200)}`)
       throw error
     }
   }
