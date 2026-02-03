@@ -95,7 +95,61 @@ jobs:
       - name: Update API URL in api.ts
         working-directory: apps/driver
         run: |
-          sed -i "s|process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'|'https://haulkind-production-285b.up.railway.app'|g" lib/api.ts
+          cat > lib/api.ts << 'APIEOF'
+          const API_BASE_URL = 'https://haulkind-production-285b.up.railway.app';
+
+          interface ApiResponse<T> {
+            data?: T;
+            error?: string;
+          }
+
+          async function apiRequest<T>(
+            endpoint: string,
+            options: RequestInit = {}
+          ): Promise<ApiResponse<T>> {
+            try {
+              const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...options.headers,
+                },
+              });
+
+              const data = await response.json();
+              
+              if (!response.ok) {
+                return { error: data.error || 'Request failed' };
+              }
+
+              return { data };
+            } catch (error) {
+              return { error: 'Network error' };
+            }
+          }
+
+          export const api = {
+            get: <T>(endpoint: string, headers?: Record<string, string>) =>
+              apiRequest<T>(endpoint, { method: 'GET', headers }),
+            
+            post: <T>(endpoint: string, body: any, headers?: Record<string, string>) =>
+              apiRequest<T>(endpoint, {
+                method: 'POST',
+                body: JSON.stringify(body),
+                headers,
+              }),
+            
+            put: <T>(endpoint: string, body: any, headers?: Record<string, string>) =>
+              apiRequest<T>(endpoint, {
+                method: 'PUT',
+                body: JSON.stringify(body),
+                headers,
+              }),
+            
+            delete: <T>(endpoint: string, headers?: Record<string, string>) =>
+              apiRequest<T>(endpoint, { method: 'DELETE', headers }),
+          };
+          APIEOF
           
       - name: Create assets directory if missing
         working-directory: apps/driver
