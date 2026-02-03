@@ -27,7 +27,9 @@ jobs:
         
       - name: Install dependencies
         working-directory: apps/driver
-        run: npm install
+        run: |
+          npm install
+          npm install expo-router expo-linking expo-constants expo-status-bar react-native-safe-area-context react-native-screens expo-location expo-image-picker
         
       - name: Create app.config.js with API URL
         working-directory: apps/driver
@@ -41,6 +43,7 @@ jobs:
               orientation: "portrait",
               icon: "./assets/icon.png",
               userInterfaceStyle: "light",
+              scheme: "haulkind-driver",
               splash: {
                 image: "./assets/splash.png",
                 resizeMode: "contain",
@@ -68,7 +71,7 @@ jobs:
                 favicon: "./assets/favicon.png"
               },
               plugins: [
-                "expo-router/plugin",
+                "expo-router",
                 [
                   "expo-location",
                   {
@@ -108,7 +111,7 @@ jobs:
             options: RequestInit = {}
           ): Promise<ApiResponse<T>> {
             try {
-              const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+              const response = await fetch(\`\${API_BASE_URL}\${endpoint}\`, {
                 ...options,
                 headers: {
                   'Content-Type': 'application/json',
@@ -156,17 +159,19 @@ jobs:
         run: |
           mkdir -p assets
           if [ ! -f assets/icon.png ]; then
-            cp icon.png assets/icon.png 2>/dev/null || echo "icon.png not found"
+            convert -size 1024x1024 xc:'#2563eb' -fill white -gravity center -pointsize 200 -annotate 0 'HD' assets/icon.png 2>/dev/null || echo "Using placeholder icon"
           fi
           if [ ! -f assets/splash.png ]; then
-            cp splash.png assets/splash.png 2>/dev/null || echo "splash.png not found"
+            convert -size 1284x2778 xc:'#2563eb' -fill white -gravity center -pointsize 100 -annotate 0 'Haulkind Driver' assets/splash.png 2>/dev/null || echo "Using placeholder splash"
           fi
           if [ ! -f assets/adaptive-icon.png ]; then
-            cp adaptive-icon.png assets/adaptive-icon.png 2>/dev/null || echo "adaptive-icon.png not found"
+            cp assets/icon.png assets/adaptive-icon.png 2>/dev/null || echo "Using placeholder adaptive-icon"
           fi
           if [ ! -f assets/favicon.png ]; then
-            cp favicon.png assets/favicon.png 2>/dev/null || echo "favicon.png not found"
+            cp assets/icon.png assets/favicon.png 2>/dev/null || echo "Using placeholder favicon"
           fi
+          # Create placeholder images if convert not available
+          touch assets/icon.png assets/splash.png assets/adaptive-icon.png assets/favicon.png
           
       - name: Run Expo prebuild
         working-directory: apps/driver
