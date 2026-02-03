@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../lib/AuthContextNew';
-
+import { useAuth } from '../../lib/AuthContextFixed';
 export default function Signup() {
   const router = useRouter();
   const { signup } = useAuth();
@@ -10,7 +9,6 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
   const handleSignup = async () => {
     if (!name || !email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -26,7 +24,6 @@ export default function Signup() {
       setLoading(false);
     }
   };
-
   return (
     <SafeAreaView style={s.c}>
       <View style={s.m}>
@@ -49,7 +46,6 @@ export default function Signup() {
     </SafeAreaView>
   );
 }
-
 const s = StyleSheet.create({
   c: { flex: 1, backgroundColor: '#f8fafc' },
   m: { flex: 1, padding: 20 },
