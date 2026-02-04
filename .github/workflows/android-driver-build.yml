@@ -1,5 +1,4 @@
 name: Build Android Driver APK
-
 on:
   workflow_dispatch:
 
@@ -24,7 +23,10 @@ jobs:
       - name: Setup Expo CLI
         run: npm install -g expo-cli eas-cli
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install driver dependencies
         working-directory: apps/driver
         run: npm install --legacy-peer-deps
 
@@ -73,14 +75,14 @@ jobs:
 
       - name: Run Expo prebuild
         working-directory: apps/driver
-        run: npx expo prebuild --clean --platform android
+        run: expo prebuild --clean
 
       - name: Build Android APK
         working-directory: apps/driver
-        run: cd android && ./gradlew assembleRelease
+        run: eas build --platform android --local --output=./app-release.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: haulkind-driver-release
-          path: apps/driver/android/app/build/outputs/apk/release/app-release.apk
+          path: apps/driver/app-release.apk
