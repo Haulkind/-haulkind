@@ -39,7 +39,7 @@ jobs:
 
       - name: Install expo dependencies
         run: |
-          npx expo install expo-linking expo-notifications expo-device expo-constants
+          npx expo install expo-router expo-linking expo-notifications expo-device expo-constants expo-location expo-notifications expo-device expo-constants
           npm install expo-asset@11.0.5 expo-constants@17.0.8 expo-file-system@18.0.12 expo-font@13.0.4 --save
 
       - name: Set API URL in .env
