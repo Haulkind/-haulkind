@@ -33,7 +33,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router/plugin",
+
       [
         "expo-location",
         {
