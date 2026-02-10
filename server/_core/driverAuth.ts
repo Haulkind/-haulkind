@@ -79,39 +79,10 @@ export function registerDriverAuthRoutes(app: Express) {
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
-      res.json({ success: true, token, driver: { id: driver.id, userId: user.id, email: user.email, status: driver.status, isOnline: driver.is_online } });
-    } catch (error) {
-      console.error('Driver login error:', error);
-      res.status(500).json({ error: 'Failed to login', details: String(error) });
+      res.json({ token, user: { id: user.id, email: user.email, role: user.role }, driver: { id: driver.id, status: driver.status } });
+    } catch (err) {
+      console.error('Driver login error:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
-}const result = await db.execute(sql`
-        SELECT id, email, password_hash, full_name, role FROM users WHERE email = ${email} AND role = 'driver' LIMIT 1
-              `);
-      const rows = (result as any)[0] || [];
-      const user = rows[0];
-
-      if (!user || !user.password_hash) {
-                return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      // Verify password
-      const isValid = await bcrypt.compare(password, user.password_hash);
-      if (!isValid) {
-                return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      // Get driver record
-      const driverResult = await db.execute(sql`
-              SELECT id, status, is_online FROM drivers WHERE user_id = ${user.id} LIMIT 1
-                    `);
-      const driverRows = (driverResult as any)[0] || [];
-      const driver = driverRows[0];
-
-      if (!driver) {
-                return res.status(404).json({ error: 'Driver profile not found' });
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId: user.id, email: user.email, role: us
+}
