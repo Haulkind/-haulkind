@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { healthRouter } from "./health";
+import { registerDriverAuthRoutes } from "./driverAuth";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -164,6 +165,15 @@ async function startServer() {
 
   // ============================================
   // End Customer Auth Routes
+  // ============================================
+
+  // ============================================
+  // Driver Auth Routes (signup/login for driver app)
+  // ============================================
+  registerDriverAuthRoutes(app);
+  // ============================================
+  // End Driver Auth Routes
+  // ============================================
   // ============================================
 
   // tRPC API
