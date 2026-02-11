@@ -1,6 +1,6 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
-import { createCustomer, getUserByEmail, getCustomerByUserId } from "../db";
+import { createCustomer, getCustomerByUserId } from "../db";
 import { users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { eq } from "drizzle-orm";
@@ -26,7 +26,7 @@ export const customerAuthRouter = router({
       }
 
       // Check if user already exists
-      const existingUser = await getUserByEmail(input.email);
+      const existingUser = await db.select().from(users).where(eq(users.email, input.email)).limit(1).then(rows => rows[0]);
       if (existingUser) {
         throw new Error("Email already registered");
       }
@@ -90,7 +90,7 @@ export const customerAuthRouter = router({
       }
 
       // Get user by email
-      const user = await getUserByEmail(input.email);
+      const user = await db.select().from(users).where(eq(users.email, input.email)).limit(1).then(rows => rows[0]);
       if (!user) {
         throw new Error("Invalid email or password");
       }
