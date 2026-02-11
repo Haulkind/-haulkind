@@ -6,7 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic } from "./vite";
+import { serveStatic } from "./static";
 import { healthRouter } from "./health";
 import { registerDriverAuthRoutes } from "./driverAuth";
 import bcrypt from "bcryptjs";
