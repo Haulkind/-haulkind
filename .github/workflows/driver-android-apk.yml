@@ -12,25 +12,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
       - name: Setup Java (Gradle)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Install dependencies (Driver)
-        working-directory: apps/driver
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+      - name: Install dependencies (Driver Native)
+        working-directory: apps/driver-native/HaulkindDriverNative
+        run: npm install
       - name: Build Debug APK
-        working-directory: apps/driver/android
+        working-directory: apps/driver-native/HaulkindDriverNative/android
         run: ./gradlew assembleDebug --stacktrace
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: driver-app-debug-apk
-          path: apps/driver/android/app/build/outputs/apk/debug/app-debug.apk
+          path: apps/driver-native/HaulkindDriverNative/android/app/build/outputs/apk/debug/app-debug.apk
