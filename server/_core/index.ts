@@ -230,7 +230,7 @@ async function startServer() {
     const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // serveStatic(app); // Commented out to avoid conflicts with Socket.io - will configure later when needed
   }
 
   // Initialize Socket.io for real-time communication
