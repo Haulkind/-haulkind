@@ -51,7 +51,7 @@ function PrimaryButton({ title, onPress, disabled, loading }) {
     return (
       <View style={[styles.btn, styles.btnLoading]}>
         <ActivityIndicator color={COLORS.white} />
-        <Text style={styles.btnText}>  Aguarde...</Text>
+        <Text style={styles.btnText}>  Please wait...</Text>
       </View>
     );
   }
@@ -74,7 +74,7 @@ export function LoginScreen({ navigation }) {
     try {
       const data = await apiPost("/driver/auth/login", { email, password });
       const token = data?.token || data?.accessToken;
-      if (!token) throw new Error("Token não retornou na resposta.");
+      if (!token) throw new Error("No token returned from server.");
       await AsyncStorage.setItem("driver_token", token);
       navigation.reset({ index: 0, routes: [{ name: "Home" }] });
     } catch (e) {
@@ -93,35 +93,35 @@ export function LoginScreen({ navigation }) {
             <Text style={styles.logoIcon}>🚛</Text>
           </View>
           <Text style={styles.appName}>Haulkind Driver</Text>
-          <Text style={styles.subtitle}>Faça login para continuar</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
 
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Login</Text>
 
           <InputField
-            label="E-mail"
+            label="Email"
             icon="📧"
             value={email}
             onChangeText={setEmail}
-            placeholder="seu.email@exemplo.com"
+            placeholder="your.email@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
           />
 
           <InputField
-            label="Senha"
+            label="Password"
             icon="🔒"
             value={password}
             onChangeText={setPassword}
-            placeholder="Digite sua senha"
+            placeholder="Enter your password"
             secureTextEntry
           />
 
           {err ? <Text style={styles.err}>{err}</Text> : null}
 
           <PrimaryButton
-            title="Entrar"
+            title="Sign In"
             onPress={onLogin}
             disabled={!email || !password}
             loading={loading}
@@ -129,9 +129,9 @@ export function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.bottomLink}>
-          <Text style={styles.bottomText}>Não tem conta? </Text>
+          <Text style={styles.bottomText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-            <Text style={styles.linkText}>Criar conta</Text>
+            <Text style={styles.linkText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -151,11 +151,11 @@ export function SignupScreen({ navigation }) {
   async function onSignup() {
     setErr("");
     if (password !== confirmPassword) {
-      setErr("As senhas não coincidem.");
+      setErr("Passwords do not match.");
       return;
     }
     if (password.length < 6) {
-      setErr("A senha deve ter pelo menos 6 caracteres.");
+      setErr("Password must be at least 6 characters.");
       return;
     }
     setLoading(true);
@@ -180,61 +180,61 @@ export function SignupScreen({ navigation }) {
             <Text style={styles.logoIcon}>🚛</Text>
           </View>
           <Text style={styles.appName}>Haulkind Driver</Text>
-          <Text style={styles.subtitle}>Crie sua conta de motorista</Text>
+          <Text style={styles.subtitle}>Create your driver account</Text>
         </View>
 
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Cadastro</Text>
+          <Text style={styles.formTitle}>Sign Up</Text>
 
           <InputField
-            label="Nome completo"
+            label="Full Name"
             icon="👤"
             value={name}
             onChangeText={setName}
-            placeholder="Ex: João da Silva"
+            placeholder="e.g. John Smith"
           />
 
           <InputField
-            label="E-mail"
+            label="Email"
             icon="📧"
             value={email}
             onChangeText={setEmail}
-            placeholder="seu.email@exemplo.com"
+            placeholder="your.email@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
           />
 
           <InputField
-            label="Telefone"
+            label="Phone Number"
             icon="📱"
             value={phone}
             onChangeText={setPhone}
-            placeholder="(11) 99999-9999"
+            placeholder="(555) 123-4567"
             keyboardType="phone-pad"
           />
 
           <InputField
-            label="Senha"
+            label="Password"
             icon="🔒"
             value={password}
             onChangeText={setPassword}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="At least 6 characters"
             secureTextEntry
           />
 
           <InputField
-            label="Confirmar senha"
+            label="Confirm Password"
             icon="🔒"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Repita a senha"
+            placeholder="Re-enter your password"
             secureTextEntry
           />
 
           {err ? <Text style={styles.err}>{err}</Text> : null}
 
           <PrimaryButton
-            title="Criar conta"
+            title="Create Account"
             onPress={onSignup}
             disabled={!name || !email || !phone || !password || !confirmPassword}
             loading={loading}
@@ -242,9 +242,9 @@ export function SignupScreen({ navigation }) {
         </View>
 
         <View style={styles.bottomLink}>
-          <Text style={styles.bottomText}>Já tem conta? </Text>
+          <Text style={styles.bottomText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.linkText}>Fazer login</Text>
+            <Text style={styles.linkText}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -277,8 +277,8 @@ export function HomeScreen({ navigation }) {
       <View style={styles.homeContent}>
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeIcon}>✅</Text>
-          <Text style={styles.welcomeTitle}>Bem-vindo, Motorista!</Text>
-          <Text style={styles.welcomeText}>Você está conectado e pronto para receber entregas.</Text>
+          <Text style={styles.welcomeTitle}>Welcome, Driver!</Text>
+          <Text style={styles.welcomeText}>You are logged in and ready to receive deliveries.</Text>
         </View>
 
         <View style={styles.statusCard}>
@@ -290,7 +290,7 @@ export function HomeScreen({ navigation }) {
         </View>
 
         <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.8}>
-          <Text style={styles.logoutText}>🚪 Sair da conta</Text>
+          <Text style={styles.logoutText}>🚪 Sign Out</Text>
         </TouchableOpacity>
       </View>
     </View>
