@@ -41,6 +41,7 @@ async function startServer() {
   const server = createServer(app);
   
   // Enable CORS for admin dashboard and other frontends (manual headers for reliability)
+  // Force rebuild to ensure CORS is applied - 2026-02-12
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowedOrigins = [
