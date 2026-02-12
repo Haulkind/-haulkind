@@ -215,6 +215,35 @@ async function startServer() {
   // End Admin Routes
   // ============================================
 
+  // ============================================
+  // Admin Dashboard Static Files
+  // ============================================
+  // Serve admin dashboard from /admin path
+  const adminPath = './apps/admin/.next/standalone/apps/admin';
+  const fs = await import('fs');
+  const path = await import('path');
+  
+  if (fs.existsSync(adminPath)) {
+    // Serve Next.js static files
+    app.use('/admin/_next/static', express.static(path.join(adminPath, '.next/static')));
+    app.use('/admin', express.static(path.join(adminPath, 'public')));
+    
+    // Serve Next.js pages
+    const nextServer = await import(path.join(process.cwd(), adminPath, 'server.js'));
+    app.get('/admin*', (req, res) => {
+      // Rewrite path for Next.js
+      req.url = req.url.replace('/admin', '');
+      nextServer.default(req, res);
+    });
+    
+    console.log('Admin dashboard available at /admin');
+  } else {
+    console.log('Admin dashboard not built - run npm run build to include it');
+  }
+  // ============================================
+  // End Admin Dashboard
+  // ============================================
+
   // tRPC API
   app.use(
     "/api/trpc",
