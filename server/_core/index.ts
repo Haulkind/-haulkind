@@ -9,6 +9,8 @@ import { createContext } from "./context";
 import { serveStatic } from "./static";
 import { healthRouter } from "./health";
 import { registerDriverAuthRoutes } from "./driverAuth";
+import { registerAdminAuthRoutes } from "./adminAuth";
+import { registerAdminApiRoutes } from "./adminApi";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -174,6 +176,14 @@ async function startServer() {
   // ============================================
   // End Driver Auth Routes
   // ============================================
+
+  // ============================================
+  // Admin Auth and API Routes
+  // ============================================
+  registerAdminAuthRoutes(app);
+  registerAdminApiRoutes(app);
+  // ============================================
+  // End Admin Routes
   // ============================================
 
   // tRPC API
