@@ -12,6 +12,7 @@ import { healthRouter } from "./health";
 import { registerDriverAuthRoutes } from "./driverAuth";
 import { registerAdminAuthRoutes } from "./adminAuth";
 import { registerAdminApiRoutes } from "./adminApi";
+import { initializeSocket } from "./socket";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -231,6 +232,10 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+
+  // Initialize Socket.io for real-time communication
+  initializeSocket(server);
+  console.log('[Server] Socket.io initialized');
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
