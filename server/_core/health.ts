@@ -24,19 +24,33 @@ healthRouter.get("/health/db", async (_req, res) => {
     const tablesResult = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`);
     const tables = tablesResult.rows.map((r: any) => r.table_name);
 
-    // Get users columns
-    const colsResult = await pool.query(`SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position`);
-    const usersColumns = colsResult.rows.map((r: any) => `${r.column_name} (${r.data_type}, nullable=${r.is_nullable})`);
+    // Get columns for each main table
+    const getColumns = async (tableName: string) => {
+      const result = await pool.query(
+        `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
+        [tableName]
+      );
+      return result.rows.map((r: any) => `${r.column_name} (${r.data_type}, nullable=${r.is_nullable})`);
+    };
 
-    // Get drivers columns
-    const driverColsResult = await pool.query(`SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'drivers' ORDER BY ordinal_position`);
-    const driversColumns = driverColsResult.rows.map((r: any) => `${r.column_name} (${r.data_type}, nullable=${r.is_nullable})`);
+    const usersColumns = await getColumns('users');
+    const driversColumns = await getColumns('drivers');
+    const customersColumns = await getColumns('customers');
+    const ordersColumns = await getColumns('orders');
 
     await pool.end();
     clearTimeout(timeout);
     
     if (!res.headersSent) {
-      res.json({ status: "ok", DATABASE_URL_MASKED: masked, tables, usersColumns, driversColumns });
+      res.json({ 
+        status: "ok", 
+        DATABASE_URL_MASKED: masked, 
+        tables, 
+        usersColumns, 
+        driversColumns,
+        customersColumns,
+        ordersColumns
+      });
     }
   } catch (error: any) {
     clearTimeout(timeout);
