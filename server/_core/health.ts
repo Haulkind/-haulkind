@@ -1,6 +1,4 @@
 import { Router } from "express";
-import { getDb } from "../db";
-import { sql } from "drizzle-orm";
 
 export const healthRouter = Router();
 
@@ -12,68 +10,38 @@ healthRouter.get("/health/db", async (_req, res) => {
   const dbUrl = process.env.DATABASE_URL || "";
   const masked = dbUrl ? dbUrl.replace(/\/\/[^@]+@/, "//***:***@").substring(0, 80) : "NOT SET";
   
-  // Set a timeout so the endpoint doesn't hang forever
   const timeout = setTimeout(() => {
-    res.status(504).json({ 
-      status: "timeout", 
-      message: "Database query timed out after 8 seconds",
-      DATABASE_URL_MASKED: masked,
-    });
+    if (!res.headersSent) {
+      res.status(504).json({ status: "timeout", DATABASE_URL_MASKED: masked });
+    }
   }, 8000);
 
   try {
-    const db = await getDb();
-    if (!db) {
-      clearTimeout(timeout);
-      return res.json({ 
-        status: "no_db", 
-        message: "Database not available - getDb() returned null",
-        DATABASE_URL_SET: !!process.env.DATABASE_URL,
-        DATABASE_URL_MASKED: masked
-      });
-    }
+    const { default: pg } = await import("pg");
+    const pool = new pg.Pool({ connectionString: dbUrl, max: 2, connectionTimeoutMillis: 5000 });
+    
+    // Get all tables
+    const tablesResult = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`);
+    const tables = tablesResult.rows.map((r: any) => r.table_name);
 
-    // Test basic connectivity
-    const result = await db.execute(sql`SELECT 1 as test`);
+    // Get users columns
+    const colsResult = await pool.query(`SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position`);
+    const usersColumns = colsResult.rows.map((r: any) => `${r.column_name} (${r.data_type}, nullable=${r.is_nullable})`);
+
+    // Get drivers columns
+    const driverColsResult = await pool.query(`SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'drivers' ORDER BY ordinal_position`);
+    const driversColumns = driverColsResult.rows.map((r: any) => `${r.column_name} (${r.data_type}, nullable=${r.is_nullable})`);
+
+    await pool.end();
     clearTimeout(timeout);
-
-    // Check tables
-    let tables: string[] = [];
-    try {
-      const tablesResult = await db.execute(sql`SHOW TABLES`);
-      const tablesRows = Array.isArray(tablesResult) ? (tablesResult as any)[0] : tablesResult;
-      tables = Array.isArray(tablesRows) ? tablesRows.map((r: any) => Object.values(r)[0] as string) : [];
-    } catch (e: any) {
-      tables = ["ERROR: " + (e?.message || String(e))];
+    
+    if (!res.headersSent) {
+      res.json({ status: "ok", DATABASE_URL_MASKED: masked, tables, usersColumns, driversColumns });
     }
-
-    // Check users columns
-    let usersColumns: string[] = [];
-    try {
-      const colsResult = await db.execute(sql`SHOW COLUMNS FROM users`);
-      const colsRows = Array.isArray(colsResult) ? (colsResult as any)[0] : colsResult;
-      usersColumns = Array.isArray(colsRows) ? colsRows.map((r: any) => `${r.Field} (${r.Type})`) : [];
-    } catch (e: any) {
-      usersColumns = ["ERROR: " + (e?.message || String(e))];
-    }
-
-    res.json({
-      status: "ok",
-      DATABASE_URL_MASKED: masked,
-      dbConnected: true,
-      tables,
-      usersColumns,
-    });
   } catch (error: any) {
     clearTimeout(timeout);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        status: "error", 
-        message: error?.message || String(error),
-        code: error?.code,
-        errno: error?.errno,
-        DATABASE_URL_MASKED: masked,
-      });
+      res.status(500).json({ status: "error", message: error?.message || String(error), DATABASE_URL_MASKED: masked });
     }
   }
 });
