@@ -10,11 +10,21 @@ healthRouter.get("/health", (_req, res) => {
 
 healthRouter.get("/health/db", async (_req, res) => {
   const dbUrl = process.env.DATABASE_URL || "";
-  const masked = dbUrl ? dbUrl.replace(/\/\/[^@]+@/, "//***:***@") : "NOT SET";
+  const masked = dbUrl ? dbUrl.replace(/\/\/[^@]+@/, "//***:***@").substring(0, 80) : "NOT SET";
   
+  // Set a timeout so the endpoint doesn't hang forever
+  const timeout = setTimeout(() => {
+    res.status(504).json({ 
+      status: "timeout", 
+      message: "Database query timed out after 8 seconds",
+      DATABASE_URL_MASKED: masked,
+    });
+  }, 8000);
+
   try {
     const db = await getDb();
     if (!db) {
+      clearTimeout(timeout);
       return res.json({ 
         status: "no_db", 
         message: "Database not available - getDb() returned null",
@@ -23,20 +33,9 @@ healthRouter.get("/health/db", async (_req, res) => {
       });
     }
 
-    // Test basic connectivity with raw mysql2
-    let rawTestResult = null;
-    let rawTestError = null;
-    try {
-      const result = await db.execute(sql`SELECT 1 as test`);
-      rawTestResult = result;
-    } catch (e: any) {
-      rawTestError = e?.message || String(e);
-      // Try to get the underlying cause
-      if (e?.cause) rawTestError += " | cause: " + String(e.cause);
-      if (e?.code) rawTestError += " | code: " + e.code;
-      if (e?.errno) rawTestError += " | errno: " + e.errno;
-      if (e?.sqlState) rawTestError += " | sqlState: " + e.sqlState;
-    }
+    // Test basic connectivity
+    const result = await db.execute(sql`SELECT 1 as test`);
+    clearTimeout(timeout);
 
     // Check tables
     let tables: string[] = [];
@@ -48,19 +47,33 @@ healthRouter.get("/health/db", async (_req, res) => {
       tables = ["ERROR: " + (e?.message || String(e))];
     }
 
+    // Check users columns
+    let usersColumns: string[] = [];
+    try {
+      const colsResult = await db.execute(sql`SHOW COLUMNS FROM users`);
+      const colsRows = Array.isArray(colsResult) ? (colsResult as any)[0] : colsResult;
+      usersColumns = Array.isArray(colsRows) ? colsRows.map((r: any) => `${r.Field} (${r.Type})`) : [];
+    } catch (e: any) {
+      usersColumns = ["ERROR: " + (e?.message || String(e))];
+    }
+
     res.json({
-      status: rawTestError ? "db_error" : "ok",
+      status: "ok",
       DATABASE_URL_MASKED: masked,
-      dbConnected: !rawTestError,
-      rawTestResult: rawTestResult ? "OK" : null,
-      rawTestError,
+      dbConnected: true,
       tables,
+      usersColumns,
     });
   } catch (error: any) {
-    res.status(500).json({ 
-      status: "error", 
-      message: error?.message || String(error),
-      DATABASE_URL_MASKED: masked,
-    });
+    clearTimeout(timeout);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        status: "error", 
+        message: error?.message || String(error),
+        code: error?.code,
+        errno: error?.errno,
+        DATABASE_URL_MASKED: masked,
+      });
+    }
   }
 });
