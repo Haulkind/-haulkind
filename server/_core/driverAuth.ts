@@ -8,7 +8,7 @@ export function registerDriverAuthRoutes(app: Express) {
   // POST /driver/auth/signup
   app.post('/driver/auth/signup', async (req, res) => {
     try {
-      const { email, password, name } = req.body;
+      const { email, password, name, phone } = req.body;
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
@@ -23,8 +23,8 @@ export function registerDriverAuthRoutes(app: Express) {
       }
       const hashedPassword = await bcrypt.hash(password, 10);
       const insertResult = await db.execute(sql`
-        INSERT INTO users (email, password_hash, role, full_name, created_at, updated_at)
-        VALUES (${email}, ${hashedPassword}, 'driver', ${name || ''}, NOW(), NOW())
+        INSERT INTO users (email, password_hash, role, full_name, phone, created_at, updated_at)
+        VALUES (${email}, ${hashedPassword}, 'driver', ${name || ''}, ${phone || null}, NOW(), NOW())
       `);
       const userId = (insertResult as any)[0]?.insertId;
       if (!userId) {
