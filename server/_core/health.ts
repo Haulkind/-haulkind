@@ -9,60 +9,58 @@ healthRouter.get("/health", (_req, res) => {
 });
 
 healthRouter.get("/health/db", async (_req, res) => {
+  const dbUrl = process.env.DATABASE_URL || "";
+  const masked = dbUrl ? dbUrl.replace(/\/\/[^@]+@/, "//***:***@") : "NOT SET";
+  
   try {
     const db = await getDb();
     if (!db) {
-      return res.json({ status: "no_db", message: "Database not available", DATABASE_URL_SET: !!process.env.DATABASE_URL });
+      return res.json({ 
+        status: "no_db", 
+        message: "Database not available - getDb() returned null",
+        DATABASE_URL_SET: !!process.env.DATABASE_URL,
+        DATABASE_URL_MASKED: masked
+      });
     }
 
-    // Test basic query
-    const testResult = await db.execute(sql`SELECT 1 as test`);
-    const testRows = Array.isArray(testResult) ? (testResult as any)[0] : testResult;
-
-    // Check if users table exists
-    let usersTableExists = false;
-    let usersColumns: string[] = [];
+    // Test basic connectivity with raw mysql2
+    let rawTestResult = null;
+    let rawTestError = null;
     try {
-      const tablesResult = await db.execute(sql`SHOW TABLES LIKE 'users'`);
-      const tablesRows = Array.isArray(tablesResult) ? (tablesResult as any)[0] : tablesResult;
-      usersTableExists = Array.isArray(tablesRows) && tablesRows.length > 0;
-
-      if (usersTableExists) {
-        const colsResult = await db.execute(sql`SHOW COLUMNS FROM users`);
-        const colsRows = Array.isArray(colsResult) ? (colsResult as any)[0] : colsResult;
-        usersColumns = Array.isArray(colsRows) ? colsRows.map((r: any) => `${r.Field} (${r.Type})`) : [];
-      }
-    } catch (e) {
-      // table doesn't exist
+      const result = await db.execute(sql`SELECT 1 as test`);
+      rawTestResult = result;
+    } catch (e: any) {
+      rawTestError = e?.message || String(e);
+      // Try to get the underlying cause
+      if (e?.cause) rawTestError += " | cause: " + String(e.cause);
+      if (e?.code) rawTestError += " | code: " + e.code;
+      if (e?.errno) rawTestError += " | errno: " + e.errno;
+      if (e?.sqlState) rawTestError += " | sqlState: " + e.sqlState;
     }
 
-    // Check drivers table
-    let driversTableExists = false;
-    let driversColumns: string[] = [];
+    // Check tables
+    let tables: string[] = [];
     try {
-      const tablesResult = await db.execute(sql`SHOW TABLES LIKE 'drivers'`);
+      const tablesResult = await db.execute(sql`SHOW TABLES`);
       const tablesRows = Array.isArray(tablesResult) ? (tablesResult as any)[0] : tablesResult;
-      driversTableExists = Array.isArray(tablesRows) && tablesRows.length > 0;
-
-      if (driversTableExists) {
-        const colsResult = await db.execute(sql`SHOW COLUMNS FROM drivers`);
-        const colsRows = Array.isArray(colsResult) ? (colsResult as any)[0] : colsResult;
-        driversColumns = Array.isArray(colsRows) ? colsRows.map((r: any) => `${r.Field} (${r.Type})`) : [];
-      }
-    } catch (e) {
-      // table doesn't exist
+      tables = Array.isArray(tablesRows) ? tablesRows.map((r: any) => Object.values(r)[0] as string) : [];
+    } catch (e: any) {
+      tables = ["ERROR: " + (e?.message || String(e))];
     }
 
     res.json({
-      status: "ok",
-      dbConnected: true,
-      testQuery: testRows,
-      usersTableExists,
-      usersColumns,
-      driversTableExists,
-      driversColumns,
+      status: rawTestError ? "db_error" : "ok",
+      DATABASE_URL_MASKED: masked,
+      dbConnected: !rawTestError,
+      rawTestResult: rawTestResult ? "OK" : null,
+      rawTestError,
+      tables,
     });
-  } catch (error) {
-    res.status(500).json({ status: "error", message: String(error) });
+  } catch (error: any) {
+    res.status(500).json({ 
+      status: "error", 
+      message: error?.message || String(error),
+      DATABASE_URL_MASKED: masked,
+    });
   }
 });
