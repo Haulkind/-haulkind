@@ -1,8 +1,5 @@
 // Admin API client
-// Use same origin when running on same domain (no CORS needed)
-const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('railway.app') 
-  ? window.location.origin 
-  : (process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app');
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 
 export interface Driver {
   id: string; // UUID
