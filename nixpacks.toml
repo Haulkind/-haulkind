@@ -5,7 +5,7 @@ nixPkgs = ['nodejs-18_x', 'pnpm']
 cmds = ['pnpm install --frozen-lockfile']
 
 [phases.build]
-cmds = ['pnpm build:backend']
+cmds = ['pnpm build']
 
 [start]
-cmd = 'node dist/server/_core/index.js'
+cmd = 'node dist/index.js'
