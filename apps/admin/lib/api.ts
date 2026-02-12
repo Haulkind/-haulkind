@@ -1,297 +1,174 @@
 // Admin API client
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 
 export interface Driver {
-  id: number
-  name: string
-  email: string
-  phone: string
-  status: 'PENDING' | 'ACTIVE' | 'BLOCKED'
-  canHaulAway: boolean
-  canLaborOnly: boolean
-  vehicleType?: string
-  vehicleCapacity?: string
-  liftingLimit?: number
-  documentsUploaded: boolean
-  licenseUrl?: string
-  insuranceUrl?: string
-  registrationUrl?: string
-  createdAt: string
-  lastSeenAt?: string
+  id: string; // UUID
+  name: string;
+  email: string;
+  phone: string;
+  status: 'pending' | 'approved' | 'blocked';
+  created_at: string;
+  updated_at: string;
 }
 
-export interface Job {
-  id: number
-  serviceType: 'HAUL_AWAY' | 'LABOR_ONLY'
-  status: string
-  pickupAddress: string
-  pickupLat: number
-  pickupLng: number
-  scheduledFor: string
-  totalPrice: number
-  customerId: number
-  driverId?: number
-  driver?: {
-    id: number
-    name: string
-    phone: string
+export interface Customer {
+  id: number;
+  user_id: number | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  total_orders: number;
+}
+
+export interface Order {
+  id: string; // UUID
+  service_type: 'HAUL_AWAY' | 'LABOR_ONLY';
+  customer_name: string;
+  phone: string;
+  email: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string;
+  lat: number | null;
+  lng: number | null;
+  pickup_date: string | null;
+  pickup_time_window: string | null;
+  items_json: any;
+  pricing_json: any;
+  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  assigned_driver_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Stats {
+  drivers: {
+    total: number;
+    pending: number;
+    approved: number;
+    blocked: number;
+  };
+  customers: {
+    total: number;
+  };
+  orders: {
+    total: number;
+    today: number;
+    thisWeek: number;
+    thisMonth: number;
+    byStatus: Record<string, number>;
+  };
+}
+
+class ApiClient {
+  private token: string | null = null;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('admin_token');
+    }
   }
-  customer?: {
-    id: number
-    name: string
-    phone: string
+
+  setToken(token: string) {
+    this.token = token;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin_token', token);
+    }
   }
-  volumeTier?: string
-  helperCount?: number
-  estimatedHours?: number
-  createdAt: string
-}
 
-export interface EligibleDriver {
-  driver: Driver
-  distance: number
-  eta: number
-  completionRate: number
-  averageRating: number
-  jobsCompleted: number
-}
+  clearToken() {
+    this.token = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_token');
+    }
+  }
 
-export interface OfferWave {
-  id: number
-  jobId: number
-  waveNumber: number
-  driverIds: number[]
-  expiresAt: string
-  acceptedBy?: number
-  createdAt: string
-}
-
-export interface VolumePricing {
-  id: number
-  tier: string
-  basePrice: number
-  disposalCap: number
-  serviceAreaId: number
-}
-
-export interface Addon {
-  id: number
-  name: string
-  price: number
-  enabled: boolean
-  serviceAreaId?: number
-}
-
-export interface LaborRate {
-  id: number
-  helperCount: number
-  hourlyRate: number
-  minimumHours: number
-  serviceAreaId: number
-}
-
-export interface AuditLog {
-  id: number
-  entityType: string
-  entityId: number
-  action: string
-  userId: number
-  userName: string
-  changes: any
-  createdAt: string
-}
-
-export async function login(email: string, password: string): Promise<{ token: string }> {
-  const response = await fetch(`${API_BASE_URL}/admin/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  if (!response.ok) throw new Error('Login failed')
-  return response.json()
-}
-
-// Drivers
-export async function getDrivers(token: string, filters?: any): Promise<Driver[]> {
-  const params = new URLSearchParams(filters)
-  const response = await fetch(`${API_BASE_URL}/admin/drivers?${params}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get drivers')
-  return response.json()
-}
-
-export async function getDriver(token: string, id: number): Promise<Driver> {
-  const response = await fetch(`${API_BASE_URL}/admin/drivers/${id}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get driver')
-  return response.json()
-}
-
-export async function approveDriver(token: string, id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/drivers/${id}/approve`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to approve driver')
-}
-
-export async function blockDriver(token: string, id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/drivers/${id}/block`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to block driver')
-}
-
-export async function unblockDriver(token: string, id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/drivers/${id}/unblock`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to unblock driver')
-}
-
-// Jobs
-export async function getJobs(token: string, filters?: any): Promise<Job[]> {
-  const params = new URLSearchParams(filters)
-  const response = await fetch(`${API_BASE_URL}/admin/jobs?${params}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get jobs')
-  return response.json()
-}
-
-export async function getJob(token: string, id: number): Promise<Job> {
-  const response = await fetch(`${API_BASE_URL}/admin/jobs/${id}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get job')
-  return response.json()
-}
-
-export async function getOfferWaves(token: string, jobId: number): Promise<OfferWave[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/jobs/${jobId}/offer-waves`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get offer waves')
-  return response.json()
-}
-
-// Dispatch
-export async function getUnassignedJobs(token: string): Promise<Job[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/dispatch/unassigned`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get unassigned jobs')
-  return response.json()
-}
-
-export async function getEligibleDrivers(token: string, jobId: number): Promise<EligibleDriver[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/dispatch/eligible-drivers?jobId=${jobId}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get eligible drivers')
-  return response.json()
-}
-
-export async function forceAssign(token: string, jobId: number, driverId: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/dispatch/force-assign`, {
-    method: 'POST',
-    headers: {
+  private async request(endpoint: string, options: RequestInit = {}) {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ jobId, driverId }),
-  })
-  if (!response.ok) throw new Error('Failed to force assign')
+      ...options.headers,
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Auth
+  async login(email: string, password: string) {
+    const data = await this.request('/admin/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    this.setToken(data.token);
+    return data;
+  }
+
+  async getMe() {
+    return this.request('/admin/auth/me');
+  }
+
+  // Stats
+  async getStats(): Promise<Stats> {
+    return this.request('/admin/stats/overview');
+  }
+
+  // Drivers
+  async getDrivers(params?: { status?: string; search?: string; limit?: number; offset?: number }): Promise<{ drivers: Driver[]; total: number; limit: number; offset: number }> {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/drivers${query ? `?${query}` : ''}`);
+  }
+
+  async getDriver(id: string): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}`);
+  }
+
+  async updateDriverStatus(id: string, status: 'pending' | 'approved' | 'blocked'): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // Customers
+  async getCustomers(params?: { search?: string; limit?: number; offset?: number }): Promise<{ customers: Customer[]; total: number; limit: number; offset: number }> {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/customers${query ? `?${query}` : ''}`);
+  }
+
+  async getCustomer(id: string): Promise<{ customer: Customer }> {
+    return this.request(`/admin/customers/${id}`);
+  }
+
+  // Orders
+  async getOrders(params?: { status?: string; service_type?: string; search?: string; limit?: number; offset?: number }): Promise<{ orders: Order[]; total: number; limit: number; offset: number }> {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/orders${query ? `?${query}` : ''}`);
+  }
+
+  async getOrder(id: string): Promise<{ order: Order }> {
+    return this.request(`/admin/orders/${id}`);
+  }
+
+  async assignOrder(id: string, driver_id: string): Promise<{ order: Order }> {
+    return this.request(`/admin/orders/${id}/assign`, {
+      method: 'PUT',
+      body: JSON.stringify({ driver_id }),
+    });
+  }
 }
 
-// Pricing
-export async function getVolumePricing(token: string): Promise<VolumePricing[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/pricing/volumes`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get volume pricing')
-  return response.json()
-}
-
-export async function updateVolumePricing(token: string, id: number, data: Partial<VolumePricing>): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/pricing/volumes/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error('Failed to update volume pricing')
-}
-
-export async function getAddons(token: string): Promise<Addon[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/pricing/addons`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get addons')
-  return response.json()
-}
-
-export async function updateAddon(token: string, id: number, data: Partial<Addon>): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/pricing/addons/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error('Failed to update addon')
-}
-
-export async function getLaborRates(token: string): Promise<LaborRate[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/pricing/labor-rates`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get labor rates')
-  return response.json()
-}
-
-export async function updateLaborRate(token: string, id: number, data: Partial<LaborRate>): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/admin/pricing/labor-rates/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) throw new Error('Failed to update labor rate')
-}
-
-// Audit Logs
-export async function getAuditLogs(token: string, filters?: any): Promise<AuditLog[]> {
-  const params = new URLSearchParams(filters)
-  const response = await fetch(`${API_BASE_URL}/admin/audit-logs?${params}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get audit logs')
-  return response.json()
-}
-
-// Map
-export async function getActiveDrivers(token: string): Promise<Driver[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/map/drivers`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get active drivers')
-  return response.json()
-}
-
-export async function getActiveJobs(token: string): Promise<Job[]> {
-  const response = await fetch(`${API_BASE_URL}/admin/map/jobs`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-  if (!response.ok) throw new Error('Failed to get active jobs')
-  return response.json()
-}
+export const api = new ApiClient();
