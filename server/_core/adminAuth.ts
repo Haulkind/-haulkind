@@ -78,8 +78,7 @@ export function registerAdminAuthRoutes(app: Express) {
       // Check if this is an admin email (hardcoded for now)
       // TODO: Add proper role management
       const adminEmails = [
-        'admin@haulkind.com',
-        'negocios@haulkind.com'
+        'support@haulkind.com'
       ];
       if (!adminEmails.includes(email.toLowerCase())) {
         return res.status(403).json({ error: 'Admin access required' });
