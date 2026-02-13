@@ -13,6 +13,8 @@ import { registerDriverAuthRoutes } from "./driverAuth";
 import { registerAdminAuthRoutes } from "./adminAuth";
 import { registerAdminApiRoutes } from "./adminApi";
 import { initializeSocket } from "./socket";
+import { realtimeRouter } from "./realtime";
+import { migrateRouter } from "./migrate";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -74,6 +76,12 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // Health check endpoint
   app.use(healthRouter);
+  
+  // Realtime polling endpoints
+  app.use(realtimeRouter);
+  
+  // Migration endpoints (temporary)
+  app.use(migrateRouter);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
