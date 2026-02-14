@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haulkind API</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    h1 { color: #2c5f2d; }
+    a { color: #2c5f2d; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>🚛 Haulkind API Server</h1>
+  <p>Backend API server for Haulkind logistics platform.</p>
+  <h2>Available Endpoints:</h2>
+  <ul>
+    <li><a href="/health">GET /health</a> - Health check</li>
+    <li><a href="/updates?channel=test&since=0">GET /updates</a> - Polling endpoint (short)</li>
+    <li><a href="/updates/long?channel=test&since=0">GET /updates/long</a> - Long polling endpoint</li>
+    <li>POST /driver/auth/signup - Driver signup</li>
+    <li>POST /driver/auth/login - Driver login</li>
+    <li>POST /customer/auth/signup - Customer signup</li>
+    <li>POST /customer/auth/login - Customer login</li>
+    <li>POST /admin/auth/login - Admin login</li>
+  </ul>
+</body>
+</html>
