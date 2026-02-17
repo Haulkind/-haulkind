@@ -25,8 +25,8 @@ export function serveStatic(app: Express) {
       `Could not find the public directory in any of these locations:`,
       possiblePaths
     );
-    // Create a minimal fallback
-    app.use("*", (_req, res) => {
+    // Only serve root path, don't capture all routes
+    app.get("/", (_req, res) => {
       res.send(`<!DOCTYPE html><html><head><title>Haulkind API</title></head><body><h1>Haulkind API Server</h1><p>Backend is running. Public folder not found.</p></body></html>`);
     });
     return;
