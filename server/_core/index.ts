@@ -7,7 +7,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-// import { serveStatic } from "./static"; // Disabled temporarily
+import { serveStatic } from "./static";
 import { healthRouter } from "./health";
 import { registerDriverAuthRoutes } from "./driverAuth";
 import { registerAdminAuthRoutes } from "./adminAuth";
@@ -233,14 +233,8 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
-  // Temporarily disabled to avoid route conflicts
-  // if (process.env.NODE_ENV === "development") {
-  //   const { setupVite } = await import("./vite");
-  //   await setupVite(app, server);
-  // } else {
-  //   // serveStatic(app); // Commented out to avoid conflicts with Socket.io - will configure later when needed
-  // }
+  // Serve static files (with fallback handling)
+  serveStatic(app);
 
   // Initialize Socket.io for real-time communication
   initializeSocket(server);
