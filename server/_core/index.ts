@@ -47,6 +47,22 @@ async function startServer() {
   app.get('/__diag', (req, res) => {
     res.json({
       ok: true,
+      file: __filename,
+      cwd: process.cwd(),
+      dir: __dirname,
+      time: new Date().toISOString(),
+    });
+  });
+
+  app.get('/updates', (req, res) => {
+    res.json({ ok: true, source: 'index.ts fallback', ts: Date.now() });
+  });
+
+
+  // Diagnostic endpoints
+  app.get('/__diag', (req, res) => {
+    res.json({
+      ok: true,
       nodeEnv: process.env.NODE_ENV,
       cwd: process.cwd(),
       file: __filename,
