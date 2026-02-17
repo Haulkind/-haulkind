@@ -33,8 +33,8 @@ export function serveStatic(app: Express) {
   }
   
   app.use(express.static(distPath));
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Serve index.html for root path only (not for API routes)
+  app.get("/", (_req, res) => {
     const indexPath = path.resolve(distPath, "index.html");
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
