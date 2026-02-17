@@ -41,6 +41,34 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   const app = express();
+
+  // Diagnostic endpoints
+  app.get('/__diag', (req, res) => {
+    res.json({
+      ok: true,
+      nodeEnv: process.env.NODE_ENV,
+      cwd: process.cwd(),
+      file: __filename,
+      dir: __dirname,
+      time: new Date().toISOString(),
+    });
+  });
+
+  app.get('/__diag/files', (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    const distPath = path.join(process.cwd(), 'dist');
+    res.json({
+      hasDist: fs.existsSync(distPath),
+      hasServer: fs.existsSync(path.join(process.cwd(), 'server')),
+      distList: fs.existsSync(distPath) ? fs.readdirSync(distPath).slice(0, 200) : [],
+    });
+  });
+
+  // Fallback for /updates to isolate the problem
+  app.get('/updates', (req, res) => {
+    res.json({ ok: true, source: 'index.ts fallback', ts: Date.now() });
+  });
   const server = createServer(app);
   
   // Enable CORS for admin dashboard and other frontends (manual headers for reliability)
