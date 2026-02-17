@@ -19,8 +19,8 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the backend
-RUN pnpm build:backend
+# Build the backend with tsc
+RUN pnpm build
 
 # Remove devDependencies to reduce image size
 RUN pnpm prune --prod
