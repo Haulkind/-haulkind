@@ -1,4 +1,5 @@
 import "dotenv/config";
+console.log("--- [DIAG] Executing /tmp/haulkind-repo/server/_core/index.ts ---");
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
