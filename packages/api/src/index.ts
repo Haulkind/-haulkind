@@ -4,7 +4,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { db } from "./db/index.js";
-import { orders, drivers, users, customers } from "./db/schema.js";
+import { orders, drivers, users as usersTable, customers } from "./db/schema.js";
 import * as adminRoutes from "./admin-routes.js";
 import { eq, desc, sql } from "drizzle-orm";
 
