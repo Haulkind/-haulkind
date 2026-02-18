@@ -30,7 +30,17 @@ app.get('/updates', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Express server listening on port ${PORT}`);
-});
+// NÃO iniciar o servidor aqui - o backend real vai fazer isso
+// Carregar o backend real compilado
+console.log('Loading real backend from dist/index.js...');
+try {
+  require('./dist/index.js');
+  console.log('Backend real loaded successfully');
+} catch (error) {
+  console.error('Failed to load backend:', error);
+  // Fallback: rodar apenas o servidor de diagnóstico
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Diagnostic server listening on port ${PORT} (backend failed to load)`);
+  });
+}
