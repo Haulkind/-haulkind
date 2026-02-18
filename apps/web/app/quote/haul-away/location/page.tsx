@@ -50,7 +50,7 @@ export default function HaulAwayLocationPage() {
       city.trim().length > 0 &&
       state.trim().length === 2 &&
       zip.trim().length === 5 &&
-      serviceDate.trim().length > 0
+      (asap || serviceDate.trim().length > 0)
     )
     console.log('[useEffect validation]', { fullName, phone, email, street, city, state, zip, serviceDate, valid })
     setFormIsValid(valid)
@@ -122,7 +122,7 @@ export default function HaulAwayLocationPage() {
       city.trim().length > 0 &&
       state.trim().length === 2 &&
       zip.trim().length === 5 &&
-      serviceDate.trim().length > 0
+      (asap || serviceDate.trim().length > 0)
     )
     console.log('[isFormValid]', { fullName, phone, email, street, city, state, zip, serviceDate, valid })
     return valid
@@ -168,8 +168,8 @@ export default function HaulAwayLocationPage() {
       return
     }
     
-    if (!serviceDate.trim()) {
-      setError('Please select a service date')
+    if (!asap && !serviceDate.trim()) {
+      setError('Please select a service date or check ASAP')
       return
     }
 
