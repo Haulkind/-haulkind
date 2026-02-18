@@ -4,7 +4,7 @@ const RAILWAY_BASE_URL = 'https://haulkind-production.up.railway.app';
 const TIMEOUT_MS = 8000;
 
 // Approved states - all addresses in these states are automatically covered
-const APPROVED_STATES = ['NJ', 'MA', 'PA', 'NY'];
+const APPROVED_STATES = ['NJ', 'MA', 'PA', 'NY', 'CT'];
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
           'New Jersey': 'NJ',
           'Massachusetts': 'MA',
           'Pennsylvania': 'PA',
-          'New York': 'NY'
+          'New York': 'NY',
+          'Connecticut': 'CT'
         };
         
         const stateAbbr = stateMap[addressState] || addressState;
