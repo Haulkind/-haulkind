@@ -55,6 +55,9 @@ export default function HaulAwaySummaryPage() {
         addons: data.addons,
         customerNotes: data.customerNotes,
         photoUrls: data.photoUrls,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        customerEmail: data.customerEmail,
       })
 
       updateData({ jobId: job.id })

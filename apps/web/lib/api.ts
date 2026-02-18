@@ -48,6 +48,9 @@ export interface JobCreateRequest {
   estimatedHours?: number
   customerNotes?: string
   photoUrls?: string[]
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
 }
 
 export interface JobResponse {

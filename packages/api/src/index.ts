@@ -308,6 +308,161 @@ app.post('/quotes', async (req: Request, res: Response) => {
   }
 });
 
+// POST /jobs - Create a new job/order
+app.post('/jobs', async (req: Request, res: Response) => {
+  try {
+    const {
+      serviceType,
+      serviceAreaId,
+      pickupLat,
+      pickupLng,
+      pickupAddress,
+      scheduledFor,
+      volumeTier,
+      addons,
+      helperCount,
+      estimatedHours,
+      customerNotes,
+      photoUrls
+    } = req.body;
+
+    // Parse address from pickupAddress string
+    const addressParts = pickupAddress.split(',').map((p: string) => p.trim());
+    const street = addressParts[0] || '';
+    const city = addressParts[1] || '';
+    const stateZip = addressParts[2] || '';
+    const [state, zip] = stateZip.split(' ').filter(Boolean);
+
+    // Calculate total price (same logic as /quotes endpoint)
+    const volumePrices: { [key: string]: number } = {
+      'EIGHTH': 109,
+      'QUARTER': 169,
+      'HALF': 279,
+      'THREE_QUARTER': 389,
+      'FULL': 529
+    };
+    
+    const basePrice = volumePrices[volumeTier] || 169;
+    let addonTotal = 0;
+    
+    if (addons && Array.isArray(addons)) {
+      if (addons.includes('SAME_DAY')) addonTotal += 50;
+      if (addons.includes('HEAVY_ITEM')) addonTotal += 25;
+      if (addons.includes('STAIRS')) addonTotal += 20;
+      if (addons.includes('DISASSEMBLY')) addonTotal += 30;
+    }
+    
+    const total = basePrice + addonTotal;
+
+    // Get customer info from request (assuming it's in pickupAddress or separate fields)
+    const customerName = req.body.customerName || 'Customer';
+    const customerPhone = req.body.customerPhone || '';
+    const customerEmail = req.body.customerEmail || '';
+
+    // Insert order into database
+    const insertResult = await db.execute(sql`
+      INSERT INTO orders (
+        service_type,
+        customer_name,
+        phone,
+        email,
+        street,
+        city,
+        state,
+        zip,
+        lat,
+        lng,
+        pickup_date,
+        pickup_time_window,
+        items_json,
+        pricing_json,
+        status
+      ) VALUES (
+        ${serviceType},
+        ${customerName},
+        ${customerPhone},
+        ${customerEmail},
+        ${street},
+        ${city},
+        ${state || 'Unknown'},
+        ${zip || '00000'},
+        ${pickupLat?.toString() || '0'},
+        ${pickupLng?.toString() || '0'},
+        ${scheduledFor},
+        ${'ALL_DAY'},
+        ${JSON.stringify({ volumeTier, addons, photoUrls, customerNotes })},
+        ${JSON.stringify({ total, basePrice, addonTotal, disposalIncluded: 50 })},
+        ${'pending'}
+      )
+      RETURNING id
+    `);
+
+    const orderId = (insertResult.rows[0] as { id: string }).id;
+
+    res.json({
+      success: true,
+      id: orderId,
+      status: 'pending',
+      total
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[CREATE_JOB] Error:', errorMessage);
+    res.status(500).json({ error: 'Failed to create job', details: errorMessage });
+  }
+});
+
+// POST /jobs/:id/pay - Process payment for a job
+app.post('/jobs/:id/pay', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethodId } = req.body;
+
+    // For now, just mark the order as paid (demo mode)
+    await db.execute(sql`
+      UPDATE orders
+      SET status = 'paid'
+      WHERE id = ${id}
+    `);
+
+    res.json({
+      success: true,
+      message: 'Payment processed successfully'
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[PAY_JOB] Error:', errorMessage);
+    res.status(500).json({ error: 'Failed to process payment', details: errorMessage });
+  }
+});
+
+// GET /jobs/:id - Get job status
+app.get('/jobs/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.execute(sql`
+      SELECT * FROM orders WHERE id = ${id} LIMIT 1
+    `);
+
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const order = result.rows[0] as any;
+
+    res.json({
+      success: true,
+      status: order.status,
+      order
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[GET_JOB] Error:', errorMessage);
+    res.status(500).json({ error: 'Failed to get job', details: errorMessage });
+  }
+});
+
 // Health check endpoint with version info and DB connection test
 app.get("/health", async (req: Request, res: Response) => {
   try {
