@@ -280,6 +280,45 @@ app.get("/health", async (req: Request, res: Response) => {
   }
 });
 
+// Create admin user endpoint (protected by DEBUG_TOKEN)
+app.post("/create-admin", authenticateDebugToken, async (req: Request, res: Response) => {
+  try {
+    const { email, password, name } = req.body;
+    
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Email, password and name are required' });
+    }
+    
+    // Check if admin already exists
+    const existingAdmin = await db.execute(sql`SELECT id FROM users WHERE email = ${email} LIMIT 1`);
+    
+    if (existingAdmin.rows && existingAdmin.rows.length > 0) {
+      return res.status(400).json({ error: 'Admin already exists' });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Insert admin user
+    const insertResult = await db.execute(sql`
+      INSERT INTO users (email, password_hash, full_name, role, phone)
+      VALUES (${email}, ${hashedPassword}, ${name}, 'admin', '')
+      RETURNING id
+    `);
+    
+    const adminId = (insertResult.rows[0] as { id: number }).id;
+    
+    res.json({
+      success: true,
+      admin: { id: adminId, email, name, role: 'admin' }
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[CREATE_ADMIN] Error:', errorMessage);
+    res.status(500).json({ error: 'Failed to create admin', details: errorMessage });
+  }
+});
+
 // Migration endpoint (protected by DEBUG_TOKEN)
 app.post("/migrate", authenticateDebugToken, async (req: Request, res: Response) => {
   try {
