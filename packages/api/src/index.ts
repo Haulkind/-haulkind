@@ -4,7 +4,8 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { db } from "./db/index.js";
-import { orders, drivers } from "./db/schema.js";
+import { orders, drivers, users, customers } from "./db/schema.js";
+import * as adminRoutes from "./admin-routes.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 const app = express();
@@ -447,6 +448,31 @@ app.get("/driver-applications", authenticateToken, (req: AuthRequest, res: Respo
     applications: driverApplications,
   });
 });
+
+// =====================================================
+// ADMIN ROUTES
+// =====================================================
+
+// Admin Auth
+app.post("/admin/auth/login", adminRoutes.adminLogin);
+app.get("/admin/auth/me", authenticateToken, adminRoutes.requireAdmin, adminRoutes.adminMe);
+
+// Admin Stats
+app.get("/admin/stats/overview", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getStatsOverview);
+
+// Admin Drivers
+app.get("/admin/drivers", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getDrivers);
+app.get("/admin/drivers/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getDriver);
+app.put("/admin/drivers/:id/status", authenticateToken, adminRoutes.requireAdmin, adminRoutes.updateDriverStatus);
+
+// Admin Customers
+app.get("/admin/customers", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getCustomers);
+app.get("/admin/customers/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getCustomer);
+
+// Admin Orders
+app.get("/admin/orders", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrders);
+app.get("/admin/orders/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrder);
+app.put("/admin/orders/:id/assign", authenticateToken, adminRoutes.requireAdmin, adminRoutes.assignOrder);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
