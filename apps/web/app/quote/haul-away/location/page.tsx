@@ -228,7 +228,9 @@ export default function HaulAwayLocationPage() {
         EVENING: '17:00',
         ALL_DAY: '09:00'
       }
-      const preferredDateTime = `${serviceDate}T${timeMap[timeWindow]}:00`
+      // If ASAP, use tomorrow's date as default
+      const effectiveDate = asap && !serviceDate ? new Date(Date.now() + 86400000).toISOString().split('T')[0] : serviceDate
+      const preferredDateTime = `${effectiveDate}T${timeMap[timeWindow]}:00`
 
       updateData({
         serviceType: 'HAUL_AWAY',
