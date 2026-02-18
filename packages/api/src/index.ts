@@ -247,7 +247,7 @@ app.get('/customer/auth/me', authenticateToken, async (req: AuthRequest, res: Re
 // POST /quotes - Calculate quote for junk removal
 app.post('/quotes', async (req: Request, res: Response) => {
   try {
-    const { serviceType, location, volume, addons, scheduledDate } = req.body;
+    const { serviceType, serviceAreaId, pickupLat, pickupLng, pickupAddress, scheduledFor, volumeTier, addons } = req.body;
     
     // Base prices for different volumes
     const volumePrices: { [key: string]: number } = {
@@ -258,29 +258,32 @@ app.post('/quotes', async (req: Request, res: Response) => {
       'FULL': 529
     };
     
-    const basePrice = volumePrices[volume] || 169;
+    const basePrice = volumePrices[volumeTier] || 169;
     
     // Calculate addon prices
     let addonTotal = 0;
-    const breakdown: Array<{ item: string; price: number }> = [
-      { item: `${volume} Truck Load`, price: basePrice }
+    const breakdown: Array<{ label: string; amount: number }> = [
+      { label: `${volumeTier} Truck Load`, amount: basePrice }
     ];
     
-    if (addons?.sameDayService) {
-      addonTotal += 50;
-      breakdown.push({ item: 'Same-Day Service', price: 50 });
-    }
-    if (addons?.heavyItem) {
-      addonTotal += 25;
-      breakdown.push({ item: 'Heavy Item', price: 25 });
-    }
-    if (addons?.stairs) {
-      addonTotal += 20;
-      breakdown.push({ item: 'Stairs', price: 20 });
-    }
-    if (addons?.disassembly) {
-      addonTotal += 30;
-      breakdown.push({ item: 'Disassembly', price: 30 });
+    // Addons is an array of strings like ['SAME_DAY', 'HEAVY_ITEM']
+    if (addons && Array.isArray(addons)) {
+      if (addons.includes('SAME_DAY')) {
+        addonTotal += 50;
+        breakdown.push({ label: 'Same-Day Service', amount: 50 });
+      }
+      if (addons.includes('HEAVY_ITEM')) {
+        addonTotal += 25;
+        breakdown.push({ label: 'Heavy Item', amount: 25 });
+      }
+      if (addons.includes('STAIRS')) {
+        addonTotal += 20;
+        breakdown.push({ label: 'Stairs', amount: 20 });
+      }
+      if (addons.includes('DISASSEMBLY')) {
+        addonTotal += 30;
+        breakdown.push({ label: 'Disassembly', amount: 30 });
+      }
     }
     
     const total = basePrice + addonTotal;
@@ -291,9 +294,9 @@ app.post('/quotes', async (req: Request, res: Response) => {
       breakdown,
       disposalIncluded: 50,
       serviceType,
-      location,
-      volume,
-      scheduledDate
+      pickupAddress,
+      volumeTier,
+      scheduledFor
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
