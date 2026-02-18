@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "start": "node ../../dist/server/_core/index.js",
+    "build": "tsc && mkdir -p dist && echo \"console.log(\\\"🚀 [RAILWAY-ENTRY] Executing packages/api/dist/index.js\\\");\\nimport \\\"../../../dist/packages/api/src/index.js\\\";\" > dist/index.js",
+    "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
