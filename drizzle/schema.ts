@@ -29,6 +29,7 @@ export const users = mysqlTable("users", {
   phone: varchar("phone", { length: 20 }),
   photoUrl: text("photoUrl"),
   loginMethod: varchar("loginMethod", { length: 64 }),
+  password: varchar("password", { length: 255 }),
   role: mysqlEnum("role", ["user", "admin", "customer", "driver"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -419,6 +420,70 @@ export const driverStrikes = mysqlTable("driverStrikes", {
 }));
 
 // ============================================================================
+// ITEMS CATALOG & PRICING
+// ============================================================================
+
+export const items = mysqlTable("items", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),
+  parentId: int("parentId"),
+  basePrice: decimal("basePrice", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  isPopular: boolean("isPopular").default(false),
+  displayOrder: int("displayOrder").default(0),
+  sortOrder: int("sortOrder").default(0),
+  imageUrl: varchar("imageUrl", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  parentIdIdx: index("items_parentId_idx").on(table.parentId),
+  categoryIdx: index("items_category_idx").on(table.category),
+}));
+
+export const promoCodes = mysqlTable("promoCodes", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  description: text("description"),
+  discountType: mysqlEnum("discountType", ["percentage", "fixed"]).notNull(),
+  discountValue: decimal("discountValue", { precision: 10, scale: 2 }).notNull(),
+  minOrderAmount: decimal("minOrderAmount", { precision: 10, scale: 2 }),
+  minOrderValue: decimal("minOrderValue", { precision: 10, scale: 2 }),
+  maxDiscountAmount: decimal("maxDiscountAmount", { precision: 10, scale: 2 }),
+  maxDiscount: decimal("maxDiscount", { precision: 10, scale: 2 }),
+  validFrom: timestamp("validFrom"),
+  validUntil: timestamp("validUntil"),
+  maxUses: int("maxUses"),
+  currentUses: int("currentUses").default(0),
+  isActive: boolean("isActive").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const savedQuotes = mysqlTable("savedQuotes", {
+  id: varchar("id", { length: 100 }).primaryKey(),
+  quoteId: varchar("quoteId", { length: 100 }).notNull().unique(),
+  customerName: varchar("customerName", { length: 255 }).notNull(),
+  customerEmail: varchar("customerEmail", { length: 255 }).notNull(),
+  customerPhone: varchar("customerPhone", { length: 50 }).notNull(),
+  serviceStreet: varchar("serviceStreet", { length: 500 }).notNull(),
+  serviceCity: varchar("serviceCity", { length: 255 }).notNull(),
+  serviceState: varchar("serviceState", { length: 50 }).notNull(),
+  serviceZip: varchar("serviceZip", { length: 20 }).notNull(),
+  items: json("items").notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  tax: decimal("tax", { precision: 10, scale: 2 }).notNull(),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0.00"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  promoCode: varchar("promoCode", { length: 50 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  quoteIdIdx: index("savedQuotes_quoteId_idx").on(table.quoteId),
+  emailIdx: index("savedQuotes_email_idx").on(table.customerEmail),
+}));
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
@@ -430,3 +495,7 @@ export type ServiceArea = typeof serviceAreas.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Payout = typeof payouts.$inferSelect;
+export type Item = typeof items.$inferSelect;
+export type InsertItem = typeof items.$inferInsert;
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type SavedQuote = typeof savedQuotes.$inferSelect;

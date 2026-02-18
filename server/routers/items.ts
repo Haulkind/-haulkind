@@ -5,18 +5,48 @@ import { items, promoCodes, savedQuotes } from "../../drizzle/schema";
 import { eq, and, isNull, lte, gte, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+// ============================================================================
+// Zod Schemas for explicit output typing
+// ============================================================================
+
+const ItemSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  slug: z.string().nullable(),
+  description: z.string().nullable(),
+  category: z.string().nullable(),
+  parentId: z.number().nullable(),
+  basePrice: z.string(),
+  isPopular: z.boolean().nullable(),
+  displayOrder: z.number().nullable(),
+  sortOrder: z.number().nullable(),
+  imageUrl: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+const ItemsListOutputSchema = z.object({
+  items: z.array(ItemSchema),
+});
+
+// ============================================================================
+// Items Router
+// ============================================================================
+
 export const itemsRouter = router({
   // Get items catalog with optional filtering
   list: publicProcedure
     .input(
       z.object({
-        parentId: z.string().nullable().optional(),
+        parentId: z.union([z.string(), z.number()]).nullable().optional(),
         popular: z.boolean().optional(),
         category: z.string().optional(),
       }).optional()
     )
-    .query(async ({ input }) => {
+    .output(ItemsListOutputSchema)
+    .query(async ({ input }): Promise<z.infer<typeof ItemsListOutputSchema>> => {
       const db = await getDb();
+      if (!db) return { items: [] };
       
       let conditions = [];
       
@@ -24,7 +54,7 @@ export const itemsRouter = router({
         conditions.push(
           input.parentId === null 
             ? isNull(items.parentId)
-            : eq(items.parentId, input.parentId)
+            : eq(items.parentId, typeof input.parentId === 'string' ? parseInt(input.parentId) : input.parentId)
         );
       }
       
@@ -59,6 +89,7 @@ export const itemsRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      if (!db) throw new Error('Database not available');
       
       // Fetch item details
       const itemIds = input.items.map(i => i.id);
@@ -66,13 +97,13 @@ export const itemsRouter = router({
         .select()
         .from(items)
         .where(
-          or(...itemIds.map(id => eq(items.id, id)))
+          or(...itemIds.map(id => eq(items.id, parseInt(id))))
         );
       
       // Calculate subtotal
       let subtotal = 0;
       const breakdown = input.items.map(selectedItem => {
-        const item = itemDetails.find(i => i.id === selectedItem.id);
+        const item = itemDetails.find(i => String(i.id) === selectedItem.id);
         if (!item) {
           throw new Error(`Item ${selectedItem.id} not found`);
         }
@@ -113,6 +144,7 @@ export const itemsRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      if (!db) throw new Error('Database not available');
       
       // Find promo code
       const [promoCode] = await db
@@ -140,7 +172,7 @@ export const itemsRouter = router({
       }
       
       // Check max uses
-      if (promoCode.maxUses && promoCode.currentUses >= promoCode.maxUses) {
+      if (promoCode.maxUses && promoCode.currentUses !== null && promoCode.currentUses >= promoCode.maxUses) {
         throw new Error("Promo code has reached maximum uses");
       }
       
@@ -206,6 +238,7 @@ export const itemsRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      if (!db) throw new Error('Database not available');
       
       // Generate quote ID
       const quoteId = `HK-${new Date().getFullYear()}-${nanoid(8).toUpperCase()}`;
@@ -251,6 +284,7 @@ export const itemsRouter = router({
     )
     .query(async ({ input }) => {
       const db = await getDb();
+      if (!db) throw new Error('Database not available');
       
       const [quote] = await db
         .select()
@@ -269,7 +303,7 @@ export const itemsRouter = router({
       
       return {
         ...quote,
-        items: JSON.parse(quote.items),
+        items: JSON.parse(quote.items as string),
       };
     }),
 });

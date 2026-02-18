@@ -20,6 +20,33 @@
       "@shared/*": ["../../shared/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../../server/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../../shared/**/*.ts",
+    "../../drizzle/schema.ts",
+    "../../server/routers.ts",
+    "../../server/routers/items.ts",
+    "../../server/routers/serviceAreas.ts",
+    "../../server/routers/pricing.ts",
+    "../../server/routers/jobs.ts",
+    "../../server/routers/media.ts",
+    "../../server/routers/drivers.ts",
+    "../../server/routers/dispatch.ts",
+    "../../server/routers/ledger.ts",
+    "../../server/routers/customerAuth.ts",
+    "../../server/_core/trpc.ts",
+    "../../server/_core/context.ts",
+    "../../server/_core/cookies.ts",
+    "../../server/_core/systemRouter.ts",
+    "../../server/_core/notification.ts",
+    "../../server/_core/sdk.ts",
+    "../../server/_core/env.ts",
+    "../../server/_core/types/**/*.ts",
+    "../../server/db.ts",
+    "../../server/storage.ts"
+  ],
   "exclude": ["node_modules"]
 }
