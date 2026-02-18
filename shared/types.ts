@@ -5,3 +5,6 @@
 
 export type * from "../drizzle/schema";
 export * from "./_core/errors";
+
+// Re-export AppRouter type for frontend consumption
+export type { AppRouter } from '../server/routers';
