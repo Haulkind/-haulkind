@@ -279,6 +279,19 @@ app.get("/health", async (req: Request, res: Response) => {
   }
 });
 
+// Migration endpoint (protected by DEBUG_TOKEN)
+app.post("/migrate", authenticateDebugToken, async (req: Request, res: Response) => {
+  try {
+    const { runMigrations } = await import("./migrate.js");
+    const result = await runMigrations();
+    res.json(result);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[MIGRATE] Error:', errorMessage);
+    res.status(500).json({ error: "Migration failed", details: errorMessage });
+  }
+});
+
 // Debug endpoint to list last 20 orders (protected by DEBUG_TOKEN)
 app.get("/debug/orders", authenticateDebugToken, async (req: Request, res: Response) => {
   try {
