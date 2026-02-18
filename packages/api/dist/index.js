@@ -12,17 +12,7 @@ const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "https://haulkind-web.vercel.app";
 const allowedOrigins = CORS_ORIGIN.split(",").map(o => o.trim());
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        }
-        else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: true,
     credentials: true,
 }));
 app.use(express.json());
