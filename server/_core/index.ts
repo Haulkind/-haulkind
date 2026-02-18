@@ -1,5 +1,4 @@
 import "dotenv/config";
-console.log("--- [DIAG] Executing /tmp/haulkind-repo/server/_core/index.ts ---");
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
@@ -42,50 +41,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   const app = express();
-
-  // Diagnostic endpoints
-  app.get('/__diag', (req, res) => {
-    res.json({
-      ok: true,
-      file: __filename,
-      cwd: process.cwd(),
-      dir: __dirname,
-      time: new Date().toISOString(),
-    });
-  });
-
-  app.get('/updates', (req, res) => {
-    res.json({ ok: true, source: 'index.ts fallback', ts: Date.now() });
-  });
-
-
-  // Diagnostic endpoints
-  app.get('/__diag', (req, res) => {
-    res.json({
-      ok: true,
-      nodeEnv: process.env.NODE_ENV,
-      cwd: process.cwd(),
-      file: __filename,
-      dir: __dirname,
-      time: new Date().toISOString(),
-    });
-  });
-
-  app.get('/__diag/files', (req, res) => {
-    const fs = require('fs');
-    const path = require('path');
-    const distPath = path.join(process.cwd(), 'dist');
-    res.json({
-      hasDist: fs.existsSync(distPath),
-      hasServer: fs.existsSync(path.join(process.cwd(), 'server')),
-      distList: fs.existsSync(distPath) ? fs.readdirSync(distPath).slice(0, 200) : [],
-    });
-  });
-
-  // Fallback for /updates to isolate the problem
-  app.get('/updates', (req, res) => {
-    res.json({ ok: true, source: 'index.ts fallback', ts: Date.now() });
-  });
   const server = createServer(app);
   
   // Enable CORS for admin dashboard and other frontends (manual headers for reliability)
@@ -278,8 +233,13 @@ async function startServer() {
       createContext,
     })
   );
-  // Serve static files (with fallback handling)
-  serveStatic(app);
+  // development mode uses Vite, production mode uses static files
+  if (process.env.NODE_ENV === "development") {
+    const { setupVite } = await import("./vite");
+    await setupVite(app, server);
+  } else {
+    // serveStatic(app); // Commented out to avoid conflicts with Socket.io - will configure later when needed
+  }
 
   // Initialize Socket.io for real-time communication
   initializeSocket(server);
