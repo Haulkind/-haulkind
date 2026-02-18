@@ -42,7 +42,7 @@ export const itemsRouter = router({
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(items.displayOrder);
       
-      return result;
+      return { items: result };
     }),
 
   // Calculate price for selected items
