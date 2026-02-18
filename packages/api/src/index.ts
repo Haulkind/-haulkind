@@ -416,6 +416,26 @@ app.get("/service-areas", (req: Request, res: Response) => {
   });
 });
 
+// Check service availability by lat/lng (for frontend)
+app.post("/api/service-areas/check", (req: Request, res: Response) => {
+  const { lat, lng, state } = req.body;
+  
+  // For now, accept all Connecticut addresses
+  if (state === 'CT') {
+    res.json({
+      covered: true,
+      serviceArea: {
+        id: 1,
+        name: 'Connecticut'
+      }
+    });
+  } else {
+    res.json({
+      covered: false
+    });
+  }
+});
+
 // Check service availability by zip code
 app.get("/service-areas/check/:zipCode", (req: Request, res: Response) => {
   const { zipCode } = req.params;
