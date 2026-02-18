@@ -244,6 +244,64 @@ app.get('/customer/auth/me', authenticateToken, async (req: AuthRequest, res: Re
 // END CUSTOMER AUTH ROUTES
 // =====================================================
 
+// POST /quotes - Calculate quote for junk removal
+app.post('/quotes', async (req: Request, res: Response) => {
+  try {
+    const { serviceType, location, volume, addons, scheduledDate } = req.body;
+    
+    // Base prices for different volumes
+    const volumePrices: { [key: string]: number } = {
+      'EIGHTH': 109,
+      'QUARTER': 169,
+      'HALF': 279,
+      'THREE_QUARTER': 389,
+      'FULL': 529
+    };
+    
+    const basePrice = volumePrices[volume] || 169;
+    
+    // Calculate addon prices
+    let addonTotal = 0;
+    const breakdown: Array<{ item: string; price: number }> = [
+      { item: `${volume} Truck Load`, price: basePrice }
+    ];
+    
+    if (addons?.sameDayService) {
+      addonTotal += 50;
+      breakdown.push({ item: 'Same-Day Service', price: 50 });
+    }
+    if (addons?.heavyItem) {
+      addonTotal += 25;
+      breakdown.push({ item: 'Heavy Item', price: 25 });
+    }
+    if (addons?.stairs) {
+      addonTotal += 20;
+      breakdown.push({ item: 'Stairs', price: 20 });
+    }
+    if (addons?.disassembly) {
+      addonTotal += 30;
+      breakdown.push({ item: 'Disassembly', price: 30 });
+    }
+    
+    const total = basePrice + addonTotal;
+    
+    res.json({
+      success: true,
+      total,
+      breakdown,
+      disposalIncluded: 50,
+      serviceType,
+      location,
+      volume,
+      scheduledDate
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[QUOTES] Error:', errorMessage);
+    res.status(500).json({ error: 'Failed to calculate quote', details: errorMessage });
+  }
+});
+
 // Health check endpoint with version info and DB connection test
 app.get("/health", async (req: Request, res: Response) => {
   try {
