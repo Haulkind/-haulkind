@@ -1,8 +1,16 @@
 const express = require('express');
 const app = express();
 
+console.log("BOOT: DIST/INDEX.JS ENTRYPOINT ✅", new Date().toISOString());
+
+// Middleware para adicionar header X-ENTRYPOINT
+app.use((req, res, next) => {
+  res.setHeader('X-ENTRYPOINT', 'dist-index-js');
+  next();
+});
+
 app.get('/__diag', (req, res) => {
-  res.json({ ok: true, service: 'api', ts: Date.now() });
+  res.json({ ok: true, entry: 'dist/index.js', ts: Date.now() });
 });
 
 app.get('/updates', (req, res) => {
@@ -15,5 +23,5 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
