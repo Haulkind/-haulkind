@@ -24,7 +24,7 @@ export default function CTASection() {
             </Link>
 
             <Link
-              href="/become-driver"
+              href="/become-a-driver"
               className="inline-flex flex-col items-center justify-center bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 px-8 py-5 rounded-xl transition-all backdrop-blur-sm"
             >
               <span className="text-lg font-bold">Become a Partner Driver</span>
