@@ -67,7 +67,7 @@ export default function HeroSection() {
               </svg>
             </Link>
             <Link
-              href="/become-driver"
+              href="/become-a-driver"
               className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border-2 border-white/50 px-8 py-4 rounded-lg text-lg font-semibold transition-all backdrop-blur-sm"
             >
               Become a Driver
