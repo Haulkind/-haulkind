@@ -46,8 +46,9 @@ export const drivers = pgTable('drivers', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   phone: text('phone').notNull(),
-  email: text('email').notNull(),
-  status: text('status').notNull().default('available'),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  status: text('status').notNull().default('pending'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

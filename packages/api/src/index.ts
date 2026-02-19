@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { db } from "./db/index.js";
 import { orders, drivers, users as usersTable, customers } from "./db/schema.js";
 import * as adminRoutes from "./admin-routes.js";
+import * as driverRoutes from "./driver-routes.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 const app = express();
@@ -742,6 +743,21 @@ app.get("/admin/customers/:id", authenticateToken, adminRoutes.requireAdmin, adm
 app.get("/admin/orders", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrders);
 app.get("/admin/orders/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrder);
 app.put("/admin/orders/:id/assign", authenticateToken, adminRoutes.requireAdmin, adminRoutes.assignOrder);
+
+// =====================================================
+// DRIVER ROUTES
+// =====================================================
+
+// Driver Auth
+app.post("/driver/auth/login", driverRoutes.driverLogin);
+app.get("/driver/auth/me", authenticateToken, driverRoutes.requireDriver, driverRoutes.driverMe);
+
+// Driver Jobs
+app.get("/driver/jobs/available", authenticateToken, driverRoutes.requireDriver, driverRoutes.getAvailableJobs);
+app.get("/driver/jobs/my-jobs", authenticateToken, driverRoutes.requireDriver, driverRoutes.getMyJobs);
+app.post("/driver/jobs/:id/accept", authenticateToken, driverRoutes.requireDriver, driverRoutes.acceptJob);
+app.post("/driver/jobs/:id/start", authenticateToken, driverRoutes.requireDriver, driverRoutes.startJob);
+app.post("/driver/jobs/:id/complete", authenticateToken, driverRoutes.requireDriver, driverRoutes.completeJob);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

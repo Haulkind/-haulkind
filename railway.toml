@@ -1,0 +1,20 @@
+[build]
+builder = "NIXPACKS"
+
+[[services]]
+name = "admin"
+source = "apps/admin"
+buildCommand = "cd apps/admin && npm install && npm run build"
+startCommand = "cd apps/admin && npm start"
+
+[[services]]
+name = "driver"
+source = "apps/driver"
+buildCommand = "cd apps/driver && npm install && npx expo export:web"
+startCommand = "npx serve apps/driver/dist -l 3000"
+
+[[services]]
+name = "customer"
+source = "apps/customer"
+buildCommand = "cd apps/customer && npm install && npx expo export:web"
+startCommand = "npx serve apps/customer/dist -l 3000"
