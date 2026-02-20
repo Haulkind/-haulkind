@@ -41,11 +41,14 @@ function verifyToken(req: any): any {
 
 export function registerDriverAuthRoutes(app: Express) {
 
-  // Ensure driver address columns exist
+  // ============================================================================
+  // DATABASE SETUP - Ensure tables exist
+  // ============================================================================
   (async () => {
     try {
       const pool = await getPgPool();
       if (pool) {
+        // Ensure driver address columns exist
         await pool.query(`
           ALTER TABLE drivers 
           ADD COLUMN IF NOT EXISTS first_name TEXT,
@@ -62,11 +65,194 @@ export function registerDriverAuthRoutes(app: Express) {
           ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT false
         `);
         console.log('[DriverAuth] Driver columns ensured');
+
+        // Create jobs table if not exists (PostgreSQL syntax)
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS jobs (
+            id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+            customer_id TEXT,
+            customer_name TEXT,
+            customer_phone TEXT,
+            customer_email TEXT,
+            service_type TEXT DEFAULT 'HAUL_AWAY',
+            status TEXT DEFAULT 'pending',
+            pickup_address TEXT,
+            pickup_lat DECIMAL(10,7),
+            pickup_lng DECIMAL(10,7),
+            dropoff_address TEXT,
+            description TEXT,
+            items_json TEXT,
+            estimated_price DECIMAL(10,2),
+            final_price DECIMAL(10,2),
+            assigned_driver_id TEXT,
+            scheduled_for TIMESTAMP,
+            completed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+        console.log('[DriverAuth] Jobs table ensured');
+
+        // Create job_assignments table if not exists
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS job_assignments (
+            id SERIAL PRIMARY KEY,
+            job_id TEXT REFERENCES jobs(id),
+            driver_id TEXT,
+            status TEXT DEFAULT 'assigned',
+            assigned_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+        console.log('[DriverAuth] Job assignments table ensured');
+
+        // Also create orders view/table for admin compatibility
+        await pool.query(`
+          CREATE OR REPLACE VIEW orders AS
+          SELECT 
+            id, service_type, customer_name, customer_phone as phone,
+            customer_email as email, pickup_address as street,
+            '' as city, '' as state, '' as zip,
+            pickup_lat as lat, pickup_lng as lng,
+            scheduled_for as pickup_date, '' as pickup_time_window,
+            items_json, estimated_price as pricing_json,
+            status, assigned_driver_id,
+            created_at, updated_at
+          FROM jobs
+        `);
+        console.log('[DriverAuth] Orders view ensured');
       }
     } catch (e) {
-      console.log('[DriverAuth] Column migration note:', (e as any)?.message);
+      console.log('[DriverAuth] DB setup note:', (e as any)?.message);
     }
   })();
+
+  // ============================================================================
+  // DIAGNOSTIC ENDPOINTS
+  // ============================================================================
+
+  // GET /api/db/tables - List all tables in the database
+  app.get('/api/db/tables', async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      const result = await pool.query(`
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' ORDER BY table_name
+      `);
+      res.json({ tables: result.rows.map((r: any) => r.table_name) });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ============================================================================
+  // ORDER CREATION ENDPOINTS (for Dashboard and Customer flow)
+  // ============================================================================
+
+  // POST /api/orders/create - Create a new order/job
+  app.post('/api/orders/create', async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const {
+        customerName, customerPhone, customerEmail,
+        serviceType, pickupAddress, dropoffAddress,
+        description, estimatedPrice, items, scheduledFor
+      } = req.body;
+
+      if (!customerName || !pickupAddress) {
+        return res.status(400).json({ error: 'customerName and pickupAddress are required' });
+      }
+
+      const result = await pool.query(
+        `INSERT INTO jobs (
+          customer_name, customer_phone, customer_email,
+          service_type, status, pickup_address, dropoff_address,
+          description, estimated_price, items_json, scheduled_for,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING *`,
+        [
+          customerName,
+          customerPhone || '',
+          customerEmail || '',
+          serviceType || 'HAUL_AWAY',
+          pickupAddress,
+          dropoffAddress || '',
+          description || '',
+          estimatedPrice || 0,
+          items ? JSON.stringify(items) : '[]',
+          scheduledFor || null
+        ]
+      );
+
+      const job = result.rows[0];
+      console.log(`[Orders] New job created: ${job.id} - ${customerName}`);
+      res.json({ success: true, order: job });
+    } catch (err: any) {
+      console.error('Create order error:', err);
+      res.status(500).json({ error: 'Failed to create order', details: err.message });
+    }
+  });
+
+  // GET /api/orders - List all orders (public for now)
+  app.get('/api/orders', async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { status, limit = 50 } = req.query;
+      let query = 'SELECT * FROM jobs WHERE 1=1';
+      const params: any[] = [];
+      let idx = 1;
+
+      if (status) {
+        query += ` AND status = $${idx++}`;
+        params.push(status);
+      }
+      query += ` ORDER BY created_at DESC LIMIT $${idx++}`;
+      params.push(limit);
+
+      const result = await pool.query(query, params);
+      res.json({ orders: result.rows, total: result.rows.length });
+    } catch (err: any) {
+      console.error('List orders error:', err);
+      res.status(500).json({ error: 'Failed to list orders' });
+    }
+  });
+
+  // PUT /api/orders/:id/assign - Assign order to driver (admin)
+  app.put('/api/orders/:id/assign', async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { driver_id } = req.body;
+      if (!driver_id) return res.status(400).json({ error: 'driver_id required' });
+
+      await pool.query(
+        `UPDATE jobs SET assigned_driver_id = $1, status = 'assigned', updated_at = NOW() WHERE id = $2`,
+        [driver_id, req.params.id]
+      );
+
+      // Create assignment record
+      await pool.query(
+        `INSERT INTO job_assignments (job_id, driver_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [req.params.id, driver_id]
+      );
+
+      const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
+      res.json({ success: true, order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Assign order error:', err);
+      res.status(500).json({ error: 'Failed to assign order' });
+    }
+  });
+
+  // ============================================================================
+  // DRIVER AUTH ENDPOINTS
+  // ============================================================================
 
   // POST /driver/auth/signup
   app.post('/driver/auth/signup', async (req, res) => {
@@ -233,7 +419,6 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // For multipart form data, fields come in req.body
       const { vehicleType, vehicleCapacity, liftingLimit, licensePlate, services } = req.body;
 
       await pool.query(
@@ -412,7 +597,6 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // Try to get completed jobs for this driver
       try {
         const result = await pool.query(
           `SELECT j.* FROM jobs j 
@@ -423,7 +607,6 @@ export function registerDriverAuthRoutes(app: Express) {
         );
         res.json({ orders: result.rows || [] });
       } catch (e) {
-        // Table might not exist or have different schema
         res.json({ orders: [] });
       }
     } catch (err: any) {
@@ -472,9 +655,19 @@ export function registerDriverAuthRoutes(app: Express) {
       
       // Update job status
       await pool.query(
-        "UPDATE jobs SET status = 'assigned', updated_at = NOW() WHERE id = $1",
-        [orderId]
+        "UPDATE jobs SET status = 'assigned', assigned_driver_id = $1, updated_at = NOW() WHERE id = $2",
+        [decoded.driverId, orderId]
       );
+
+      // Create assignment record
+      try {
+        await pool.query(
+          `INSERT INTO job_assignments (job_id, driver_id) VALUES ($1, $2)`,
+          [orderId, decoded.driverId]
+        );
+      } catch (e) {
+        // ignore duplicate
+      }
 
       res.json({ success: true, message: 'Order accepted' });
     } catch (err: any) {
@@ -514,7 +707,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const orderId = req.params.id;
       
       await pool.query(
-        "UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1",
+        "UPDATE jobs SET status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = $1",
         [orderId]
       );
 
