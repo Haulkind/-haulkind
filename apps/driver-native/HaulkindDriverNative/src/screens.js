@@ -1,3 +1,4 @@
+import { menuEmitter } from './menuEmitter';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
@@ -482,7 +483,7 @@ export function HomeScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.grayMedium }}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
+        <TouchableOpacity onPress={() => menuEmitter.open()}>
           <View style={{ width: 32, height: 24, justifyContent: 'space-between' }}>
             <View style={{ height: 3, backgroundColor: COLORS.dark, borderRadius: 2 }} />
             <View style={{ height: 3, backgroundColor: COLORS.dark, borderRadius: 2 }} />
