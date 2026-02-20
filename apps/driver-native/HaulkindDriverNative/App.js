@@ -1,115 +1,214 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
-import { View, Text, ActivityIndicator, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
-  LoginScreen,
-  SignupScreen,
-  PendingScreen,
-  HomeScreen,
-  OrderDetailScreen,
-  ActiveOrderScreen,
-  ProfileScreen,
-  OrderHistoryScreen,
-  EarningsScreen,
-  SettingsScreen,
-  DocumentsScreen,
+  View, Text, TouchableOpacity, Modal, SafeAreaView,
+  StatusBar, ActivityIndicator, Alert, Animated, Dimensions,
+  ScrollView, Pressable,
+} from 'react-native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { menuEmitter } from './src/menuEmitter';
+
+import {
+  LoginScreen, SignupScreen, PendingScreen,
+  HomeScreen, ProfileScreen, OrderHistoryScreen,
+  EarningsScreen, DocumentsScreen, SettingsScreen,
+  OrderDetailScreen, ActiveOrderScreen,
 } from './src/screens';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 
-const Stack = createNativeStackNavigator();
-const Drawer = createDrawerNavigator();
-
 const COLORS = {
-  primary: '#1a56db',
-  primaryLight: '#dbeafe',
-  dark: '#111827',
-  gray: '#6b7280',
+  primary: '#1a3a4a',
+  primaryLight: '#2d5f73',
+  accent: '#e8b84b',
   white: '#ffffff',
-  danger: '#dc2626',
+  gray: '#6b7280',
+  grayLight: '#f3f4f6',
+  danger: '#ef4444',
+  dark: '#111827',
 };
 
-// Custom Drawer Content
-function CustomDrawerContent(props) {
-  const { navigation } = props;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DRAWER_WIDTH = SCREEN_WIDTH * 0.78;
+
+// Menu is controlled via menuEmitter (no context needed)
+
+const Stack = createNativeStackNavigator();
+
+// Hamburger Button Component
+function HamburgerButton({ onPress }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        width: 40, height: 40, justifyContent: 'center', alignItems: 'center',
+        marginLeft: 4,
+      }}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <View style={{ width: 22, height: 2, backgroundColor: COLORS.dark, marginBottom: 5, borderRadius: 1 }} />
+      <View style={{ width: 22, height: 2, backgroundColor: COLORS.dark, marginBottom: 5, borderRadius: 1 }} />
+      <View style={{ width: 22, height: 2, backgroundColor: COLORS.dark, borderRadius: 1 }} />
+    </TouchableOpacity>
+  );
+}
+
+// Side Menu (Modal-based drawer replacement)
+function SideMenu({ visible, onClose, navigation }) {
   const [driverName, setDriverName] = useState('Driver');
   const [driverEmail, setDriverEmail] = useState('');
+  const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadDriverInfo();
+  }, [visible]);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      slideAnim.setValue(-DRAWER_WIDTH);
+    }
+  }, [visible]);
+
+  const loadDriverInfo = async () => {
     try {
+      const driverData = await AsyncStorage.getItem('driver_data');
+      if (driverData) {
+        const d = JSON.parse(driverData);
+        setDriverName(d.name || d.firstName || 'Driver');
+        setDriverEmail(d.email || '');
+      }
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
-        const user = JSON.parse(userData);
-        setDriverName(user.name || 'Driver');
-        setDriverEmail(user.email || '');
+        const u = JSON.parse(userData);
+        if (!driverName || driverName === 'Driver') setDriverName(u.name || 'Driver');
+        if (!driverEmail) setDriverEmail(u.email || '');
       }
     } catch (e) {}
   };
 
-  const handleLogout = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out', style: 'destructive', onPress: async () => {
-          await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data']);
-          props.navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        }
-      },
-    ]);
+  const handleClose = () => {
+    Animated.timing(slideAnim, {
+      toValue: -DRAWER_WIDTH,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => onClose());
   };
 
+  const navigateTo = (screen) => {
+    handleClose();
+    setTimeout(() => {
+      navigation.navigate(screen);
+    }, 100);
+  };
+
+  const handleLogout = () => {
+    handleClose();
+    setTimeout(() => {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out', style: 'destructive', onPress: async () => {
+            await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data']);
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          }
+        },
+      ]);
+    }, 150);
+  };
+
+  const menuItems = [
+    { label: 'Dashboard', screen: 'Home', icon: 'H' },
+    { label: 'My Profile', screen: 'Profile', icon: 'P' },
+    { label: 'Order History', screen: 'OrderHistory', icon: 'O' },
+    { label: 'Earnings', screen: 'Earnings', icon: 'E' },
+    { label: 'My Documents', screen: 'Documents', icon: 'D' },
+    { label: 'Settings', screen: 'Settings', icon: 'S' },
+  ];
+
+  if (!visible) return null;
+
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1 }}>
-      {/* Header */}
-      <View style={{ padding: 20, backgroundColor: COLORS.primary, marginTop: -4 }}>
-        <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: COLORS.white }}>{(driverName || 'D')[0].toUpperCase()}</Text>
-        </View>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.white }}>{driverName}</Text>
-        <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{driverEmail}</Text>
-      </View>
+    <Modal transparent visible={visible} animationType="none" onRequestClose={handleClose}>
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {/* Drawer Panel */}
+        <Animated.View
+          style={{
+            width: DRAWER_WIDTH,
+            backgroundColor: COLORS.white,
+            transform: [{ translateX: slideAnim }],
+            elevation: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 2, height: 0 },
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+          }}
+        >
+          <SafeAreaView style={{ flex: 1 }}>
+            {/* Header */}
+            <View style={{ padding: 24, backgroundColor: COLORS.primary, paddingTop: 48 }}>
+              <View style={{
+                width: 56, height: 56, borderRadius: 28,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+              }}>
+                <Text style={{ fontSize: 26, fontWeight: '700', color: COLORS.white }}>
+                  {(driverName || 'D')[0].toUpperCase()}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.white }}>{driverName}</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{driverEmail}</Text>
+            </View>
 
-      {/* Menu Items */}
-      <View style={{ flex: 1, paddingTop: 8 }}>
-        <DrawerItemList {...props} />
-      </View>
+            {/* Menu Items */}
+            <ScrollView style={{ flex: 1, paddingTop: 8 }}>
+              {menuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => navigateTo(item.screen)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center',
+                    paddingVertical: 14, paddingHorizontal: 20,
+                    marginHorizontal: 8, borderRadius: 8,
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    backgroundColor: COLORS.grayLight,
+                    justifyContent: 'center', alignItems: 'center', marginRight: 14,
+                  }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.primary }}>{item.icon}</Text>
+                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.dark }}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-      {/* Logout */}
-      <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', padding: 16 }}>
-        <TouchableOpacity onPress={handleLogout} style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.danger }}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-    </DrawerContentScrollView>
-  );
-}
+            {/* Logout */}
+            <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', padding: 16 }}>
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.danger }}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </Animated.View>
 
-// Drawer Navigator (Main App)
-function MainDrawer() {
-  return (
-    <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
-        headerShown: false,
-        drawerActiveTintColor: COLORS.primary,
-        drawerInactiveTintColor: COLORS.gray,
-        drawerLabelStyle: { fontSize: 15, fontWeight: '600', marginLeft: -8 },
-        drawerItemStyle: { borderRadius: 8, paddingVertical: 2 },
-      }}
-    >
-      <Drawer.Screen name="Home" component={HomeScreen} options={{ drawerLabel: 'Dashboard' }} />
-      <Drawer.Screen name="Profile" component={ProfileScreen} options={{ drawerLabel: 'My Profile' }} />
-      <Drawer.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ drawerLabel: 'Order History' }} />
-      <Drawer.Screen name="Earnings" component={EarningsScreen} options={{ drawerLabel: 'Earnings' }} />
-      <Drawer.Screen name="Documents" component={DocumentsScreen} options={{ drawerLabel: 'My Documents' }} />
-      <Drawer.Screen name="Settings" component={SettingsScreen} options={{ drawerLabel: 'Settings' }} />
-    </Drawer.Navigator>
+        {/* Overlay */}
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onPress={handleClose}
+        />
+      </View>
+    </Modal>
   );
 }
 
@@ -120,6 +219,43 @@ function LoadingScreen() {
       <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.primary, marginBottom: 16 }}>Haulkind</Text>
       <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
+  );
+}
+
+// Main App with Menu
+function MainApp({ initialRoute }) {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const navigationRef = React.useRef(null);
+
+  useEffect(() => {
+    const unsub = menuEmitter.subscribe(() => setMenuVisible(true));
+    return unsub;
+  }, []);
+
+  return (
+    <>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Pending" component={PendingScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+          <Stack.Screen name="Earnings" component={EarningsScreen} />
+          <Stack.Screen name="Documents" component={DocumentsScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+          <Stack.Screen name="ActiveOrder" component={ActiveOrderScreen} />
+        </Stack.Navigator>
+        <SideMenu
+          visible={menuVisible}
+          onClose={() => setMenuVisible(false)}
+          navigation={navigationRef.current}
+        />
+      </NavigationContainer>
+    </>
   );
 }
 
@@ -137,19 +273,18 @@ export default function App() {
         setInitialRoute('Login');
         return;
       }
-      // Try to get driver status
       const driverData = await AsyncStorage.getItem('driver_data');
       if (driverData) {
         const driver = JSON.parse(driverData);
         if (driver.status === 'pending') {
           setInitialRoute('Pending');
         } else if (driver.status === 'approved' || driver.status === 'active') {
-          setInitialRoute('Main');
+          setInitialRoute('Home');
         } else {
           setInitialRoute('Login');
         }
       } else {
-        setInitialRoute('Main');
+        setInitialRoute('Home');
       }
     } catch (e) {
       setInitialRoute('Login');
@@ -158,17 +293,5 @@ export default function App() {
 
   if (!initialRoute) return <LoadingScreen />;
 
-  return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Pending" component={PendingScreen} />
-        <Stack.Screen name="Main" component={MainDrawer} />
-        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
-        <Stack.Screen name="ActiveOrder" component={ActiveOrderScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+  return <MainApp initialRoute={initialRoute} />;
 }
