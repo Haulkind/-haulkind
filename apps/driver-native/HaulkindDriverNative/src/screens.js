@@ -163,7 +163,7 @@ export function SignupScreen({ navigation }) {
       const data = await apiPost("/driver/auth/signup", { name, email, phone, password });
       const token = data?.token || data?.accessToken;
       if (token) await AsyncStorage.setItem("driver_token", token);
-      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+      navigation.reset({ index: 0, routes: [{ name: "Onboarding" }] });
     } catch (e) {
       setErr(String(e.message || e));
     } finally {
