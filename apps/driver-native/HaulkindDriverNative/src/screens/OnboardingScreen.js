@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import DocumentPicker from 'react-native-document-picker';
+// Document picking uses image picker for compatibility
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiPost } from '../api';
 
@@ -81,17 +81,21 @@ export function OnboardingScreen({ navigation }) {
 
   const pickDocument = async (setter) => {
     try {
-      const result = await DocumentPicker.pick({
-        type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1200,
+        maxHeight: 1200,
       });
-
-      if (result && result[0]) {
-        setter(result[0]);
+      if (result.assets && result.assets[0]) {
+        setter({
+          uri: result.assets[0].uri,
+          name: result.assets[0].fileName || 'document.jpg',
+          type: result.assets[0].type || 'image/jpeg',
+        });
       }
     } catch (error) {
-      if (!DocumentPicker.isCancel(error)) {
-        Alert.alert('Error', 'Failed to pick document');
-      }
+      Alert.alert('Error', 'Failed to pick document');
     }
   };
 
