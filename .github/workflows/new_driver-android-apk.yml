@@ -1,0 +1,46 @@
+name: Build Driver Android APK
+on:
+  workflow_dispatch:
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Setup Java (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Install dependencies (Driver Native)
+        working-directory: apps/driver-native/HaulkindDriverNative
+        run: npm install
+      
+      - name: Build JS Bundle
+        working-directory: apps/driver-native/HaulkindDriverNative
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file new_index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+      
+      - name: Build Release APK
+        working-directory: apps/driver-native/HaulkindDriverNative/android
+        run: ./gradlew assembleRelease --stacktrace
+      
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver-app-release-apk
+          path: apps/driver-native/HaulkindDriverNative/android/app/build/outputs/apk/release/app-release.apk
