@@ -1,6 +1,8 @@
 name: Build Driver Android APK
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -44,3 +46,30 @@ jobs:
         with:
           name: driver-app-release-apk
           path: apps/driver-native/HaulkindDriverNative/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Delete old release if exists
+        run: gh release delete v1.0.0-beta --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release with APK
+        run: |
+          gh release create v1.0.0-beta \
+            apps/driver-native/HaulkindDriverNative/android/app/build/outputs/apk/release/app-release.apk \
+            --title "Haulkind Driver App v1.0.0-beta" \
+            --notes "## Haulkind Driver App - Android APK
+
+          Baixe o arquivo **app-release.apk** abaixo e instale no seu Android.
+
+          ### Como instalar:
+          1. Clique em **app-release.apk** abaixo para baixar
+          2. Abra o arquivo no Android
+          3. Ative 'Fontes desconhecidas' se necessário
+          4. Instale e abra o app
+
+          ### Conta de teste:
+          - Email: test_driver_v14@test.com
+          - Senha: Test123!" \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
