@@ -3,9 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { LoginScreen, SignupScreen, HomeScreen } from "./src/screens";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
-
 const Stack = createNativeStackNavigator();
-
 export default function App() {
   return (
     <NavigationContainer>
