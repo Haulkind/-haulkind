@@ -127,7 +127,7 @@ export default function DriversPage() {
                 <tr key={driver.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-medium text-gray-900">{driver.name}</div>
-                    <div className="text-sm text-gray-500">{driver.id.substring(0, 8)}...</div>
+                    <div className="text-sm text-gray-500">{String(driver.id).substring(0, 8)}...</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{driver.email}</div>
