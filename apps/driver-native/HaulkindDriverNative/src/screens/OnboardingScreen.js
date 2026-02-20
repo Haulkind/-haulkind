@@ -1,750 +1,352 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Image,
-  ActivityIndicator,
-  Platform,
-  StatusBar,
-} from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
-// Document picking uses image picker for compatibility
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiPost } from '../api';
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
+  StatusBar, ActivityIndicator, Alert, Image,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { launchImageLibrary } from "react-native-image-picker";
+import { API_URL } from "../config";
 
 const COLORS = {
-  primary: '#2563eb',
-  primaryDark: '#1e40af',
-  bg: '#ffffff',
-  bgGray: '#f8f9fa',
-  text: '#1f2937',
-  textSecondary: '#6b7280',
-  border: '#d1d5db',
-  borderActive: '#2563eb',
-  success: '#16a34a',
-  error: '#dc2626',
+  primary: "#1a56db",
+  primaryDark: "#1e40af",
+  bg: "#f8f9fa",
+  white: "#ffffff",
+  text: "#1f2937",
+  textSecondary: "#6b7280",
+  border: "#d1d5db",
+  error: "#dc2626",
+  success: "#16a34a",
+  selected: "#dbeafe",
+  selectedBorder: "#1a56db",
 };
+
+const TOTAL_STEPS = 2;
 
 export function OnboardingScreen({ navigation }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Step 1: Personal Information
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [zipCode, setZipCode] = useState('');
+  // Step 1: Vehicle & Services (ALL REQUIRED)
+  const [vehicleType, setVehicleType] = useState("");
+  const [vehicleCapacity, setVehicleCapacity] = useState("");
+  const [liftingLimit, setLiftingLimit] = useState("");
+  const [selectedServices, setSelectedServices] = useState([]);
 
-  // Step 2: Vehicle & Services
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehicleCapacity, setVehicleCapacity] = useState('');
-  const [liftingLimit, setLiftingLimit] = useState('');
-  const [canHaulAway, setCanHaulAway] = useState(true);
-  const [canLaborOnly, setCanLaborOnly] = useState(true);
+  // Step 2: Documents
+  const [documents, setDocuments] = useState({
+    profilePhoto: null,
+    driversLicense: null,
+    vehicleInsurance: null,
+    vehicleRegistration: null,
+  });
 
-  // Step 3: Documents
-  const [profilePhoto, setProfilePhoto] = useState(null);
-  const [driversLicense, setDriversLicense] = useState(null);
-  const [insurance, setInsurance] = useState(null);
-  const [registration, setRegistration] = useState(null);
+  const services = [
+    { id: "junk_removal", name: "Junk Removal (Haul Away)", desc: "Pick up and dispose of junk" },
+    { id: "labor_only", name: "Labor Only (Help Moving)", desc: "Help customers move items" },
+  ];
 
-  const formatPhoneNumber = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
-    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
-  };
+  function toggleService(id) {
+    setSelectedServices((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  }
 
-  const pickImage = async (setter) => {
+  async function pickImage(docType) {
     try {
       const result = await launchImageLibrary({
-        mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      });
-
-      if (!result.didCancel && result.assets && result.assets[0]) {
-        setter(result.assets[0]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
-    }
-  };
-
-  const pickDocument = async (setter) => {
-    try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
+        mediaType: "photo",
         quality: 0.8,
         maxWidth: 1200,
         maxHeight: 1200,
       });
-      if (result.assets && result.assets[0]) {
-        setter({
-          uri: result.assets[0].uri,
-          name: result.assets[0].fileName || 'document.jpg',
-          type: result.assets[0].type || 'image/jpeg',
-        });
+      if (result.assets && result.assets.length > 0) {
+        setDocuments((prev) => ({ ...prev, [docType]: result.assets[0] }));
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick document');
+    } catch (e) {
+      Alert.alert("Error", "Failed to pick image. Please try again.");
     }
-  };
+  }
 
-  const validateStep1 = () => {
-    if (!name || !phone || !address || !city || !state || !zipCode) {
-      Alert.alert('Error', 'Please fill in all required fields');
+  async function uploadDocument(docType, asset) {
+    try {
+      const token = await AsyncStorage.getItem("driver_token");
+      const formData = new FormData();
+      formData.append("file", {
+        uri: asset.uri,
+        type: asset.type || "image/jpeg",
+        name: asset.fileName || `${docType}.jpg`,
+      });
+      formData.append("documentType", docType);
+
+      const res = await fetch(`${API_URL}/driver/documents/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        body: formData,
+      });
+      return res.ok;
+    } catch (e) {
+      console.log("Upload error:", e);
       return false;
     }
-    if (!/^\d{5}(-\d{4})?$/.test(zipCode)) {
-      Alert.alert('Error', 'Please enter a valid ZIP code');
+  }
+
+  async function saveVehicleInfo() {
+    try {
+      const token = await AsyncStorage.getItem("driver_token");
+      const res = await fetch(`${API_URL}/driver/profile/vehicle`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          vehicleType,
+          vehicleCapacity,
+          liftingLimit: liftingLimit ? parseInt(liftingLimit) : null,
+          services: selectedServices,
+        }),
+      });
+      return res.ok;
+    } catch (e) {
+      console.log("Save vehicle error:", e);
       return false;
     }
-    if (state.length !== 2) {
-      Alert.alert('Error', 'State must be 2 letters (e.g., CT)');
-      return false;
-    }
-    return true;
-  };
+  }
 
-  const validateStep2 = () => {
-    if (!canHaulAway && !canLaborOnly) {
-      Alert.alert('Error', 'Please select at least one service type');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep3 = () => {
-    if (!profilePhoto) {
-      Alert.alert('Error', 'Please upload your profile photo');
-      return false;
-    }
-    if (!driversLicense) {
-      Alert.alert('Error', "Please upload your driver's license");
-      return false;
-    }
-    if (canHaulAway && (!insurance || !registration)) {
-      Alert.alert('Error', 'Vehicle insurance and registration are required for Haul Away service');
-      return false;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    if (currentStep === 1 && validateStep1()) {
-      setCurrentStep(2);
-    } else if (currentStep === 2 && validateStep2()) {
-      setCurrentStep(3);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleComplete = async () => {
-    if (!validateStep3()) return;
-
+  async function completeOnboarding() {
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('driver_token');
-      
-      // In production, upload images to S3 first
-      // For now, sending placeholder URIs
-      await apiPost('/driver/onboarding', {
-        name,
-        phone,
-        address,
-        city,
-        state,
-        zipCode,
-        vehicleType: vehicleType || undefined,
-        vehicleCapacity: vehicleCapacity || undefined,
-        liftingLimit: liftingLimit ? parseInt(liftingLimit) : undefined,
-        canHaulAway,
-        canLaborOnly,
-        documents: {
-          profilePhoto: profilePhoto?.uri || 'pending',
-          license: driversLicense?.uri || 'pending',
-          insurance: insurance?.uri || 'pending',
-          registration: registration?.uri || 'pending',
-        },
-      }, token);
+      // Save vehicle info
+      await saveVehicleInfo();
 
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to complete onboarding. Please try again.');
+      // Upload documents
+      for (const [docType, asset] of Object.entries(documents)) {
+        if (asset) {
+          await uploadDocument(docType, asset);
+        }
+      }
+
+      // Navigate to Home
+      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+    } catch (e) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgGray} />
-      
-      {/* Progress Bar */}
+  function canProceedStep1() {
+    return vehicleType.trim() !== "" && vehicleCapacity.trim() !== "" && selectedServices.length > 0;
+  }
+
+  function canProceedStep2() {
+    return documents.driversLicense !== null && documents.vehicleInsurance !== null && documents.vehicleRegistration !== null;
+  }
+
+  function renderProgressBar() {
+    return (
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${(currentStep / 3) * 100}%` }]} />
+          <View style={[styles.progressFill, { width: `${(currentStep / TOTAL_STEPS) * 100}%` }]} />
         </View>
-        <Text style={styles.progressText}>Step {currentStep} of 3</Text>
+        <Text style={styles.progressText}>Step {currentStep} of {TOTAL_STEPS}</Text>
       </View>
+    );
+  }
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Step 1: Personal Information */}
-        {currentStep === 1 && (
-          <View style={styles.stepContainer}>
-            <Text style={styles.title}>Personal Information</Text>
-            <Text style={styles.subtitle}>Tell us about yourself</Text>
+  function renderStep1() {
+    return (
+      <ScrollView contentContainerStyle={styles.stepContent} keyboardShouldPersistTaps="handled">
+        <Text style={styles.stepTitle}>Vehicle & Services</Text>
+        <Text style={styles.stepSubtitle}>Tell us about your vehicle and the services you can provide</Text>
 
-            <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="John Smith"
-                  value={name}
-                  onChangeText={setName}
-                  editable={!loading}
-                />
-              </View>
+        <Text style={styles.sectionTitle}>Vehicle Information *</Text>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Phone Number *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="(555) 123-4567"
-                  value={phone}
-                  onChangeText={(text) => setPhone(formatPhoneNumber(text))}
-                  keyboardType="phone-pad"
-                  maxLength={14}
-                  editable={!loading}
-                />
-              </View>
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Vehicle Type *</Text>
+          <TextInput
+            style={styles.fieldInput}
+            value={vehicleType}
+            onChangeText={setVehicleType}
+            placeholder="e.g. Pickup Truck, Box Truck, Van"
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Street Address *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="123 Main Street"
-                  value={address}
-                  onChangeText={setAddress}
-                  editable={!loading}
-                />
-              </View>
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Vehicle Capacity *</Text>
+          <TextInput
+            style={styles.fieldInput}
+            value={vehicleCapacity}
+            onChangeText={setVehicleCapacity}
+            placeholder="e.g. 1/2 Ton, 1 Ton, 26ft"
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
 
-              <View style={styles.row}>
-                <View style={[styles.inputContainer, styles.flex2]}>
-                  <Text style={styles.label}>City *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Hartford"
-                    value={city}
-                    onChangeText={setCity}
-                    editable={!loading}
-                  />
-                </View>
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Lifting Limit (lbs)</Text>
+          <TextInput
+            style={styles.fieldInput}
+            value={liftingLimit}
+            onChangeText={setLiftingLimit}
+            placeholder="e.g. 150"
+            placeholderTextColor="#9ca3af"
+            keyboardType="number-pad"
+          />
+        </View>
 
-                <View style={[styles.inputContainer, styles.flex1]}>
-                  <Text style={styles.label}>State *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="CT"
-                    value={state}
-                    onChangeText={(text) => setState(text.toUpperCase())}
-                    maxLength={2}
-                    autoCapitalize="characters"
-                    editable={!loading}
-                  />
-                </View>
-              </View>
+        <Text style={styles.sectionTitle}>Services You Can Provide *</Text>
+        <Text style={styles.sectionHint}>Select at least one service</Text>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>ZIP Code *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="06106"
-                  value={zipCode}
-                  onChangeText={setZipCode}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  editable={!loading}
-                />
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Step 2: Vehicle & Services */}
-        {currentStep === 2 && (
-          <View style={styles.stepContainer}>
-            <Text style={styles.title}>Vehicle & Services</Text>
-            <Text style={styles.subtitle}>What services can you provide?</Text>
-
-            <View style={styles.form}>
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Vehicle Information (Optional)</Text>
-                
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Vehicle Type</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., Pickup Truck"
-                    value={vehicleType}
-                    onChangeText={setVehicleType}
-                    editable={!loading}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Vehicle Capacity</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., 1/2 Ton"
-                    value={vehicleCapacity}
-                    onChangeText={setVehicleCapacity}
-                    editable={!loading}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Lifting Limit (lbs)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., 50"
-                    value={liftingLimit}
-                    onChangeText={setLiftingLimit}
-                    keyboardType="number-pad"
-                    editable={!loading}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Services You Can Provide *</Text>
-                
-                <TouchableOpacity
-                  style={[styles.serviceCard, canHaulAway && styles.serviceCardActive]}
-                  onPress={() => setCanHaulAway(!canHaulAway)}
-                  disabled={loading}
-                >
-                  <View style={styles.serviceContent}>
-                    <Text style={[styles.serviceTitle, canHaulAway && styles.serviceTextActive]}>
-                      ð Junk Removal (Haul Away)
-                    </Text>
-                    <Text style={styles.serviceDescription}>
-                      Pick up and dispose of junk
-                    </Text>
-                  </View>
-                  <View style={[styles.checkbox, canHaulAway && styles.checkboxActive]}>
-                    {canHaulAway && <Text style={styles.checkmark}>â</Text>}
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.serviceCard, canLaborOnly && styles.serviceCardActive]}
-                  onPress={() => setCanLaborOnly(!canLaborOnly)}
-                  disabled={loading}
-                >
-                  <View style={styles.serviceContent}>
-                    <Text style={[styles.serviceTitle, canLaborOnly && styles.serviceTextActive]}>
-                      ðª Labor Only (Help Moving)
-                    </Text>
-                    <Text style={styles.serviceDescription}>
-                      Help customers move items
-                    </Text>
-                  </View>
-                  <View style={[styles.checkbox, canLaborOnly && styles.checkboxActive]}>
-                    {canLaborOnly && <Text style={styles.checkmark}>â</Text>}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Step 3: Documents */}
-        {currentStep === 3 && (
-          <View style={styles.stepContainer}>
-            <Text style={styles.title}>Upload Documents</Text>
-            <Text style={styles.subtitle}>Required for verification</Text>
-
-            <View style={styles.form}>
-              {/* Profile Photo */}
-              <View style={styles.uploadSection}>
-                <Text style={styles.uploadLabel}>Profile Photo *</Text>
-                <TouchableOpacity
-                  style={styles.uploadButton}
-                  onPress={() => pickImage(setProfilePhoto)}
-                  disabled={loading}
-                >
-                  {profilePhoto ? (
-                    <Image source={{ uri: profilePhoto.uri }} style={styles.uploadedImage} />
-                  ) : (
-                    <View style={styles.uploadPlaceholder}>
-                      <Text style={styles.uploadIcon}>ð¸</Text>
-                      <Text style={styles.uploadText}>Tap to upload photo</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* Driver's License */}
-              <View style={styles.uploadSection}>
-                <Text style={styles.uploadLabel}>Driver's License *</Text>
-                <TouchableOpacity
-                  style={styles.uploadButton}
-                  onPress={() => pickDocument(setDriversLicense)}
-                  disabled={loading}
-                >
-                  {driversLicense ? (
-                    <View style={styles.uploadedDoc}>
-                      <Text style={styles.uploadIcon}>â</Text>
-                      <Text style={styles.uploadedText}>License uploaded</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.uploadPlaceholder}>
-                      <Text style={styles.uploadIcon}>ð</Text>
-                      <Text style={styles.uploadText}>Tap to upload</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* Insurance (required if Haul Away selected) */}
-              {canHaulAway && (
-                <View style={styles.uploadSection}>
-                  <Text style={styles.uploadLabel}>Vehicle Insurance *</Text>
-                  <TouchableOpacity
-                    style={styles.uploadButton}
-                    onPress={() => pickDocument(setInsurance)}
-                    disabled={loading}
-                  >
-                    {insurance ? (
-                      <View style={styles.uploadedDoc}>
-                        <Text style={styles.uploadIcon}>â</Text>
-                        <Text style={styles.uploadedText}>Insurance uploaded</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.uploadPlaceholder}>
-                        <Text style={styles.uploadIcon}>ð¡ï¸</Text>
-                        <Text style={styles.uploadText}>Tap to upload</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* Registration (required if Haul Away selected) */}
-              {canHaulAway && (
-                <View style={styles.uploadSection}>
-                  <Text style={styles.uploadLabel}>Vehicle Registration *</Text>
-                  <TouchableOpacity
-                    style={styles.uploadButton}
-                    onPress={() => pickDocument(setRegistration)}
-                    disabled={loading}
-                  >
-                    {registration ? (
-                      <View style={styles.uploadedDoc}>
-                        <Text style={styles.uploadIcon}>â</Text>
-                        <Text style={styles.uploadedText}>Registration uploaded</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.uploadPlaceholder}>
-                        <Text style={styles.uploadIcon}>ð</Text>
-                        <Text style={styles.uploadText}>Tap to upload</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              <View style={styles.note}>
-                <Text style={styles.noteText}>
-                  ð Your documents are securely stored and will be reviewed within 24 hours.
+        {services.map((service) => {
+          const isSelected = selectedServices.includes(service.id);
+          return (
+            <TouchableOpacity
+              key={service.id}
+              style={[styles.serviceCard, isSelected && styles.serviceCardSelected]}
+              onPress={() => toggleService(service.id)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.serviceInfo}>
+                <Text style={[styles.serviceName, isSelected && styles.serviceNameSelected]}>
+                  {service.name}
                 </Text>
+                <Text style={styles.serviceDesc}>{service.desc}</Text>
               </View>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+              <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                {isSelected && <Text style={styles.checkmark}>{"✓"}</Text>}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
 
-      {/* Navigation Buttons */}
-      <View style={styles.buttonContainer}>
-        {currentStep > 1 && (
+        <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.buttonSecondary]}
-            onPress={handleBack}
-            disabled={loading}
+            style={[styles.nextBtn, !canProceedStep1() && styles.nextBtnDisabled]}
+            onPress={() => setCurrentStep(2)}
+            disabled={!canProceedStep1()}
+            activeOpacity={0.8}
           >
-            <Text style={styles.buttonSecondaryText}>Back</Text>
+            <Text style={styles.nextBtnText}>Next</Text>
           </TouchableOpacity>
-        )}
-        {currentStep < 3 ? (
+        </View>
+      </ScrollView>
+    );
+  }
+
+  function renderDocUpload(label, docType) {
+    const doc = documents[docType];
+    return (
+      <View style={styles.docSection}>
+        <Text style={styles.fieldLabel}>{label} *</Text>
+        <TouchableOpacity
+          style={[styles.uploadBox, doc && styles.uploadBoxDone]}
+          onPress={() => pickImage(docType)}
+          activeOpacity={0.7}
+        >
+          {doc ? (
+            <View style={styles.uploadedContent}>
+              <Image source={{ uri: doc.uri }} style={styles.uploadedImage} />
+              <Text style={styles.uploadedText}>Tap to change</Text>
+            </View>
+          ) : (
+            <View style={styles.uploadPlaceholder}>
+              <Text style={styles.uploadIcon}>+</Text>
+              <Text style={styles.uploadText}>Tap to upload</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  function renderStep2() {
+    return (
+      <ScrollView contentContainerStyle={styles.stepContent} keyboardShouldPersistTaps="handled">
+        <Text style={styles.stepTitle}>Documents</Text>
+        <Text style={styles.stepSubtitle}>Upload your required documents</Text>
+
+        {renderDocUpload("Profile Photo", "profilePhoto")}
+        {renderDocUpload("Driver's License", "driversLicense")}
+        {renderDocUpload("Vehicle Insurance", "vehicleInsurance")}
+        {renderDocUpload("Vehicle Registration", "vehicleRegistration")}
+
+        <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.buttonPrimary, currentStep === 1 && styles.buttonFull]}
-            onPress={handleNext}
-            disabled={loading}
+            style={styles.backBtn}
+            onPress={() => setCurrentStep(1)}
+            activeOpacity={0.8}
           >
-            <Text style={styles.buttonPrimaryText}>Next</Text>
+            <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
-        ) : (
           <TouchableOpacity
-            style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
-            onPress={handleComplete}
-            disabled={loading}
+            style={[styles.nextBtn, !canProceedStep2() && styles.nextBtnDisabled]}
+            onPress={completeOnboarding}
+            disabled={!canProceedStep2() || loading}
+            activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonPrimaryText}>Complete Profile</Text>
+              <Text style={styles.nextBtnText}>Complete Profile</Text>
             )}
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      {renderProgressBar()}
+      {currentStep === 1 && renderStep1()}
+      {currentStep === 2 && renderStep2()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  progressContainer: {
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
-    backgroundColor: COLORS.bgGray,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-  },
-  progressText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 24,
-  },
-  stepContainer: {
-    gap: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-  },
-  form: {
-    gap: 16,
-  },
-  inputContainer: {
-    marginBottom: 4,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: COLORS.bg,
-    color: COLORS.text,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  flex1: {
-    flex: 1,
-  },
-  flex2: {
-    flex: 2,
-  },
-  section: {
-    gap: 12,
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginTop: 8,
-  },
-  serviceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    backgroundColor: COLORS.bg,
-  },
-  serviceCardActive: {
-    borderColor: COLORS.borderActive,
-    backgroundColor: '#eff6ff',
-  },
-  serviceContent: {
-    flex: 1,
-  },
-  serviceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  serviceTextActive: {
-    color: COLORS.primary,
-  },
-  serviceDescription: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  uploadSection: {
-    marginBottom: 16,
-  },
-  uploadLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  uploadButton: {
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    borderStyle: 'dashed',
-    overflow: 'hidden',
-  },
-  uploadPlaceholder: {
-    padding: 32,
-    alignItems: 'center',
-    gap: 8,
-  },
-  uploadIcon: {
-    fontSize: 32,
-  },
-  uploadText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  uploadedImage: {
-    width: '100%',
-    height: 200,
-    resizeMode: 'cover',
-  },
-  uploadedDoc: {
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#f0fdf4',
-  },
-  uploadedText: {
-    fontSize: 14,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  note: {
-    backgroundColor: '#eff6ff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    marginTop: 8,
-  },
-  noteText: {
-    fontSize: 14,
-    color: '#1e40af',
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    padding: 24,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    backgroundColor: COLORS.bg,
-  },
-  button: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonFull: {
-    flex: 1,
-  },
-  buttonPrimary: {
-    backgroundColor: COLORS.primary,
-  },
-  buttonSecondary: {
-    backgroundColor: COLORS.bg,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPrimaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonSecondaryText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  progressContainer: { paddingTop: 50, paddingHorizontal: 24, paddingBottom: 8, backgroundColor: COLORS.white },
+  progressBar: { height: 6, backgroundColor: "#e5e7eb", borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: COLORS.primary, borderRadius: 3 },
+  progressText: { textAlign: "center", marginTop: 8, fontSize: 14, color: COLORS.textSecondary },
+  stepContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 },
+  stepTitle: { fontSize: 24, fontWeight: "bold", color: COLORS.text, marginBottom: 4 },
+  stepSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: COLORS.text, marginTop: 16, marginBottom: 8 },
+  sectionHint: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 12 },
+  fieldWrap: { marginBottom: 14 },
+  fieldLabel: { fontSize: 14, fontWeight: "600", color: COLORS.text, marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: COLORS.text, backgroundColor: COLORS.white },
+  serviceCard: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 16, marginBottom: 12 },
+  serviceCardSelected: { borderColor: COLORS.selectedBorder, backgroundColor: COLORS.selected },
+  serviceInfo: { flex: 1 },
+  serviceName: { fontSize: 16, fontWeight: "bold", color: COLORS.text, marginBottom: 4 },
+  serviceNameSelected: { color: COLORS.primary },
+  serviceDesc: { fontSize: 13, color: COLORS.textSecondary },
+  checkbox: { width: 24, height: 24, borderRadius: 4, borderWidth: 2, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
+  checkboxSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  checkmark: { color: COLORS.white, fontSize: 16, fontWeight: "bold" },
+  buttonRow: { flexDirection: "row", marginTop: 24, gap: 12 },
+  backBtn: { flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingVertical: 14, alignItems: "center", backgroundColor: COLORS.white },
+  backBtnText: { fontSize: 16, fontWeight: "bold", color: COLORS.text },
+  nextBtn: { flex: 1, backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  nextBtnDisabled: { backgroundColor: "#93c5fd" },
+  nextBtnText: { color: COLORS.white, fontSize: 16, fontWeight: "bold" },
+  docSection: { marginBottom: 20 },
+  uploadBox: { borderWidth: 2, borderColor: COLORS.border, borderStyle: "dashed", borderRadius: 10, padding: 24, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.white, minHeight: 120 },
+  uploadBoxDone: { borderColor: COLORS.success, borderStyle: "solid" },
+  uploadPlaceholder: { alignItems: "center" },
+  uploadIcon: { fontSize: 32, color: COLORS.textSecondary, marginBottom: 4 },
+  uploadText: { fontSize: 14, color: COLORS.textSecondary },
+  uploadedContent: { alignItems: "center" },
+  uploadedImage: { width: 100, height: 100, borderRadius: 8, marginBottom: 8 },
+  uploadedText: { fontSize: 12, color: COLORS.primary },
 });
