@@ -1,10 +1,9 @@
-import { Express } from "express";
+import type { Express } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 // Use raw pg connection since DATABASE_URL is PostgreSQL
 let pgPool: any = null;
-
 async function getPgPool() {
   if (pgPool) return pgPool;
   const dbUrl = process.env.DATABASE_URL;
@@ -29,11 +28,54 @@ async function getPgPool() {
   }
 }
 
+// JWT middleware helper
+function verifyToken(req: any): any {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  try {
+    return jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
+  } catch (e) {
+    return null;
+  }
+}
+
 export function registerDriverAuthRoutes(app: Express) {
+
+  // Ensure driver address columns exist
+  (async () => {
+    try {
+      const pool = await getPgPool();
+      if (pool) {
+        await pool.query(`
+          ALTER TABLE drivers 
+          ADD COLUMN IF NOT EXISTS first_name TEXT,
+          ADD COLUMN IF NOT EXISTS last_name TEXT,
+          ADD COLUMN IF NOT EXISTS address TEXT,
+          ADD COLUMN IF NOT EXISTS city TEXT,
+          ADD COLUMN IF NOT EXISTS state TEXT,
+          ADD COLUMN IF NOT EXISTS zip_code TEXT,
+          ADD COLUMN IF NOT EXISTS vehicle_type TEXT,
+          ADD COLUMN IF NOT EXISTS vehicle_capacity TEXT,
+          ADD COLUMN IF NOT EXISTS lifting_limit TEXT,
+          ADD COLUMN IF NOT EXISTS license_plate TEXT,
+          ADD COLUMN IF NOT EXISTS services TEXT,
+          ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT false
+        `);
+        console.log('[DriverAuth] Driver columns ensured');
+      }
+    } catch (e) {
+      console.log('[DriverAuth] Column migration note:', (e as any)?.message);
+    }
+  })();
+
   // POST /driver/auth/signup
   app.post('/driver/auth/signup', async (req, res) => {
     try {
-      const { email, password, name, phone } = req.body;
+      const { 
+        email, password, name, phone, 
+        firstName, lastName, address, city, state, zipCode 
+      } = req.body;
+
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
@@ -43,7 +85,7 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // Check if user already exists in users table
+      // Check if user already exists
       const existingResult = await pool.query(
         'SELECT id FROM users WHERE email = $1 LIMIT 1',
         [email]
@@ -52,7 +94,6 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'Email already registered' });
       }
 
-      // Also check if driver with this email exists
       const existingDriver = await pool.query(
         'SELECT id FROM drivers WHERE email = $1 LIMIT 1',
         [email]
@@ -61,25 +102,39 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'Email already registered as driver' });
       }
 
+      const fullName = firstName && lastName ? `${firstName} ${lastName}` : (name || '');
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Insert into users table
-      // Real columns: id (auto), email, password, name, password_hash, phone
       const insertResult = await pool.query(
         `INSERT INTO users (email, name, phone, password_hash)
          VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [email, name || '', phone || null, hashedPassword]
+        [email, fullName, phone || null, hashedPassword]
       );
       const userId = insertResult.rows[0]?.id;
 
-      // Insert into drivers table
-      // Real columns: id (uuid auto), name, phone, email, status, created_at, updated_at
+      // Insert into drivers table with all fields
       const driverResult = await pool.query(
-        `INSERT INTO drivers (name, phone, email, status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
+        `INSERT INTO drivers (
+          name, phone, email, status, 
+          first_name, last_name, address, city, state, zip_code,
+          created_at, updated_at
+        )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
          RETURNING id`,
-        [name || '', phone || '', email, 'pending']
+        [
+          fullName, 
+          phone || '', 
+          email, 
+          'pending',
+          firstName || '',
+          lastName || '',
+          address || '',
+          city || '',
+          state || '',
+          zipCode || ''
+        ]
       );
       const driverId = driverResult.rows[0]?.id;
 
@@ -88,7 +143,18 @@ export function registerDriverAuthRoutes(app: Express) {
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
-      res.json({ success: true, token, driver: { id: driverId, userId, email, status: 'pending' } });
+
+      res.json({ 
+        success: true, 
+        token, 
+        driver: { 
+          id: driverId, 
+          userId, 
+          email, 
+          name: fullName,
+          status: 'pending' 
+        } 
+      });
     } catch (error: any) {
       console.error('Driver signup error:', error);
       res.status(500).json({ error: 'Failed to create account', details: error?.message || String(error) });
@@ -108,40 +174,354 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // Get user with password_hash from users table
       const result = await pool.query(
         'SELECT id, email, password_hash, name FROM users WHERE email = $1 LIMIT 1',
         [email]
       );
       const user = result.rows[0];
-
       if (!user || !user.password_hash) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
+
       const isValid = await bcrypt.compare(password, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // Get driver record by email
       const driverResult = await pool.query(
-        'SELECT id, status FROM drivers WHERE email = $1 LIMIT 1',
+        'SELECT id, status, first_name, last_name, vehicle_type FROM drivers WHERE email = $1 LIMIT 1',
         [email]
       );
       const driver = driverResult.rows[0];
-
       if (!driver) {
         return res.status(404).json({ error: 'Driver profile not found' });
       }
+
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: 'driver', driverId: driver.id },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
-      res.json({ token, user: { id: user.id, email: user.email, name: user.name }, driver: { id: driver.id, status: driver.status } });
+
+      res.json({ 
+        token, 
+        user: { id: user.id, email: user.email, name: user.name }, 
+        driver: { 
+          id: driver.id, 
+          status: driver.status,
+          firstName: driver.first_name,
+          lastName: driver.last_name,
+          vehicleType: driver.vehicle_type
+        } 
+      });
     } catch (err: any) {
       console.error('Driver login error:', err);
       res.status(500).json({ error: 'Internal server error', details: err?.message || String(err) });
+    }
+  });
+
+  // POST /driver/onboarding - Save vehicle info and documents
+  app.post('/driver/onboarding', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      // For multipart form data, fields come in req.body
+      const { vehicleType, vehicleCapacity, liftingLimit, licensePlate, services } = req.body;
+
+      await pool.query(
+        `UPDATE drivers SET 
+          vehicle_type = COALESCE($1, vehicle_type),
+          vehicle_capacity = COALESCE($2, vehicle_capacity),
+          lifting_limit = COALESCE($3, lifting_limit),
+          license_plate = COALESCE($4, license_plate),
+          services = COALESCE($5, services),
+          updated_at = NOW()
+        WHERE id = $6`,
+        [
+          vehicleType || null,
+          vehicleCapacity || null,
+          liftingLimit || null,
+          licensePlate || null,
+          services || null,
+          decoded.driverId
+        ]
+      );
+
+      res.json({ success: true, message: 'Onboarding data saved' });
+    } catch (err: any) {
+      console.error('Driver onboarding error:', err);
+      res.status(500).json({ error: 'Failed to save onboarding data', details: err?.message });
+    }
+  });
+
+  // POST /driver/online - Toggle online/offline status
+  app.post('/driver/online', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const { online } = req.body;
+      await pool.query(
+        'UPDATE drivers SET is_online = $1, updated_at = NOW() WHERE id = $2',
+        [!!online, decoded.driverId]
+      );
+
+      res.json({ success: true, online: !!online });
+    } catch (err: any) {
+      console.error('Driver online toggle error:', err);
+      res.status(500).json({ error: 'Failed to update status' });
+    }
+  });
+
+  // GET /driver/orders/available - Get available orders for driver
+  app.get('/driver/orders/available', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      // Get orders that are pending assignment
+      const result = await pool.query(
+        `SELECT * FROM jobs WHERE status = 'pending' ORDER BY created_at DESC LIMIT 20`
+      );
+
+      res.json({ orders: result.rows || [] });
+    } catch (err: any) {
+      console.error('Get available orders error:', err);
+      res.json({ orders: [] });
+    }
+  });
+
+  // GET /driver/profile - Get driver profile
+  app.get('/driver/profile', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const result = await pool.query(
+        'SELECT * FROM drivers WHERE id = $1 LIMIT 1',
+        [decoded.driverId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      const driver = result.rows[0];
+      res.json({ 
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          firstName: driver.first_name,
+          lastName: driver.last_name,
+          email: driver.email,
+          phone: driver.phone,
+          address: driver.address,
+          city: driver.city,
+          state: driver.state,
+          zipCode: driver.zip_code,
+          status: driver.status,
+          vehicleType: driver.vehicle_type,
+          vehicleCapacity: driver.vehicle_capacity,
+          isOnline: driver.is_online,
+          createdAt: driver.created_at
+        }
+      });
+    } catch (err: any) {
+      console.error('Get driver profile error:', err);
+      res.status(500).json({ error: 'Failed to get profile' });
+    }
+  });
+
+  // PUT /driver/profile - Update driver profile
+  app.put('/driver/profile', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const { firstName, lastName, phone, address, city, state, zipCode } = req.body;
+      const fullName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+
+      await pool.query(
+        `UPDATE drivers SET 
+          name = COALESCE($1, name),
+          first_name = COALESCE($2, first_name),
+          last_name = COALESCE($3, last_name),
+          phone = COALESCE($4, phone),
+          address = COALESCE($5, address),
+          city = COALESCE($6, city),
+          state = COALESCE($7, state),
+          zip_code = COALESCE($8, zip_code),
+          updated_at = NOW()
+        WHERE id = $9`,
+        [fullName, firstName, lastName, phone, address, city, state, zipCode, decoded.driverId]
+      );
+
+      res.json({ success: true, message: 'Profile updated' });
+    } catch (err: any) {
+      console.error('Update driver profile error:', err);
+      res.status(500).json({ error: 'Failed to update profile' });
+    }
+  });
+
+  // GET /driver/orders/history - Get order history
+  app.get('/driver/orders/history', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      // Try to get completed jobs for this driver
+      try {
+        const result = await pool.query(
+          `SELECT j.* FROM jobs j 
+           JOIN job_assignments ja ON j.id = ja.job_id 
+           WHERE ja.driver_id = $1 
+           ORDER BY j.created_at DESC LIMIT 50`,
+          [decoded.driverId]
+        );
+        res.json({ orders: result.rows || [] });
+      } catch (e) {
+        // Table might not exist or have different schema
+        res.json({ orders: [] });
+      }
+    } catch (err: any) {
+      console.error('Get order history error:', err);
+      res.json({ orders: [] });
+    }
+  });
+
+  // GET /driver/earnings - Get earnings summary
+  app.get('/driver/earnings', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Return default earnings for now
+      res.json({ 
+        today: 0, 
+        thisWeek: 0, 
+        thisMonth: 0, 
+        total: 0,
+        completedJobs: 0,
+        pendingPayout: 0
+      });
+    } catch (err: any) {
+      console.error('Get earnings error:', err);
+      res.json({ today: 0, thisWeek: 0, thisMonth: 0, total: 0 });
+    }
+  });
+
+  // POST /driver/orders/:id/accept - Accept an order
+  app.post('/driver/orders/:id/accept', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const orderId = req.params.id;
+      
+      // Update job status
+      await pool.query(
+        "UPDATE jobs SET status = 'assigned', updated_at = NOW() WHERE id = $1",
+        [orderId]
+      );
+
+      res.json({ success: true, message: 'Order accepted' });
+    } catch (err: any) {
+      console.error('Accept order error:', err);
+      res.status(500).json({ error: 'Failed to accept order' });
+    }
+  });
+
+  // POST /driver/orders/:id/reject - Reject an order
+  app.post('/driver/orders/:id/reject', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      res.json({ success: true, message: 'Order rejected' });
+    } catch (err: any) {
+      console.error('Reject order error:', err);
+      res.status(500).json({ error: 'Failed to reject order' });
+    }
+  });
+
+  // POST /driver/orders/:id/complete - Complete an order
+  app.post('/driver/orders/:id/complete', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const orderId = req.params.id;
+      
+      await pool.query(
+        "UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1",
+        [orderId]
+      );
+
+      res.json({ success: true, message: 'Order completed' });
+    } catch (err: any) {
+      console.error('Complete order error:', err);
+      res.status(500).json({ error: 'Failed to complete order' });
     }
   });
 }
