@@ -1,5 +1,5 @@
 // API client for backend integration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+// All API calls go through Next.js API route proxies to avoid CORS issues
 
 export interface ServiceAreaResponse {
   covered: boolean
@@ -60,7 +60,6 @@ export interface JobResponse {
 }
 
 export async function checkServiceArea(lat: number, lng: number, state?: string): Promise<ServiceAreaResponse> {
-  // Use server-side proxy to avoid CORS and get better error logging
   const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
   const url = `/api/service-area-lookup?lat=${lat}&lng=${lng}${stateParam}`
   console.log('[API] checkServiceArea URL:', url)
@@ -80,51 +79,75 @@ export async function checkServiceArea(lat: number, lng: number, state?: string)
 }
 
 export async function getQuote(request: QuoteRequest): Promise<QuoteResponse> {
-  const response = await fetch(`${API_BASE_URL}/quotes`, {
+  console.log('[API] getQuote request:', JSON.stringify(request))
+  const response = await fetch('/api/quotes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(request),
   })
+  console.log('[API] getQuote status:', response.status)
   if (!response.ok) {
-    throw new Error('Quote request failed')
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.error('[API] getQuote error:', errorData)
+    throw new Error(errorData.error || 'Quote request failed')
   }
-  return response.json()
+  const data = await response.json()
+  console.log('[API] getQuote result:', data)
+  return data
 }
 
 export async function createJob(request: JobCreateRequest): Promise<JobResponse> {
-  const response = await fetch(`${API_BASE_URL}/jobs`, {
+  console.log('[API] createJob request:', JSON.stringify(request))
+  const response = await fetch('/api/jobs', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(request),
   })
+  console.log('[API] createJob status:', response.status)
   if (!response.ok) {
-    throw new Error('Job creation failed')
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.error('[API] createJob error:', errorData)
+    throw new Error(errorData.error || 'Job creation failed')
   }
-  return response.json()
+  const data = await response.json()
+  console.log('[API] createJob result:', data)
+  return data
 }
 
 export async function payJob(jobId: number, paymentMethodId: string): Promise<{ success: boolean }> {
-  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/pay`, {
+  console.log('[API] payJob for job:', jobId)
+  const response = await fetch(`/api/jobs/${jobId}/pay`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ paymentMethodId }),
   })
+  console.log('[API] payJob status:', response.status)
   if (!response.ok) {
-    throw new Error('Payment failed')
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.error('[API] payJob error:', errorData)
+    throw new Error(errorData.error || 'Payment failed')
   }
-  return response.json()
+  const data = await response.json()
+  console.log('[API] payJob result:', data)
+  return data
 }
 
 export async function getJobStatus(jobId: number): Promise<{ status: string; driver?: any }> {
-  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`)
+  console.log('[API] getJobStatus for job:', jobId)
+  const response = await fetch(`/api/jobs/${jobId}`)
+  console.log('[API] getJobStatus status:', response.status)
   if (!response.ok) {
-    throw new Error('Failed to get job status')
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.error('[API] getJobStatus error:', errorData)
+    throw new Error(errorData.error || 'Failed to get job status')
   }
-  return response.json()
+  const data = await response.json()
+  console.log('[API] getJobStatus result:', data)
+  return data
 }
