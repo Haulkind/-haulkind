@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, Stats } from '../lib/api';
 
@@ -9,15 +9,15 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState(30);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const data = await api.getStats();
       setStats(data);
+      setLastUpdated(new Date());
+      setCountdown(30);
     } catch (err: any) {
       if (err.message.includes('401') || err.message.includes('token')) {
         router.push('/login');
@@ -27,7 +27,27 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadStats();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [loadStats]);
+
+  // Countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev <= 1 ? 30 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (loading) {
     return (
@@ -49,7 +69,29 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard Overview</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span>Auto-refresh: {countdown}s</span>
+          </div>
+          {lastUpdated && (
+            <span className="text-xs text-gray-500">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={loadStats}
+            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+          >
+            Refresh Now
+          </button>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
