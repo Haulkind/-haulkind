@@ -643,85 +643,87 @@ export function OrderDetailScreen({ route, navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-        {/* Header */}
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: 16 }}>
-          <Text style={{ fontSize: 16, color: COLORS.primary, fontWeight: '600' }}>{'< Back'}</Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1, paddingTop: STATUSBAR_HEIGHT }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 16 }}>
+          {/* Header */}
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 16, color: COLORS.primary, fontWeight: '600' }}>{'< Back'}</Text>
+          </TouchableOpacity>
 
-        <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 4 }}>Order Details</Text>
-        <Text style={{ fontSize: 14, color: COLORS.gray, marginBottom: 20 }}>Review the order before accepting</Text>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 4 }}>Order Details</Text>
+          <Text style={{ fontSize: 14, color: COLORS.gray, marginBottom: 20 }}>Review the order before accepting</Text>
 
-        {/* Service Type & Price */}
-        <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SERVICE TYPE</Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.dark }}>{order.service_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
-          {totalPrice > 0 && (
-            <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.success, marginTop: 8 }}>${totalPrice.toFixed(0)}</Text>
-          )}
-        </View>
+          {/* Service Type & Price */}
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SERVICE TYPE</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.dark }}>{order.service_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
+            {totalPrice > 0 && (
+              <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.success, marginTop: 8 }}>${totalPrice.toFixed(0)}</Text>
+            )}
+          </View>
 
-        {/* Pickup Location */}
-        <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>PICKUP LOCATION</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{pickupAddr}</Text>
-          {addrLine2 ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{addrLine2}</Text> : null}
-          {order.dropoff_address ? (
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ fontSize: 13, color: COLORS.gray }}>DROPOFF</Text>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.dark }}>{order.dropoff_address}</Text>
+          {/* Pickup Location */}
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>PICKUP LOCATION</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{pickupAddr}</Text>
+            {addrLine2 ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{addrLine2}</Text> : null}
+            {order.dropoff_address ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={{ fontSize: 13, color: COLORS.gray }}>DROPOFF</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.dark }}>{order.dropoff_address}</Text>
+              </View>
+            ) : null}
+            <TouchableOpacity style={{ marginTop: 12, backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 10, alignItems: 'center' }} onPress={openMaps}>
+              <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Open in Maps</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Schedule */}
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SCHEDULE</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{dateInfo}</Text>
+            {timeInfo ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{timeInfo}</Text> : null}
+          </View>
+
+          {/* Customer */}
+          <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>CUSTOMER</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.customer_name || 'Customer'}</Text>
+            {customerPhone ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{customerPhone}</Text> : null}
+            {order.description ? <Text style={{ fontSize: 14, color: COLORS.gray, marginTop: 4 }}>{order.description}</Text> : null}
+          </View>
+
+          {/* Items */}
+          {Array.isArray(items) && items.length > 0 && (
+            <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 8 }}>ITEMS TO REMOVE</Text>
+              {items.map((item, idx) => (
+                <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: COLORS.grayLight }}>
+                  <Text style={{ fontSize: 14, color: COLORS.dark }}>{item.name || item.item || item}</Text>
+                  {item.quantity && <Text style={{ fontSize: 14, color: COLORS.gray }}>x{item.quantity}</Text>}
+                </View>
+              ))}
             </View>
-          ) : null}
-          <TouchableOpacity style={{ marginTop: 12, backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 10, alignItems: 'center' }} onPress={openMaps}>
-            <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Open in Maps</Text>
+          )}
+        </ScrollView>
+
+        {/* Action Buttons - fixed at bottom, not absolute */}
+        <View style={{ backgroundColor: COLORS.white, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24, flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: COLORS.grayMedium }}>
+          <TouchableOpacity style={[styles.btnOutline, { flex: 1 }]} onPress={handleDecline}>
+            <Text style={{ color: COLORS.danger, fontWeight: '700', fontSize: 16 }}>Decline</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.btnPrimary, { flex: 2 }, loading && { opacity: 0.7 }]}
+            onPress={handleAccept}
+            disabled={loading}
+          >
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryText}>Accept Order</Text>}
           </TouchableOpacity>
         </View>
-
-        {/* Schedule */}
-        <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SCHEDULE</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{dateInfo}</Text>
-          {timeInfo ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{timeInfo}</Text> : null}
-        </View>
-
-        {/* Customer */}
-        <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>CUSTOMER</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.customer_name || 'Customer'}</Text>
-          {customerPhone ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{customerPhone}</Text> : null}
-          {order.description ? <Text style={{ fontSize: 14, color: COLORS.gray, marginTop: 4 }}>{order.description}</Text> : null}
-        </View>
-
-        {/* Items */}
-        {Array.isArray(items) && items.length > 0 && (
-          <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-            <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 8 }}>ITEMS TO REMOVE</Text>
-            {items.map((item, idx) => (
-              <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: idx < items.length - 1 ? 1 : 0, borderBottomColor: COLORS.grayLight }}>
-                <Text style={{ fontSize: 14, color: COLORS.dark }}>{item.name || item.item || item}</Text>
-                {item.quantity && <Text style={{ fontSize: 14, color: COLORS.gray }}>x{item.quantity}</Text>}
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.white, padding: 16, flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: COLORS.grayMedium }}>
-        <TouchableOpacity style={[styles.btnOutline, { flex: 1 }]} onPress={handleDecline}>
-          <Text style={{ color: COLORS.danger, fontWeight: '700', fontSize: 16 }}>Decline</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.btnPrimary, { flex: 2 }, loading && { opacity: 0.7 }]}
-          onPress={handleAccept}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryText}>Accept Order</Text>}
-        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
