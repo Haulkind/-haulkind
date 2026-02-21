@@ -386,7 +386,30 @@ export function HomeScreen({ navigation }) {
   useEffect(() => {
     loadDriverData();
     loadOrders();
+    loadDriverProfile();
   }, []);
+
+  // Auto-refresh orders every 15 seconds when online
+  useEffect(() => {
+    let interval;
+    if (isOnline) {
+      interval = setInterval(() => {
+        loadOrders();
+      }, 15000);
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [isOnline]);
+
+  const loadDriverProfile = async () => {
+    try {
+      const data = await apiGet('/driver/profile');
+      const driver = data.driver || data;
+      if (driver.is_online) {
+        setIsOnline(true);
+        loadOrders();
+      }
+    } catch (e) {}
+  };
 
   const loadDriverData = async () => {
     try {
@@ -402,9 +425,10 @@ export function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       const data = await apiGet('/driver/orders/available');
-      setOrders(data.orders || []);
+      const ordersList = data.orders || data || [];
+      setOrders(Array.isArray(ordersList) ? ordersList : []);
     } catch (e) {
-      // Silently fail - orders may not be available yet
+      console.log('loadOrders error:', e.message);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -413,15 +437,20 @@ export function HomeScreen({ navigation }) {
   };
 
   const toggleOnline = async () => {
+    const newOnline = !isOnline;
+    setIsOnline(newOnline);
     try {
-      await apiPostAuth('/driver/online', { online: !isOnline });
-      setIsOnline(!isOnline);
-      if (!isOnline) {
+      await apiPostAuth('/driver/online', { online: newOnline });
+      if (newOnline) {
         loadOrders();
+      } else {
+        setOrders([]);
       }
     } catch (e) {
-      // Toggle locally even if API fails
-      setIsOnline(!isOnline);
+      // API call failed but keep the toggle state
+      if (newOnline) {
+        loadOrders();
+      }
     }
   };
 
@@ -444,10 +473,17 @@ export function HomeScreen({ navigation }) {
   };
 
   const renderOrder = ({ item }) => {
-    const pricing = typeof item.pricing_json === 'string' ? JSON.parse(item.pricing_json) : (item.pricing_json || {});
-    const items = typeof item.items_json === 'string' ? JSON.parse(item.items_json) : (item.items_json || []);
-    const totalPrice = pricing.total || pricing.estimatedTotal || 0;
-    const itemsList = Array.isArray(items) ? items.map(i => i.name || i.item || i).join(', ') : '';
+    // Support both old schema (pricing_json, street, city) and new schema (estimated_price, pickup_address)
+    const pricing = typeof item.pricing_json === 'string' ? JSON.parse(item.pricing_json || '{}') : (item.pricing_json || {});
+    const items = typeof item.items_json === 'string' ? JSON.parse(item.items_json || '[]') : (item.items_json || []);
+    const totalPrice = pricing.total || pricing.estimatedTotal || parseFloat(item.estimated_price) || parseFloat(item.final_price) || 0;
+    const itemsList = Array.isArray(items) ? items.filter(Boolean).map(i => typeof i === 'string' ? i : (i.name || i.item || '')).join(', ') : '';
+    const customerName = item.customer_name || item.customerName || 'Customer';
+    const pickupAddr = item.pickup_address || item.street || '';
+    const dropoffAddr = item.dropoff_address || item.deliveryAddress || '';
+    const addressLine = item.city ? `${item.city}, ${item.state} ${item.zip}` : pickupAddr;
+    const dateInfo = item.pickup_date ? `${item.pickup_date} - ${item.pickup_time_window || ''}` : new Date(item.created_at).toLocaleDateString();
+    const description = item.description || itemsList || '';
 
     return (
       <TouchableOpacity
@@ -460,20 +496,21 @@ export function HomeScreen({ navigation }) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.dark }}>{getServiceName(item.service_type)}</Text>
-            <Text style={{ fontSize: 13, color: COLORS.gray }}>{item.pickup_date} - {item.pickup_time_window}</Text>
+            <Text style={{ fontSize: 13, color: COLORS.gray }}>{dateInfo}</Text>
           </View>
           {totalPrice > 0 && (
-            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.success }}>${totalPrice}</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.success }}>${totalPrice.toFixed(0)}</Text>
           )}
         </View>
 
         <View style={{ backgroundColor: COLORS.grayLight, borderRadius: 8, padding: 12, marginBottom: 8 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.dark }}>{item.street}</Text>
-          <Text style={{ fontSize: 13, color: COLORS.gray }}>{item.city}, {item.state} {item.zip}</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.dark }}>{customerName}</Text>
+          <Text style={{ fontSize: 13, color: COLORS.gray }}>{addressLine}</Text>
+          {dropoffAddr ? <Text style={{ fontSize: 13, color: COLORS.gray, marginTop: 2 }}>To: {dropoffAddr}</Text> : null}
         </View>
 
-        {itemsList ? (
-          <Text style={{ fontSize: 13, color: COLORS.gray }} numberOfLines={2}>Items: {itemsList}</Text>
+        {description ? (
+          <Text style={{ fontSize: 13, color: COLORS.gray }} numberOfLines={2}>{description}</Text>
         ) : null}
       </TouchableOpacity>
     );
@@ -566,9 +603,14 @@ export function HomeScreen({ navigation }) {
 export function OrderDetailScreen({ route, navigation }) {
   const { order } = route.params;
   const [loading, setLoading] = useState(false);
-  const pricing = typeof order.pricing_json === 'string' ? JSON.parse(order.pricing_json) : (order.pricing_json || {});
-  const items = typeof order.items_json === 'string' ? JSON.parse(order.items_json) : (order.items_json || []);
-  const totalPrice = pricing.total || pricing.estimatedTotal || 0;
+  const pricing = typeof order.pricing_json === 'string' ? JSON.parse(order.pricing_json || '{}') : (order.pricing_json || {});
+  const items = typeof order.items_json === 'string' ? JSON.parse(order.items_json || '[]') : (order.items_json || []);
+  const totalPrice = pricing.total || pricing.estimatedTotal || parseFloat(order.estimated_price) || parseFloat(order.final_price) || 0;
+  const pickupAddr = order.pickup_address || order.street || '';
+  const addrLine2 = order.city ? `${order.city}, ${order.state} ${order.zip}` : '';
+  const customerPhone = order.customer_phone || order.phone || '';
+  const dateInfo = order.pickup_date || new Date(order.created_at).toLocaleDateString();
+  const timeInfo = order.pickup_time_window || '';
 
   const handleAccept = async () => {
     setLoading(true);
@@ -592,7 +634,7 @@ export function OrderDetailScreen({ route, navigation }) {
   };
 
   const openMaps = () => {
-    const address = `${order.street}, ${order.city}, ${order.state} ${order.zip}`;
+    const address = pickupAddr || `${order.street}, ${order.city}, ${order.state} ${order.zip}`;
     const url = Platform.select({
       ios: `maps:0,0?q=${encodeURIComponent(address)}`,
       android: `geo:0,0?q=${encodeURIComponent(address)}`,
@@ -617,15 +659,21 @@ export function OrderDetailScreen({ route, navigation }) {
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SERVICE TYPE</Text>
           <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.dark }}>{order.service_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
           {totalPrice > 0 && (
-            <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.success, marginTop: 8 }}>${totalPrice}</Text>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.success, marginTop: 8 }}>${totalPrice.toFixed(0)}</Text>
           )}
         </View>
 
         {/* Pickup Location */}
         <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>PICKUP LOCATION</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.street}</Text>
-          <Text style={{ fontSize: 14, color: COLORS.gray }}>{order.city}, {order.state} {order.zip}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{pickupAddr}</Text>
+          {addrLine2 ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{addrLine2}</Text> : null}
+          {order.dropoff_address ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 13, color: COLORS.gray }}>DROPOFF</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.dark }}>{order.dropoff_address}</Text>
+            </View>
+          ) : null}
           <TouchableOpacity style={{ marginTop: 12, backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 10, alignItems: 'center' }} onPress={openMaps}>
             <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Open in Maps</Text>
           </TouchableOpacity>
@@ -634,15 +682,16 @@ export function OrderDetailScreen({ route, navigation }) {
         {/* Schedule */}
         <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SCHEDULE</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.pickup_date}</Text>
-          <Text style={{ fontSize: 14, color: COLORS.gray }}>{order.pickup_time_window}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{dateInfo}</Text>
+          {timeInfo ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{timeInfo}</Text> : null}
         </View>
 
         {/* Customer */}
         <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>CUSTOMER</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.customer_name}</Text>
-          <Text style={{ fontSize: 14, color: COLORS.gray }}>{order.phone}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.customer_name || 'Customer'}</Text>
+          {customerPhone ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{customerPhone}</Text> : null}
+          {order.description ? <Text style={{ fontSize: 14, color: COLORS.gray, marginTop: 4 }}>{order.description}</Text> : null}
         </View>
 
         {/* Items */}
@@ -705,14 +754,18 @@ export function ActiveOrderScreen({ route, navigation }) {
     ]);
   };
 
+  const activePickupAddr = order.pickup_address || order.street || '';
+  const activeAddrLine2 = order.city ? `${order.city}, ${order.state} ${order.zip}` : '';
+  const activePhone = order.customer_phone || order.phone || '';
+
   const callCustomer = () => {
-    if (order.phone) {
-      Linking.openURL(`tel:${order.phone}`);
+    if (activePhone) {
+      Linking.openURL(`tel:${activePhone}`);
     }
   };
 
   const openMaps = () => {
-    const address = `${order.street}, ${order.city}, ${order.state} ${order.zip}`;
+    const address = activePickupAddr || `${order.street}, ${order.city}, ${order.state} ${order.zip}`;
     const url = Platform.select({
       ios: `maps:0,0?q=${encodeURIComponent(address)}`,
       android: `geo:0,0?q=${encodeURIComponent(address)}`,
@@ -732,17 +785,25 @@ export function ActiveOrderScreen({ route, navigation }) {
         {/* Customer Info */}
         <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>CUSTOMER</Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.dark }}>{order.customer_name}</Text>
-          <TouchableOpacity style={{ marginTop: 8, backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 10, alignItems: 'center' }} onPress={callCustomer}>
-            <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Call Customer: {order.phone}</Text>
-          </TouchableOpacity>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.dark }}>{order.customer_name || 'Customer'}</Text>
+          {activePhone ? (
+            <TouchableOpacity style={{ marginTop: 8, backgroundColor: COLORS.primaryLight, borderRadius: 8, padding: 10, alignItems: 'center' }} onPress={callCustomer}>
+              <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Call Customer: {activePhone}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Location */}
         <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>PICKUP LOCATION</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.street}</Text>
-          <Text style={{ fontSize: 14, color: COLORS.gray }}>{order.city}, {order.state} {order.zip}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{activePickupAddr}</Text>
+          {activeAddrLine2 ? <Text style={{ fontSize: 14, color: COLORS.gray }}>{activeAddrLine2}</Text> : null}
+          {order.dropoff_address ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 13, color: COLORS.gray }}>DROPOFF</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.dark }}>{order.dropoff_address}</Text>
+            </View>
+          ) : null}
           <TouchableOpacity style={{ marginTop: 12, backgroundColor: COLORS.primary, borderRadius: 8, padding: 12, alignItems: 'center' }} onPress={openMaps}>
             <Text style={{ color: COLORS.white, fontWeight: '700' }}>Navigate to Location</Text>
           </TouchableOpacity>
@@ -752,7 +813,7 @@ export function ActiveOrderScreen({ route, navigation }) {
         <View style={{ backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 13, color: COLORS.gray, marginBottom: 4 }}>SERVICE</Text>
           <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.dark }}>{order.service_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
-          <Text style={{ fontSize: 14, color: COLORS.gray, marginTop: 4 }}>{order.pickup_date} - {order.pickup_time_window}</Text>
+          <Text style={{ fontSize: 14, color: COLORS.gray, marginTop: 4 }}>{order.pickup_date || new Date(order.created_at).toLocaleDateString()}{order.pickup_time_window ? ` - ${order.pickup_time_window}` : ''}</Text>
         </View>
       </ScrollView>
 
@@ -896,18 +957,21 @@ export function OrderHistoryScreen({ navigation }) {
           keyExtractor={(item) => item.id?.toString()}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={({ item }) => {
-            const pricing = typeof item.pricing_json === 'string' ? JSON.parse(item.pricing_json) : (item.pricing_json || {});
+            const pricing = typeof item.pricing_json === 'string' ? JSON.parse(item.pricing_json || '{}') : (item.pricing_json || {});
+            const histPrice = pricing.total || pricing.estimatedTotal || parseFloat(item.estimated_price) || parseFloat(item.final_price) || 0;
+            const histAddr = item.pickup_address || (item.street ? `${item.street}, ${item.city}` : '');
+            const histDate = item.pickup_date || new Date(item.created_at).toLocaleDateString();
             return (
               <View style={styles.orderCard}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.dark }}>{item.service_type?.replace(/_/g, ' ')}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.dark }}>{item.service_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
                   <View style={{ backgroundColor: item.status === 'completed' ? COLORS.successLight : COLORS.warningLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
                     <Text style={{ fontSize: 12, fontWeight: '600', color: item.status === 'completed' ? COLORS.success : COLORS.warning }}>{item.status?.toUpperCase()}</Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 14, color: COLORS.gray }}>{item.street}, {item.city}</Text>
-                <Text style={{ fontSize: 13, color: COLORS.gray }}>{item.pickup_date}</Text>
-                {pricing.total && <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.success, marginTop: 4 }}>${pricing.total}</Text>}
+                <Text style={{ fontSize: 14, color: COLORS.gray }}>{histAddr}</Text>
+                <Text style={{ fontSize: 13, color: COLORS.gray }}>{histDate}</Text>
+                {histPrice > 0 && <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.success, marginTop: 4 }}>${histPrice.toFixed(0)}</Text>}
               </View>
             );
           }}
