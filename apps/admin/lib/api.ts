@@ -1,5 +1,5 @@
 // Admin API client
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-api-production-b00f.up.railway.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 
 export interface Driver {
   id: string; // UUID
