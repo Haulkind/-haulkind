@@ -10,6 +10,7 @@ import { apiPost } from './api';
 import { API_URL } from './config';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 0;
 
 // ============================================================================
 // COLORS & THEME
@@ -131,8 +132,8 @@ export function LoginScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+    <View style={{ flex: 1, backgroundColor: COLORS.white, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} translucent={true} />
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
         <View style={{ alignItems: 'center', marginBottom: 40 }}>
           <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.primary }}>Haulkind</Text>
@@ -185,7 +186,7 @@ export function LoginScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -251,8 +252,8 @@ export function SignupScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
+    <View style={{ flex: 1, backgroundColor: COLORS.white, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
         <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary, marginBottom: 4 }}>Create Account</Text>
         <Text style={{ fontSize: 14, color: COLORS.gray, marginBottom: 24 }}>Fill in all your details to get started</Text>
@@ -311,7 +312,7 @@ export function SignupScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -344,8 +345,8 @@ export function PendingScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
         <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.warningLight, justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
           <Text style={{ fontSize: 36 }}>...</Text>
@@ -367,7 +368,7 @@ export function PendingScreen({ navigation }) {
           <Text style={{ color: COLORS.danger, fontWeight: '600' }}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -479,12 +480,12 @@ export function HomeScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} translucent={true} />
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.grayMedium }}>
-        <TouchableOpacity onPress={() => menuEmitter.open()}>
-          <View style={{ width: 32, height: 24, justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, paddingTop: STATUSBAR_HEIGHT + 12, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.grayMedium }}>
+        <TouchableOpacity onPress={() => menuEmitter.open()} style={{ padding: 8 }}>
+          <View style={{ width: 28, height: 20, justifyContent: 'space-between' }}>
             <View style={{ height: 3, backgroundColor: COLORS.dark, borderRadius: 2 }} />
             <View style={{ height: 3, backgroundColor: COLORS.dark, borderRadius: 2 }} />
             <View style={{ height: 3, backgroundColor: COLORS.dark, borderRadius: 2 }} />
@@ -555,7 +556,7 @@ export function HomeScreen({ navigation }) {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -600,8 +601,8 @@ export function OrderDetailScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         {/* Header */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: 16 }}>
@@ -671,7 +672,7 @@ export function OrderDetailScreen({ route, navigation }) {
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryText}>Accept Order</Text>}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -720,8 +721,8 @@ export function ActiveOrderScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         <View style={{ backgroundColor: COLORS.successLight, borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.success }}>Active Order</Text>
@@ -765,7 +766,7 @@ export function ActiveOrderScreen({ route, navigation }) {
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryText}>Mark as Completed</Text>}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -796,15 +797,15 @@ export function ProfileScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 20 }}>My Profile</Text>
 
@@ -841,7 +842,7 @@ export function ProfileScreen({ navigation }) {
           <InfoRow label="License Plate" value={profile.licensePlate || profile.license_plate || 'Not set'} />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -877,8 +878,8 @@ export function OrderHistoryScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <View style={{ padding: 16 }}>
         <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 16 }}>Order History</Text>
       </View>
@@ -912,13 +913,12 @@ export function OrderHistoryScreen({ navigation }) {
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ============================================================================
-// EARNINGS SCREEN
-// ============================================================================
+// ONBOARDING SCREEN/ ============================================================================
 export function EarningsScreen({ navigation }) {
   const [earnings, setEarnings] = useState({ today: 0, week: 0, month: 0, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -939,8 +939,8 @@ export function EarningsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 20 }}>Earnings</Text>
 
@@ -964,7 +964,7 @@ export function EarningsScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -985,8 +985,8 @@ export function SettingsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 20 }}>Settings</Text>
 
@@ -1024,7 +1024,7 @@ export function SettingsScreen({ navigation }) {
           <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.danger }}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1033,8 +1033,8 @@ export function SettingsScreen({ navigation }) {
 // ============================================================================
 export function DocumentsScreen({ navigation }) {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: STATUSBAR_HEIGHT }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} translucent={true} />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.dark, marginBottom: 20 }}>My Documents</Text>
 
@@ -1049,7 +1049,7 @@ export function DocumentsScreen({ navigation }) {
           Contact support to update your documents
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
