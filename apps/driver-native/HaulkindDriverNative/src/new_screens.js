@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator, Alert,
   Dimensions, FlatList, Modal, Vibration, Switch, PermissionsAndroid,
-  Linking,
+  Linking, PanResponder, Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
@@ -11,6 +11,7 @@ import Geolocation from "@react-native-community/geolocation";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
+import { launchCamera } from "react-native-image-picker";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const RADIUS_MILES = 40;
@@ -500,9 +501,8 @@ export function HomeScreen({ navigation }) {
     try {
       await apiPostAuth(`/driver/orders/${order.id}/accept`);
       Vibration.vibrate(200);
-      Alert.alert("Order Accepted!", `You accepted the ${order.service_type || "Haul Away"} order.`, [
-        { text: "OK", onPress: () => { setShowDetail(false); fetchOrders(); } },
-      ]);
+      setShowDetail(false);
+      navigation.navigate("ActiveOrder", { order });
     } catch (e) { Alert.alert("Error", e.message || "Could not accept order."); } finally { setAccepting(false); }
   }
 
@@ -1051,14 +1051,35 @@ export function OrderDetailScreen({ route, navigation }) {
 // ============================================================================
 // ACTIVE ORDER SCREEN
 // ============================================================================
+// ============================================================================
+// STEP FLOW CONSTANTS
+// ============================================================================
+const STEPS = [
+  { key: "accepted", label: "Order Accepted", action: "START TRIP", color: C.primary, icon: "\u2714" },
+  { key: "en_route", label: "En Route to Pickup", action: "I'VE ARRIVED", color: C.warning, icon: "\u{1F697}" },
+  { key: "arrived", label: "Arrived at Location", action: "START WORK", color: C.primary, icon: "\u{1F4CD}" },
+  { key: "in_progress", label: "Work in Progress", action: "TAKE PHOTO", color: C.success, icon: "\u{1F528}" },
+  { key: "photo_taken", label: "Photo Taken", action: "GET SIGNATURE", color: C.primary, icon: "\u{1F4F7}" },
+  { key: "signed", label: "Signature Captured", action: "COMPLETE ORDER", color: C.success, icon: "\u270D\uFE0F" },
+  { key: "completed", label: "Order Completed", action: null, color: C.success, icon: "\u2705" },
+];
+
 export function ActiveOrderScreen({ route, navigation }) {
   const order = route.params?.order;
-  const [status, setStatus] = useState("accepted");
+  const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [photoUri, setPhotoUri] = useState(null);
+  const [showSignature, setShowSignature] = useState(false);
+  const [signaturePaths, setSignaturePaths] = useState([]);
+  const [currentPath, setCurrentPath] = useState([]);
+
   const price = order?.pricing?.total || order?.pricing?.estimatedTotal || order?.estimated_price || order?.final_price || "0";
   const address = order?.pickup_address || order?.address?.street || "N/A";
   const customerName = order?.customer_name || order?.customerName || "Customer";
   const customerPhone = order?.customer_phone || order?.phone || "";
   const serviceType = order?.service_type || order?.serviceType || "Service";
+  const description = order?.description || "";
+  const orderId = order?.id;
 
   const callCustomer = () => {
     if (customerPhone) Linking.openURL(`tel:${customerPhone}`);
@@ -1071,30 +1092,196 @@ export function ActiveOrderScreen({ route, navigation }) {
     Linking.openURL(url).catch(() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`));
   };
 
-  const completeOrder = () => {
-    Alert.alert("Complete Order", "Mark this order as completed?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Complete", onPress: () => {
-        setStatus("completed");
-        Alert.alert("Order Completed!", "Great job!", [
+  const apiCallStep = async (endpoint) => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("driver_token");
+      const resp = await fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Failed");
+      return true;
+    } catch (e) {
+      Alert.alert("Error", e.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNextStep = async () => {
+    const step = STEPS[currentStep];
+    if (step.key === "accepted") {
+      const ok = await apiCallStep(`/driver/orders/${orderId}/start-trip`);
+      if (ok) setCurrentStep(1);
+    } else if (step.key === "en_route") {
+      const ok = await apiCallStep(`/driver/orders/${orderId}/arrived`);
+      if (ok) setCurrentStep(2);
+    } else if (step.key === "arrived") {
+      const ok = await apiCallStep(`/driver/orders/${orderId}/start-work`);
+      if (ok) setCurrentStep(3);
+    } else if (step.key === "in_progress") {
+      // Take photo
+      try {
+        const result = await launchCamera({ mediaType: "photo", quality: 0.7, maxWidth: 1024, maxHeight: 1024 });
+        if (result.assets && result.assets[0]) {
+          setPhotoUri(result.assets[0].uri);
+          const ok = await apiCallStep(`/driver/orders/${orderId}/upload-photo`);
+          if (ok) setCurrentStep(4);
+        }
+      } catch (e) {
+        Alert.alert("Camera Error", "Could not open camera. Please try again.");
+      }
+    } else if (step.key === "photo_taken") {
+      setShowSignature(true);
+    } else if (step.key === "signed") {
+      const ok = await apiCallStep(`/driver/orders/${orderId}/complete`);
+      if (ok) {
+        setCurrentStep(6);
+        Alert.alert("Order Completed!", "Great job! The order has been completed successfully.", [
           { text: "OK", onPress: () => navigation.navigate("Home") },
         ]);
-      }},
-    ]);
+      }
+    }
   };
+
+  const handleSignatureDone = async () => {
+    setShowSignature(false);
+    const ok = await apiCallStep(`/driver/orders/${orderId}/signature`);
+    if (ok) setCurrentStep(5);
+  };
+
+  // Signature PanResponder
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setCurrentPath([{ x: locationX, y: locationY }]);
+      },
+      onPanResponderMove: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        setCurrentPath((prev) => [...prev, { x: locationX, y: locationY }]);
+      },
+      onPanResponderRelease: () => {
+        setSignaturePaths((prev) => [...prev, currentPath]);
+        setCurrentPath([]);
+      },
+    })
+  ).current;
+
+  const renderSignatureSVG = () => {
+    const allPaths = [...signaturePaths, currentPath];
+    return allPaths.map((path, i) => {
+      if (path.length < 2) return null;
+      return (
+        <View key={i} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+          {path.map((point, j) => {
+            if (j === 0) return null;
+            return (
+              <View
+                key={j}
+                style={{
+                  position: "absolute",
+                  left: point.x - 1.5,
+                  top: point.y - 1.5,
+                  width: 3,
+                  height: 3,
+                  borderRadius: 1.5,
+                  backgroundColor: C.dark,
+                }}
+              />
+            );
+          })}
+        </View>
+      );
+    });
+  };
+
+  const stepInfo = STEPS[currentStep];
+  const progress = ((currentStep) / (STEPS.length - 1)) * 100;
+
+  // Signature Modal
+  if (showSignature) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg }}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+        <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border }}>
+          <Text style={{ fontSize: 20, fontWeight: "bold", color: C.dark }}>Customer Signature</Text>
+          <Text style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>Ask the customer to sign below</Text>
+        </View>
+        <View style={{ flex: 1, padding: 16 }}>
+          <View
+            style={{ flex: 1, backgroundColor: C.white, borderRadius: 12, borderWidth: 2, borderColor: C.border, borderStyle: "dashed", overflow: "hidden" }}
+            {...panResponder.panHandlers}
+          >
+            <Text style={{ textAlign: "center", color: C.gray, marginTop: 20, fontSize: 14 }}>Sign here</Text>
+            {renderSignatureSVG()}
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", padding: 16, paddingBottom: 28, gap: 12 }}>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: C.white, borderRadius: 12, paddingVertical: 16, alignItems: "center", borderWidth: 1, borderColor: C.danger }}
+            onPress={() => { setSignaturePaths([]); setCurrentPath([]); }}
+          >
+            <Text style={{ color: C.danger, fontSize: 16, fontWeight: "bold" }}>Clear</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 2, backgroundColor: signaturePaths.length > 0 ? C.success : C.gray, borderRadius: 12, paddingVertical: 16, alignItems: "center" }}
+            onPress={handleSignatureDone}
+            disabled={signaturePaths.length === 0}
+          >
+            <Text style={{ color: C.white, fontSize: 16, fontWeight: "bold" }}>Confirm Signature</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      {/* Header */}
       <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border }}>
         <Text style={{ fontSize: 20, fontWeight: "bold", color: C.dark }}>Active Order</Text>
-        <Text style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>Status: {status.toUpperCase()}</Text>
+        <Text style={{ fontSize: 13, color: stepInfo.color, marginTop: 2, fontWeight: "600" }}>{stepInfo.icon} {stepInfo.label}</Text>
+        {/* Progress bar */}
+        <View style={{ height: 4, backgroundColor: C.border, borderRadius: 2, marginTop: 8 }}>
+          <View style={{ height: 4, backgroundColor: stepInfo.color, borderRadius: 2, width: `${progress}%` }} />
+        </View>
       </View>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        {/* Step indicators */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16, paddingHorizontal: 4 }}>
+          {STEPS.map((s, i) => (
+            <View key={s.key} style={{ alignItems: "center" }}>
+              <View style={{
+                width: 28, height: 28, borderRadius: 14,
+                backgroundColor: i <= currentStep ? s.color : C.border,
+                justifyContent: "center", alignItems: "center",
+              }}>
+                <Text style={{ color: C.white, fontSize: 12, fontWeight: "bold" }}>{i + 1}</Text>
+              </View>
+              <Text style={{ fontSize: 8, color: i <= currentStep ? C.dark : C.gray, marginTop: 2, textAlign: "center", maxWidth: 45 }} numberOfLines={1}>
+                {s.key === "accepted" ? "Accept" : s.key === "en_route" ? "Drive" : s.key === "arrived" ? "Arrive" : s.key === "in_progress" ? "Work" : s.key === "photo_taken" ? "Photo" : s.key === "signed" ? "Sign" : "Done"}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Order info */}
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 18, fontWeight: "700", color: C.dark }}>{serviceType}</Text>
-          <Text style={{ fontSize: 24, fontWeight: "bold", color: C.success, marginTop: 4 }}>${parseFloat(price).toFixed(0)}</Text>
+          <Text style={{ fontSize: 28, fontWeight: "bold", color: C.success, marginTop: 4 }}>${parseFloat(price).toFixed(0)}</Text>
+          {description ? <Text style={{ fontSize: 13, color: C.gray, marginTop: 6 }}>{description}</Text> : null}
         </View>
+
+        {/* Pickup location */}
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 4 }}>PICKUP LOCATION</Text>
           <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{address}</Text>
@@ -1102,6 +1289,8 @@ export function ActiveOrderScreen({ route, navigation }) {
             <Text style={{ color: C.primary, fontSize: 14, fontWeight: "600" }}>Navigate to Pickup</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Customer */}
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 4 }}>CUSTOMER</Text>
           <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{customerName}</Text>
@@ -1111,12 +1300,39 @@ export function ActiveOrderScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {/* Photo preview */}
+        {photoUri ? (
+          <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 8 }}>COMPLETION PHOTO</Text>
+            <Image source={{ uri: photoUri }} style={{ width: "100%", height: 200, borderRadius: 8 }} resizeMode="cover" />
+          </View>
+        ) : null}
+
+        {/* Signature confirmation */}
+        {currentStep >= 5 ? (
+          <View style={{ backgroundColor: C.successLight, borderRadius: 12, padding: 16, marginBottom: 12, alignItems: "center" }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: C.success }}>\u2714 Customer signature captured</Text>
+          </View>
+        ) : null}
       </ScrollView>
-      <View style={{ padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border }}>
-        <TouchableOpacity style={{ backgroundColor: C.success, borderRadius: 12, paddingVertical: 16, alignItems: "center" }} onPress={completeOrder}>
-          <Text style={{ color: C.white, fontSize: 16, fontWeight: "bold" }}>Complete Order</Text>
-        </TouchableOpacity>
-      </View>
+
+      {/* Action button */}
+      {stepInfo.action ? (
+        <View style={{ padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border }}>
+          <TouchableOpacity
+            style={{ backgroundColor: loading ? C.gray : stepInfo.color, borderRadius: 12, paddingVertical: 16, alignItems: "center" }}
+            onPress={handleNextStep}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={C.white} />
+            ) : (
+              <Text style={{ color: C.white, fontSize: 16, fontWeight: "bold" }}>{stepInfo.action}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 }
