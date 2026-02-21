@@ -17,6 +17,14 @@ export default function OrdersPage() {
     loadOrders();
   }, [statusFilter, serviceTypeFilter, searchQuery]);
 
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [statusFilter, serviceTypeFilter, searchQuery]);
+
   const loadOrders = async () => {
     try {
       const params: any = {};
@@ -152,14 +160,14 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
-                    <div className="text-sm text-gray-500">{order.phone}</div>
+                    <div className="text-sm text-gray-500">{order.phone || order.email || ''}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{order.service_type.replace('_', ' ')}</div>
+                    <div className="text-sm text-gray-900">{(order.service_type || '').replace('_', ' ')}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{order.city || 'N/A'}, {order.state || 'N/A'}</div>
-                    <div className="text-sm text-gray-500">{order.zip}</div>
+                    <div className="text-sm text-gray-900">{order.street || (order.city ? `${order.city}, ${order.state || ''}` : 'N/A')}</div>
+                    <div className="text-sm text-gray-500">{order.zip || ''}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(order.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatPrice(order.pricing_json)}</td>
