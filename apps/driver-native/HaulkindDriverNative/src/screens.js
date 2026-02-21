@@ -119,7 +119,7 @@ export function LoginScreen({ navigation }) {
       if (driverStatus === 'pending') {
         navigation.reset({ index: 0, routes: [{ name: 'Pending' }] });
       } else if (driverStatus === 'approved' || driverStatus === 'active') {
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       } else {
         Alert.alert('Account Blocked', 'Your account has been blocked. Please contact support.');
       }
@@ -327,7 +327,7 @@ export function PendingScreen({ navigation }) {
       const data = await apiGet('/driver/profile');
       if (data.driver?.status === 'approved' || data.driver?.status === 'active') {
         Alert.alert('Approved!', 'Your account has been approved. Welcome!');
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       } else {
         Alert.alert('Still Pending', 'Your account is still under review. Please check back later.');
       }
