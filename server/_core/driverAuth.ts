@@ -717,4 +717,44 @@ export function registerDriverAuthRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to complete order' });
     }
   });
+
+  // POST /api/setup/admin - Create admin user (one-time setup)
+  app.post('/api/setup/admin', async (req, res) => {
+    try {
+      const { email, password, name } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password required' });
+      }
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'No DB' });
+      
+      // Ensure users table exists
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          name TEXT,
+          role TEXT DEFAULT 'admin',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      
+      const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      const hash = await bcrypt.hash(password, 10);
+      
+      if (existing.rows.length > 0) {
+        await pool.query('UPDATE users SET password_hash = $1, name = $2 WHERE email = $3', [hash, name || 'Admin', email]);
+        return res.json({ success: true, message: 'Admin user updated' });
+      }
+      
+      await pool.query(
+        'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4)',
+        [email, hash, name || 'Admin', 'admin']
+      );
+      res.json({ success: true, message: 'Admin user created' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 }
