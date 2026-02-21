@@ -286,9 +286,9 @@ export function registerAdminApiRoutes(app: Express) {
       // Normalize field names so the admin dashboard gets consistent data
       let baseQuery = `
         SELECT id::text, service_type, customer_name, phone, email,
-               street, city, state, zip, lat, lng,
-               pickup_date, pickup_time_window,
-               items_json, pricing_json, status,
+               street, city, state, zip, lat::double precision, lng::double precision,
+               pickup_date::text, pickup_time_window::text,
+               items_json::text, pricing_json::text, status,
                assigned_driver_id::text, created_at, updated_at
         FROM orders
         UNION ALL
@@ -296,7 +296,7 @@ export function registerAdminApiRoutes(app: Express) {
                pickup_address as street, '' as city, '' as state, '' as zip,
                pickup_lat::double precision as lat, pickup_lng::double precision as lng,
                scheduled_for::text as pickup_date, '' as pickup_time_window,
-               items_json, json_build_object('total', estimated_price)::text as pricing_json,
+               COALESCE(items_json::text, '[]') as items_json, json_build_object('total', COALESCE(estimated_price, '0'))::text as pricing_json,
                status, assigned_driver_id::text, created_at, updated_at
         FROM jobs
       `;
