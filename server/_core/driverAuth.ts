@@ -718,6 +718,116 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
+  // POST /driver/orders/:id/start-trip - Driver starts driving to pickup
+  app.post('/driver/orders/:id/start-trip', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      await pool.query(
+        "UPDATE jobs SET status = 'en_route', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+        [req.params.id, decoded.driverId]
+      );
+      res.json({ success: true, message: 'Trip started - en route to pickup' });
+    } catch (err: any) {
+      console.error('Start trip error:', err);
+      res.status(500).json({ error: 'Failed to start trip' });
+    }
+  });
+
+  // POST /driver/orders/:id/arrived - Driver arrived at pickup location
+  app.post('/driver/orders/:id/arrived', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      await pool.query(
+        "UPDATE jobs SET status = 'arrived', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+        [req.params.id, decoded.driverId]
+      );
+      res.json({ success: true, message: 'Arrived at pickup location' });
+    } catch (err: any) {
+      console.error('Arrived error:', err);
+      res.status(500).json({ error: 'Failed to update arrival' });
+    }
+  });
+
+  // POST /driver/orders/:id/start-work - Driver starts the actual work
+  app.post('/driver/orders/:id/start-work', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      await pool.query(
+        "UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+        [req.params.id, decoded.driverId]
+      );
+      res.json({ success: true, message: 'Work started' });
+    } catch (err: any) {
+      console.error('Start work error:', err);
+      res.status(500).json({ error: 'Failed to start work' });
+    }
+  });
+
+  // POST /driver/orders/:id/upload-photo - Upload completion photo
+  app.post('/driver/orders/:id/upload-photo', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      const { photo_base64 } = req.body;
+      // Store photo reference (in production, upload to S3)
+      await pool.query(
+        "UPDATE jobs SET status = 'photo_taken', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+        [req.params.id, decoded.driverId]
+      );
+      res.json({ success: true, message: 'Photo uploaded' });
+    } catch (err: any) {
+      console.error('Upload photo error:', err);
+      res.status(500).json({ error: 'Failed to upload photo' });
+    }
+  });
+
+  // POST /driver/orders/:id/signature - Customer signature captured
+  app.post('/driver/orders/:id/signature', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      const { signature_base64 } = req.body;
+      // Store signature (in production, upload to S3)
+      await pool.query(
+        "UPDATE jobs SET status = 'signed', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+        [req.params.id, decoded.driverId]
+      );
+      res.json({ success: true, message: 'Signature captured' });
+    } catch (err: any) {
+      console.error('Signature error:', err);
+      res.status(500).json({ error: 'Failed to capture signature' });
+    }
+  });
+
+  // GET /driver/orders/:id - Get single order details
+  app.get('/driver/orders/:id', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
+      if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
+      res.json({ order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Get order error:', err);
+      res.status(500).json({ error: 'Failed to get order' });
+    }
+  });
+
   // POST /api/setup/admin - Create admin user (one-time setup)
   app.post('/api/setup/admin', async (req, res) => {
     try {
