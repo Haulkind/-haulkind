@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, Order } from '../../lib/api';
 
@@ -12,20 +12,10 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState(30);
 
-  useEffect(() => {
-    loadOrders();
-  }, [statusFilter, serviceTypeFilter, searchQuery]);
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadOrders();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [statusFilter, serviceTypeFilter, searchQuery]);
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       const params: any = {};
       if (statusFilter) params.status = statusFilter;
@@ -34,6 +24,8 @@ export default function OrdersPage() {
       
       const data = await api.getOrders(params);
       setOrders(data.orders);
+      setLastUpdated(new Date());
+      setCountdown(30);
     } catch (err: any) {
       if (err.message.includes('401') || err.message.includes('token')) {
         router.push('/login');
@@ -43,19 +35,42 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, serviceTypeFilter, searchQuery, router]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [loadOrders]);
+
+  // Countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev <= 1 ? 30 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       assigned: 'bg-blue-100 text-blue-800',
       in_progress: 'bg-purple-100 text-purple-800',
+      en_route: 'bg-indigo-100 text-indigo-800',
+      arrived: 'bg-cyan-100 text-cyan-800',
+      working: 'bg-orange-100 text-orange-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
     };
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
-        {status.replace('_', ' ')}
+        {status.replace(/_/g, ' ')}
       </span>
     );
   };
@@ -81,9 +96,31 @@ export default function OrdersPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-        <p className="text-gray-600 mt-2">View and manage customer orders</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
+          <p className="text-gray-600 mt-2">View and manage customer orders</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span>Auto-refresh: {countdown}s</span>
+          </div>
+          {lastUpdated && (
+            <span className="text-xs text-gray-500">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={loadOrders}
+            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+          >
+            Refresh Now
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -135,6 +172,9 @@ export default function OrdersPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">{orders.length} order{orders.length !== 1 ? 's' : ''} found</span>
+        </div>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -163,7 +203,7 @@ export default function OrdersPage() {
                     <div className="text-sm text-gray-500">{order.phone || order.email || ''}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{(order.service_type || '').replace('_', ' ')}</div>
+                    <div className="text-sm text-gray-900">{(order.service_type || '').replace(/_/g, ' ')}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{order.street || (order.city ? `${order.city}, ${order.state || ''}` : 'N/A')}</div>
