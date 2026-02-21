@@ -49,6 +49,10 @@ async function startServer() {
     const origin = req.headers.origin;
     const allowedOrigins = [
       'https://exciting-bravery-production.up.railway.app',
+      'https://admin.haulkind.com',
+      'https://haulkind.com',
+      'https://www.haulkind.com',
+      'https://haulkind-admin.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001'
     ];
