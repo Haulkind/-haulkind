@@ -48,10 +48,13 @@ export function registerAdminApiRoutes(app: Express) {
       const customersResult = await pool.query('SELECT COUNT(*) as count FROM customers');
       const totalCustomers = parseInt(customersResult.rows[0]?.count || 0);
 
-      // Get order counts by status
+      // Get order counts by status (from both orders and jobs tables)
       const ordersResult = await pool.query(`
-        SELECT status, COUNT(*) as count 
-        FROM orders 
+        SELECT status, COUNT(*) as count FROM (
+          SELECT status FROM orders
+          UNION ALL
+          SELECT status FROM jobs
+        ) combined
         GROUP BY status
       `);
       const orderStats = ordersResult.rows.reduce((acc: any, row: any) => {
@@ -59,10 +62,22 @@ export function registerAdminApiRoutes(app: Express) {
         return acc;
       }, {});
 
-      // Get recent orders count (last 24h, 7d, 30d)
-      const today = await pool.query(`SELECT COUNT(*) as count FROM orders WHERE created_at >= NOW() - INTERVAL '1 day'`);
-      const thisWeek = await pool.query(`SELECT COUNT(*) as count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`);
-      const thisMonth = await pool.query(`SELECT COUNT(*) as count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`);
+      // Get recent orders count (last 24h, 7d, 30d) from both tables
+      const today = await pool.query(`SELECT COUNT(*) as count FROM (
+        SELECT created_at FROM orders WHERE created_at >= NOW() - INTERVAL '1 day'
+        UNION ALL
+        SELECT created_at FROM jobs WHERE created_at >= NOW() - INTERVAL '1 day'
+      ) combined`);
+      const thisWeek = await pool.query(`SELECT COUNT(*) as count FROM (
+        SELECT created_at FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'
+        UNION ALL
+        SELECT created_at FROM jobs WHERE created_at >= NOW() - INTERVAL '7 days'
+      ) combined`);
+      const thisMonth = await pool.query(`SELECT COUNT(*) as count FROM (
+        SELECT created_at FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'
+        UNION ALL
+        SELECT created_at FROM jobs WHERE created_at >= NOW() - INTERVAL '30 days'
+      ) combined`);
 
       res.json({
         drivers: {
@@ -267,7 +282,26 @@ export function registerAdminApiRoutes(app: Express) {
 
       const { status, service_type, search, limit = 50, offset = 0 } = req.query;
       
-      let query = 'SELECT * FROM orders WHERE 1=1';
+      // Query from BOTH orders (legacy) and jobs (new) tables using UNION ALL
+      // Normalize field names so the admin dashboard gets consistent data
+      let baseQuery = `
+        SELECT id::text, service_type, customer_name, phone, email,
+               street, city, state, zip, lat, lng,
+               pickup_date, pickup_time_window,
+               items_json, pricing_json, status,
+               assigned_driver_id::text, created_at, updated_at
+        FROM orders
+        UNION ALL
+        SELECT id::text, service_type, customer_name, customer_phone as phone, customer_email as email,
+               pickup_address as street, '' as city, '' as state, '' as zip,
+               pickup_lat::double precision as lat, pickup_lng::double precision as lng,
+               scheduled_for::text as pickup_date, '' as pickup_time_window,
+               items_json, json_build_object('total', estimated_price)::text as pricing_json,
+               status, assigned_driver_id::text, created_at, updated_at
+        FROM jobs
+      `;
+      
+      let query = `SELECT * FROM (${baseQuery}) combined WHERE 1=1`;
       const params: any[] = [];
       let paramIndex = 1;
 
@@ -292,8 +326,8 @@ export function registerAdminApiRoutes(app: Express) {
 
       const result = await pool.query(query, params);
       
-      // Get total count
-      let countQuery = 'SELECT COUNT(*) as count FROM orders WHERE 1=1';
+      // Get total count from both tables
+      let countQuery = `SELECT COUNT(*) as count FROM (${baseQuery}) combined WHERE 1=1`;
       const countParams: any[] = [];
       let countParamIndex = 1;
       
@@ -328,7 +362,11 @@ export function registerAdminApiRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
-      const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
+      // Try both tables
+      let result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
+      if (result.rows.length === 0) {
+        result = await pool.query('SELECT * FROM orders WHERE id::text = $1', [req.params.id]);
+      }
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Order not found' });
       }
