@@ -10,6 +10,7 @@ import { WebView } from "react-native-webview";
 import Geolocation from "@react-native-community/geolocation";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
+import { menuEmitter } from "./menuEmitter";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const RADIUS_MILES = 40;
@@ -675,7 +676,11 @@ export function HomeScreen({ navigation }) {
       {/* TOP BAR */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
-          <View style={styles.logoSmall}><Text style={styles.logoSmallText}>H</Text></View>
+          <TouchableOpacity onPress={() => menuEmitter.open()} style={styles.hamburgerBtn}>
+            <View style={styles.hamburgerLine} />
+            <View style={styles.hamburgerLine} />
+            <View style={styles.hamburgerLine} />
+          </TouchableOpacity>
           <View>
             <Text style={styles.topBarTitle}>Haulkind</Text>
             <Text style={styles.topBarSub}>{isOnline ? `${filteredOrders.length} orders nearby` : "You're offline"}</Text>
@@ -684,7 +689,7 @@ export function HomeScreen({ navigation }) {
         <View style={styles.topBarRight}>
           <Text style={[styles.onlineLabel, { color: isOnline ? "#4ade80" : "#fbbf24" }]}>{isOnline ? "ONLINE" : "OFFLINE"}</Text>
           <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ false: "#374151", true: "#16a34a" }} thumbColor={isOnline ? "#4ade80" : "#9ca3af"} />
-          <TouchableOpacity onPress={logout} style={styles.logoutIcon}><Text style={styles.logoutIconText}>⏻</Text></TouchableOpacity>
+
         </View>
       </View>
 
@@ -798,8 +803,8 @@ const styles = StyleSheet.create({
   topBarSub: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
   topBarRight: { flexDirection: "row", alignItems: "center" },
   onlineLabel: { fontSize: 11, fontWeight: "bold", marginRight: 4, letterSpacing: 0.5 },
-  logoutIcon: { padding: 6, marginLeft: 4 },
-  logoutIconText: { fontSize: 18, color: "rgba(255,255,255,0.7)" },
+  hamburgerBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center", marginRight: 8 },
+  hamburgerLine: { width: 22, height: 2.5, backgroundColor: "#fff", marginBottom: 4, borderRadius: 2 },
 
   // Map
   mapContainer: { flex: 1 },
@@ -875,3 +880,462 @@ const styles = StyleSheet.create({
   acceptBtn: { flex: 2, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: C.success },
   acceptBtnText: { color: C.white, fontSize: 16, fontWeight: "bold", letterSpacing: 0.5 },
 });
+
+
+// ============================================================================
+// PENDING SCREEN
+// ============================================================================
+export function PendingScreen({ navigation }) {
+  const [checking, setChecking] = useState(false);
+  const checkStatus = async () => {
+    setChecking(true);
+    try {
+      const data = await apiGet("/driver/profile");
+      if (data.driver?.status === "approved" || data.driver?.status === "active") {
+        Alert.alert("Approved!", "Your account has been approved. Welcome!");
+        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+      } else {
+        Alert.alert("Still Pending", "Your account is still under review. Please check back later.");
+      }
+    } catch (e) {
+      Alert.alert("Error", "Could not check status. Please try again.");
+    } finally {
+      setChecking(false);
+    }
+  };
+  const handleLogout = async () => {
+    await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data"]);
+    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  };
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: SBH }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "#fef3c7", justifyContent: "center", alignItems: "center", marginBottom: 24 }}>
+          <Text style={{ fontSize: 36 }}>...</Text>
+        </View>
+        <Text style={{ fontSize: 24, fontWeight: "700", color: C.dark, marginBottom: 8, textAlign: "center" }}>Account Under Review</Text>
+        <Text style={{ fontSize: 15, color: C.gray, textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
+          We are verifying your documents and information. You will be notified when your account is approved. This usually takes 24-48 hours.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: C.primary, borderRadius: 12, padding: 16, alignItems: "center", width: "100%", opacity: checking ? 0.7 : 1 }}
+          onPress={checkStatus}
+          disabled={checking}
+        >
+          {checking ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Check Status</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity style={{ marginTop: 20 }} onPress={handleLogout}>
+          <Text style={{ color: C.danger, fontWeight: "600" }}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ============================================================================
+// ORDER DETAIL SCREEN (navigated from carousel tap)
+// ============================================================================
+export function OrderDetailScreen({ route, navigation }) {
+  const order = route.params?.order;
+  const [accepting, setAccepting] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [timer, setTimer] = useState(ACCEPT_TIMER_SECONDS);
+
+  useEffect(() => {
+    if (timer <= 0) return;
+    const iv = setInterval(() => setTimer((t) => t - 1), 1000);
+    return () => clearInterval(iv);
+  }, [timer]);
+
+  const handleAccept = async () => {
+    setAccepting(true);
+    try {
+      await apiPostAuth(`/driver/orders/${order.id}/accept`);
+      Alert.alert("Order Accepted!", "Navigate to the pickup location.", [
+        { text: "OK", onPress: () => navigation.navigate("ActiveOrder", { order }) },
+      ]);
+    } catch (e) {
+      Alert.alert("Error", e.message || "Could not accept order.");
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const handleDecline = () => {
+    setDeclining(true);
+    Alert.alert("Decline Order", "Are you sure you want to decline this order?", [
+      { text: "Cancel", style: "cancel", onPress: () => setDeclining(false) },
+      { text: "Decline", style: "destructive", onPress: () => navigation.goBack() },
+    ]);
+  };
+
+  const price = order?.pricing?.total || order?.pricing?.estimatedTotal || order?.estimated_price || order?.final_price || "0";
+  const address = order?.pickup_address || order?.address?.street || "N/A";
+  const customerName = order?.customer_name || order?.customerName || "Customer";
+  const customerPhone = order?.customer_phone || order?.phone || "";
+  const serviceType = order?.service_type || order?.serviceType || "Service";
+  const scheduledDate = order?.scheduled_date || order?.scheduledDate || "";
+
+  const openMaps = () => {
+    const url = Platform.OS === "ios"
+      ? `maps:?q=${encodeURIComponent(address)}`
+      : `geo:0,0?q=${encodeURIComponent(address)}`;
+    Linking.openURL(url).catch(() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`));
+  };
+
+  const timerPct = timer / ACCEPT_TIMER_SECONDS;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark }}>Order Details</Text>
+        <View style={{ width: 50 }} />
+      </View>
+      {/* Timer bar */}
+      {timer > 0 && (
+        <View style={{ height: 4, backgroundColor: C.grayLight }}>
+          <View style={{ height: 4, backgroundColor: timer > 15 ? C.success : C.danger, width: `${timerPct * 100}%` }} />
+        </View>
+      )}
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Price Card */}
+        <View style={{ backgroundColor: C.primaryLight, margin: 16, borderRadius: 16, padding: 20, alignItems: "center" }}>
+          <Text style={{ fontSize: 13, color: C.primary, fontWeight: "600", marginBottom: 4 }}>ESTIMATED PRICE</Text>
+          <Text style={{ fontSize: 36, fontWeight: "bold", color: C.primaryDark }}>${parseFloat(price).toFixed(0)}</Text>
+          {timer > 0 && <Text style={{ fontSize: 14, color: C.primary, marginTop: 4 }}>{timer}s remaining to accept</Text>}
+        </View>
+        {/* Service */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 4 }}>SERVICE TYPE</Text>
+          <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{serviceType}</Text>
+        </View>
+        {/* Pickup */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 4 }}>PICKUP LOCATION</Text>
+          <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{address}</Text>
+          <TouchableOpacity onPress={openMaps} style={{ backgroundColor: C.primaryLight, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 16, marginTop: 8, alignSelf: "flex-start" }}>
+            <Text style={{ color: C.primary, fontSize: 13, fontWeight: "600" }}>Open in Maps</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Schedule */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 4 }}>SCHEDULE</Text>
+          <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{scheduledDate ? new Date(scheduledDate).toLocaleDateString() : "ASAP"}</Text>
+        </View>
+        {/* Customer */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 4 }}>CUSTOMER</Text>
+          <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{customerName}</Text>
+          {customerPhone ? <Text style={{ fontSize: 14, color: C.primary, marginTop: 4, fontWeight: "600" }}>{customerPhone}</Text> : null}
+        </View>
+      </ScrollView>
+      {/* Bottom Buttons */}
+      <View style={{ flexDirection: "row", padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border, position: "absolute", bottom: 0, left: 0, right: 0 }}>
+        <TouchableOpacity style={{ flex: 1, borderRadius: 12, paddingVertical: 16, alignItems: "center", borderWidth: 2, borderColor: C.danger, marginRight: 12 }} onPress={handleDecline} disabled={declining}>
+          <Text style={{ color: C.danger, fontSize: 16, fontWeight: "bold" }}>Decline</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{ flex: 2, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: timer <= 0 ? C.gray : C.success, opacity: accepting ? 0.7 : 1 }} onPress={handleAccept} disabled={accepting || timer <= 0}>
+          {accepting ? <ActivityIndicator color="#fff" /> : <Text style={{ color: C.white, fontSize: 16, fontWeight: "bold", letterSpacing: 0.5 }}>{timer <= 0 ? "Expired" : "Accept Order"}</Text>}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ============================================================================
+// ACTIVE ORDER SCREEN
+// ============================================================================
+export function ActiveOrderScreen({ route, navigation }) {
+  const order = route.params?.order;
+  const [status, setStatus] = useState("accepted");
+  const price = order?.pricing?.total || order?.pricing?.estimatedTotal || order?.estimated_price || order?.final_price || "0";
+  const address = order?.pickup_address || order?.address?.street || "N/A";
+  const customerName = order?.customer_name || order?.customerName || "Customer";
+  const customerPhone = order?.customer_phone || order?.phone || "";
+  const serviceType = order?.service_type || order?.serviceType || "Service";
+
+  const callCustomer = () => {
+    if (customerPhone) Linking.openURL(`tel:${customerPhone}`);
+  };
+
+  const openMaps = () => {
+    const url = Platform.OS === "ios"
+      ? `maps:?q=${encodeURIComponent(address)}`
+      : `geo:0,0?q=${encodeURIComponent(address)}`;
+    Linking.openURL(url).catch(() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`));
+  };
+
+  const completeOrder = () => {
+    Alert.alert("Complete Order", "Mark this order as completed?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Complete", onPress: () => {
+        setStatus("completed");
+        Alert.alert("Order Completed!", "Great job!", [
+          { text: "OK", onPress: () => navigation.navigate("Home") },
+        ]);
+      }},
+    ]);
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border }}>
+        <Text style={{ fontSize: 20, fontWeight: "bold", color: C.dark }}>Active Order</Text>
+        <Text style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>Status: {status.toUpperCase()}</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: C.dark }}>{serviceType}</Text>
+          <Text style={{ fontSize: 24, fontWeight: "bold", color: C.success, marginTop: 4 }}>${parseFloat(price).toFixed(0)}</Text>
+        </View>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 4 }}>PICKUP LOCATION</Text>
+          <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{address}</Text>
+          <TouchableOpacity onPress={openMaps} style={{ backgroundColor: C.primaryLight, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignItems: "center" }}>
+            <Text style={{ color: C.primary, fontSize: 14, fontWeight: "600" }}>Navigate to Pickup</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 4 }}>CUSTOMER</Text>
+          <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{customerName}</Text>
+          {customerPhone ? (
+            <TouchableOpacity onPress={callCustomer} style={{ backgroundColor: C.successLight, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignItems: "center" }}>
+              <Text style={{ color: C.success, fontSize: 14, fontWeight: "600" }}>Call Customer {customerPhone}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </ScrollView>
+      <View style={{ padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border }}>
+        <TouchableOpacity style={{ backgroundColor: C.success, borderRadius: 12, paddingVertical: 16, alignItems: "center" }} onPress={completeOrder}>
+          <Text style={{ color: C.white, fontSize: 16, fontWeight: "bold" }}>Complete Order</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ============================================================================
+// PROFILE SCREEN
+// ============================================================================
+export function ProfileScreen({ navigation }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { loadProfile(); }, []);
+  const loadProfile = async () => {
+    try {
+      const data = await apiGet("/driver/profile");
+      setProfile(data.driver || data);
+    } catch (e) {
+      Alert.alert("Error", "Could not load profile.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  if (loading) return <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}><ActivityIndicator size="large" color={C.primary} /></View>;
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>My Profile</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 20, alignItems: "center", marginBottom: 16 }}>
+          <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.primaryLight, justifyContent: "center", alignItems: "center", marginBottom: 12 }}>
+            <Text style={{ fontSize: 28, fontWeight: "700", color: C.primary }}>{(profile?.name || "D")[0].toUpperCase()}</Text>
+          </View>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: C.dark }}>{profile?.name || "Driver"}</Text>
+          <Text style={{ fontSize: 14, color: C.gray, marginTop: 4 }}>{profile?.email || ""}</Text>
+          <View style={{ backgroundColor: profile?.status === "approved" ? C.successLight : "#fef3c7", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginTop: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: profile?.status === "approved" ? C.success : C.warning }}>{(profile?.status || "pending").toUpperCase()}</Text>
+          </View>
+        </View>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16 }}>
+          <ProfileRow label="Phone" value={profile?.phone || "Not set"} />
+          <ProfileRow label="Vehicle" value={profile?.vehicleType || profile?.vehicle_type || "Not set"} />
+          <ProfileRow label="License Plate" value={profile?.licensePlate || profile?.license_plate || "Not set"} />
+          <ProfileRow label="Member Since" value={profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "N/A"} />
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+function ProfileRow({ label, value }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+      <Text style={{ fontSize: 14, color: C.gray }}>{label}</Text>
+      <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>{value}</Text>
+    </View>
+  );
+}
+
+// ============================================================================
+// ORDER HISTORY SCREEN
+// ============================================================================
+export function OrderHistoryScreen({ navigation }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { loadOrders(); }, []);
+  const loadOrders = async () => {
+    try {
+      const data = await apiGet("/driver/orders/history");
+      setOrders(data.orders || []);
+    } catch (e) {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Order History</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {loading ? (
+          <ActivityIndicator size="large" color={C.primary} style={{ marginTop: 40 }} />
+        ) : orders.length === 0 ? (
+          <View style={{ alignItems: "center", marginTop: 60 }}>
+            <Text style={{ fontSize: 48, marginBottom: 16 }}>📋</Text>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: C.dark }}>No Orders Yet</Text>
+            <Text style={{ fontSize: 14, color: C.gray, marginTop: 8, textAlign: "center" }}>Your completed orders will appear here.</Text>
+          </View>
+        ) : (
+          orders.map((o, i) => (
+            <View key={i} style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: C.dark }}>{o.service_type || o.serviceType || "Service"}</Text>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: C.success }}>${parseFloat(o.estimated_price || o.final_price || 0).toFixed(0)}</Text>
+              </View>
+              <Text style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>{o.pickup_address || "N/A"}</Text>
+              <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{o.scheduled_date ? new Date(o.scheduled_date).toLocaleDateString() : ""}</Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============================================================================
+// EARNINGS SCREEN
+// ============================================================================
+export function EarningsScreen({ navigation }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Earnings</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 20, alignItems: "center", marginBottom: 16 }}>
+          <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600" }}>TOTAL EARNINGS</Text>
+          <Text style={{ fontSize: 36, fontWeight: "bold", color: C.success, marginTop: 8 }}>$0.00</Text>
+          <Text style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>This Month</Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1, backgroundColor: C.successLight, borderRadius: 12, padding: 16, alignItems: "center" }}>
+            <Text style={{ fontSize: 20, fontWeight: "bold", color: C.success }}>0</Text>
+            <Text style={{ fontSize: 12, color: C.success, marginTop: 4 }}>Jobs Done</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: C.primaryLight, borderRadius: 12, padding: 16, alignItems: "center" }}>
+            <Text style={{ fontSize: 20, fontWeight: "bold", color: C.primary }}>$0</Text>
+            <Text style={{ fontSize: 12, color: C.primary, marginTop: 4 }}>Today</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", marginTop: 20 }}>Earnings details will appear as you complete orders.</Text>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============================================================================
+// SETTINGS SCREEN
+// ============================================================================
+export function SettingsScreen({ navigation }) {
+  const handleLogout = async () => {
+    Alert.alert("Sign Out", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: async () => {
+        await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data"]);
+        navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+      }},
+    ]);
+  };
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Settings</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {[
+          { label: "My Profile", screen: "Profile" },
+          { label: "Order History", screen: "OrderHistory" },
+          { label: "Earnings", screen: "Earnings" },
+          { label: "Notifications", screen: null },
+          { label: "Help & Support", screen: null },
+          { label: "About", screen: null },
+        ].map((item, i) => (
+          <TouchableOpacity key={i} style={{ backgroundColor: C.white, flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: C.grayLight, borderRadius: i === 0 ? 12 : 0, borderTopLeftRadius: i === 0 ? 12 : 0, borderTopRightRadius: i === 0 ? 12 : 0 }} onPress={() => item.screen && navigation.navigate(item.screen)}>
+            <Text style={{ fontSize: 16, fontWeight: "500", color: C.dark }}>{item.label}</Text>
+            <Text style={{ color: C.gray }}>{">"}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity style={{ backgroundColor: C.white, padding: 16, borderRadius: 12, marginTop: 20 }} onPress={handleLogout}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: C.danger }}>Sign Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============================================================================
+// DOCUMENTS SCREEN
+// ============================================================================
+export function DocumentsScreen({ navigation }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>My Documents</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 12 }}>Uploaded Documents</Text>
+          {["Driver's License", "Vehicle Insurance", "Vehicle Registration"].map((doc, i) => (
+            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+              <Text style={{ fontSize: 14, color: C.dark }}>{doc}</Text>
+              <View style={{ backgroundColor: C.successLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: C.success }}>Uploaded</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", marginTop: 8 }}>Contact support to update your documents</Text>
+      </ScrollView>
+    </View>
+  );
+}
