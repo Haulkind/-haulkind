@@ -1,6 +1,8 @@
 name: Build Driver Android APK
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -44,3 +46,18 @@ jobs:
         with:
           name: driver-app-release-apk
           path: apps/driver-native/HaulkindDriverNative/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Delete old release if exists
+        run: gh release delete v1.0.0-beta --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release with APK
+        run: |
+          gh release create v1.0.0-beta \
+            apps/driver-native/HaulkindDriverNative/android/app/build/outputs/apk/release/app-release.apk \
+            --title "Haulkind Driver App v1.0.0-beta" \
+            --notes "## Haulkind Driver App - Android APK\n\nDownload **app-release.apk** below and install on your Android device.\n\n### Changes in this build:\n- Fixed order display - orders now show correctly when driver is online\n- Added auto-refresh every 15 seconds for new orders\n- Fixed field mapping for API response\n- Driver online status persists across app restarts\n- Improved error handling\n\n### Test account:\n- Email: test_driver_v14@test.com\n- Password: Test123!" \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
