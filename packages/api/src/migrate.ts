@@ -1,8 +1,10 @@
 import { Pool } from 'pg';
 
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
+
 
 export async function runMigrations() {
     const client = await pool.connect();
@@ -32,6 +34,7 @@ export async function runMigrations() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+
             CREATE TABLE IF NOT EXISTS drivers (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -45,10 +48,12 @@ export async function runMigrations() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+
             CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
             CREATE INDEX IF NOT EXISTS idx_orders_assigned_driver_id ON orders(assigned_driver_id);
             CREATE INDEX IF NOT EXISTS idx_drivers_status ON drivers(status);
         `);
+
 
         // Add columns that may not exist yet (safe ALTER TABLE)
         const alterQueries = [
@@ -56,23 +61,17 @@ export async function runMigrations() {
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_notes TEXT",
         ];
 
+
         for (const query of alterQueries) {
             try {
                 await client.query(query);
             } catch (e: any) {
                 // Column may already exist, ignore
                 if (!e.message.includes('already exists')) {
-                    console.warn(\`Warning running: \${query}\`, e.message);
+                    console.warn(`Warning running: ${query}`, e.message);
                 }
             }
         }
 
+
         console.log('✅ Migrations completed successfully');
-        return { success: true, message: 'Tables created/updated successfully' };
-    } catch (error) {
-        console.error('❌ Migration failed:', error);
-        throw error;
-    } finally {
-        client.release();
-    }
-}
