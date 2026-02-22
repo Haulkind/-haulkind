@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { getQuote, createJob, payJob } from '@/lib/api'
 
+const VOLUME_LABELS: Record<string, string> = {
+  EIGHTH: '1/8 Truck (1-2 items)',
+  QUARTER: '1/4 Truck (3-5 items)',
+  HALF: '1/2 Truck (6-10 items)',
+  THREE_QUARTER: '3/4 Truck (11-15 items)',
+  FULL: 'Full Truck (16+ items)',
+}
+
 export default function HaulAwaySummaryPage() {
   const router = useRouter()
   const { data, updateData } = useQuote()
@@ -12,6 +20,7 @@ export default function HaulAwaySummaryPage() {
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
+  const [customerNotes, setCustomerNotes] = useState(data.customerNotes || '')
 
   useEffect(() => {
     fetchQuote()
@@ -33,17 +42,52 @@ export default function HaulAwaySummaryPage() {
       updateData({ quoteData })
       setLoading(false)
     } catch (err) {
+      console.error('[SUMMARY] Failed to get quote:', err)
       setError('Failed to get quote. Please try again.')
       setLoading(false)
     }
   }
 
+  const formatScheduledDate = () => {
+    if (data.asap) return 'ASAP (Next Available)'
+    if (!data.scheduledFor) return 'Not specified'
+    try {
+      const date = new Date(data.scheduledFor)
+      if (isNaN(date.getTime())) return data.serviceDate || 'Not specified'
+      return date.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    } catch {
+      return data.serviceDate || 'Not specified'
+    }
+  }
+
+  const getVolumeLabel = () => {
+    if (!data.volumeTier) return 'Not specified'
+    return VOLUME_LABELS[data.volumeTier] || data.volumeTier
+  }
+
+  const getTimeWindowLabel = () => {
+    const labels: Record<string, string> = {
+      ALL_DAY: 'All Day (8AM - 8PM)',
+      MORNING: 'Morning (8AM - 12PM)',
+      AFTERNOON: 'Afternoon (12PM - 4PM)',
+      EVENING: 'Evening (4PM - 8PM)',
+    }
+    return labels[data.timeWindow] || data.timeWindow
+  }
+
   const handlePayment = async () => {
     setPaying(true)
     setError('')
+    updateData({ customerNotes })
 
     try {
-      // Step 1: Create job
       const job = await createJob({
         serviceType: 'HAUL_AWAY',
         serviceAreaId: data.serviceAreaId!,
@@ -53,7 +97,7 @@ export default function HaulAwaySummaryPage() {
         scheduledFor: data.scheduledFor,
         volumeTier: data.volumeTier,
         addons: data.addons,
-        customerNotes: data.customerNotes,
+        customerNotes: customerNotes,
         photoUrls: data.photoUrls,
         customerName: data.customerName,
         customerPhone: data.customerPhone,
@@ -61,13 +105,10 @@ export default function HaulAwaySummaryPage() {
       })
 
       updateData({ jobId: job.id })
-
-      // Step 2: Process payment (demo: use ledger)
       await payJob(job.id, 'ledger_demo')
-
-      // Step 3: Redirect to tracking page
       router.push(`/quote/tracking?jobId=${job.id}`)
     } catch (err) {
+      console.error('[SUMMARY] Payment failed:', err)
       setError('Payment failed. Please try again.')
       setPaying(false)
     }
@@ -97,8 +138,27 @@ export default function HaulAwaySummaryPage() {
             </div>
           )}
 
+          {/* Customer Details */}
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4">Customer Details</h2>
+            <div className="space-y-2 text-gray-700">
+              <div className="flex justify-between">
+                <span>Name:</span>
+                <span className="font-medium">{data.customerName || 'Not provided'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Phone:</span>
+                <span className="font-medium">{data.customerPhone || 'Not provided'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Email:</span>
+                <span className="font-medium">{data.customerEmail || 'Not provided'}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Service Details */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className="text-xl font-bold mb-4">Service Details</h2>
             <div className="space-y-2 text-gray-700">
               <div className="flex justify-between">
@@ -107,15 +167,19 @@ export default function HaulAwaySummaryPage() {
               </div>
               <div className="flex justify-between">
                 <span>Location:</span>
-                <span className="font-medium">{data.pickupAddress}</span>
+                <span className="font-medium text-right max-w-[60%]">{data.pickupAddress || 'Not specified'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Scheduled:</span>
-                <span className="font-medium">{new Date(data.scheduledFor).toLocaleString()}</span>
+                <span className="font-medium">{formatScheduledDate()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Time Window:</span>
+                <span className="font-medium">{getTimeWindowLabel()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Volume:</span>
-                <span className="font-medium">{data.volumeTier}</span>
+                <span className="font-medium">{getVolumeLabel()}</span>
               </div>
               {data.addons.length > 0 && (
                 <div className="flex justify-between">
@@ -124,6 +188,18 @@ export default function HaulAwaySummaryPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Customer Notes */}
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4">Notes & Special Instructions</h2>
+            <textarea
+              value={customerNotes}
+              onChange={(e) => setCustomerNotes(e.target.value)}
+              placeholder="Any special instructions for the driver? (e.g., gate code, parking info, item location, etc.)"
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent text-sm"
+            />
           </div>
 
           {/* Price Breakdown */}
