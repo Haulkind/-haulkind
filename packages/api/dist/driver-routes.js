@@ -393,3 +393,89 @@ export const completeJob = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+// ============================================================================
+// SET ONLINE STATUS
+// ============================================================================
+export const setOnlineStatus = async (req, res) => {
+    try {
+        const driverId = req.user?.id;
+        if (!driverId)
+            return res.status(401).json({ error: 'Not authenticated' });
+        const numericDriverId = Number(driverId);
+        const { online } = req.body;
+        const newStatus = online ? 'available' : 'offline';
+        const [updated] = await db
+            .update(drivers)
+            .set({
+            status: newStatus,
+            updatedAt: new Date(),
+        })
+            .where(eq(drivers.id, numericDriverId))
+            .returning();
+        res.json({ success: true, online: !!online, status: newStatus, driver: updated });
+    }
+    catch (error) {
+        console.error('Set online status error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+// ============================================================================
+// GET ORDER HISTORY
+// ============================================================================
+export const getOrderHistory = async (req, res) => {
+    try {
+        const driverId = req.user?.id;
+        if (!driverId)
+            return res.status(401).json({ error: 'Not authenticated' });
+        const numericDriverId = Number(driverId);
+        const completedOrders = await db
+            .select()
+            .from(orders)
+            .where(and(eq(orders.assignedDriverId, numericDriverId), eq(orders.status, 'completed')))
+            .orderBy(desc(orders.updatedAt));
+        const formatted = completedOrders.map(formatOrderForDriver);
+        res.json(formatted);
+    }
+    catch (error) {
+        console.error('Get order history error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+// ============================================================================
+// GET EARNINGS
+// ============================================================================
+export const getEarnings = async (req, res) => {
+    try {
+        const driverId = req.user?.id;
+        if (!driverId)
+            return res.status(401).json({ error: 'Not authenticated' });
+        const numericDriverId = Number(driverId);
+        const completedOrders = await db
+            .select()
+            .from(orders)
+            .where(and(eq(orders.assignedDriverId, numericDriverId), eq(orders.status, 'completed')))
+            .orderBy(desc(orders.updatedAt));
+        let totalEarnings = 0;
+        const earningsHistory = completedOrders.map(order => {
+            const pricing = safeJsonParse(order.pricingJson);
+            const amount = pricing?.total || pricing?.amount || 0;
+            totalEarnings += Number(amount);
+            return {
+                id: order.id,
+                customer_name: order.customerName,
+                service_type: order.serviceType,
+                amount: Number(amount),
+                completed_at: order.updatedAt,
+            };
+        });
+        res.json({
+            total_earnings: totalEarnings,
+            completed_jobs: completedOrders.length,
+            history: earningsHistory,
+        });
+    }
+    catch (error) {
+        console.error('Get earnings error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
