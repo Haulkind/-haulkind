@@ -750,14 +750,33 @@ app.put("/admin/orders/:id/assign", authenticateToken, adminRoutes.requireAdmin,
 
 // Driver Auth
 app.post("/driver/auth/login", driverRoutes.driverLogin);
+app.post("/driver/auth/signup", driverRoutes.driverSignup);
 app.get("/driver/auth/me", authenticateToken, driverRoutes.requireDriver, driverRoutes.driverMe);
 
-// Driver Jobs
+// Driver Profile (for native app)
+app.get("/driver/profile", authenticateToken, driverRoutes.requireDriver, driverRoutes.getDriverProfile);
+app.put("/driver/profile", authenticateToken, driverRoutes.requireDriver, driverRoutes.updateDriverProfile);
+
+// Driver Jobs (original endpoints)
 app.get("/driver/jobs/available", authenticateToken, driverRoutes.requireDriver, driverRoutes.getAvailableJobs);
 app.get("/driver/jobs/my-jobs", authenticateToken, driverRoutes.requireDriver, driverRoutes.getMyJobs);
 app.post("/driver/jobs/:id/accept", authenticateToken, driverRoutes.requireDriver, driverRoutes.acceptJob);
 app.post("/driver/jobs/:id/start", authenticateToken, driverRoutes.requireDriver, driverRoutes.startJob);
 app.post("/driver/jobs/:id/complete", authenticateToken, driverRoutes.requireDriver, driverRoutes.completeJob);
+
+// Driver Orders ALIASES (native app uses /driver/orders/* instead of /driver/jobs/*)
+app.get("/driver/orders/available", authenticateToken, driverRoutes.requireDriver, driverRoutes.getAvailableJobs);
+app.get("/driver/orders/my-orders", authenticateToken, driverRoutes.requireDriver, driverRoutes.getMyJobs);
+app.post("/driver/orders/:id/accept", authenticateToken, driverRoutes.requireDriver, driverRoutes.acceptJob);
+app.post("/driver/orders/:id/start", authenticateToken, driverRoutes.requireDriver, driverRoutes.startJob);
+app.post("/driver/orders/:id/complete", authenticateToken, driverRoutes.requireDriver, driverRoutes.completeJob);
+
+// Driver Status endpoints (for Expo app)
+app.post("/driver/status/online", authenticateToken, driverRoutes.requireDriver, driverRoutes.updateDriverProfile);
+app.post("/driver/status/offline", authenticateToken, driverRoutes.requireDriver, driverRoutes.updateDriverProfile);
+
+// Driver Active Job (for Expo app)
+app.get("/driver/jobs/active", authenticateToken, driverRoutes.requireDriver, driverRoutes.getMyJobs);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
