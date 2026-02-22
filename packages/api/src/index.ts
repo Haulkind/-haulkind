@@ -779,6 +779,15 @@ app.post("/driver/status/offline", authenticateToken, driverRoutes.requireDriver
 // Driver Active Job (for Expo app)
 app.get("/driver/jobs/active", authenticateToken, driverRoutes.requireDriver, driverRoutes.getMyJobs);
 
+// Driver Online/Offline toggle (native app uses POST /driver/online)
+app.post("/driver/online", authenticateToken, driverRoutes.requireDriver, driverRoutes.setOnlineStatus);
+
+// Driver Order History (native app uses GET /driver/orders/history)
+app.get("/driver/orders/history", authenticateToken, driverRoutes.requireDriver, driverRoutes.getOrderHistory);
+
+// Driver Earnings (native app uses GET /driver/earnings)
+app.get("/driver/earnings", authenticateToken, driverRoutes.requireDriver, driverRoutes.getEarnings);
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
