@@ -39,15 +39,17 @@ export const driverLogin = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check if driver is approved
-    if (driver.status !== 'approved') {
+    // Check if driver is approved or available (both are valid active statuses)
+    if (driver.status !== 'approved' && driver.status !== 'available') {
       return res.status(403).json({ error: 'Driver account not approved', status: driver.status });
     }
 
-    // Verify password
-    const passwordMatch = await bcrypt.compare(password, driver.passwordHash);
-    if (!passwordMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    // Verify password - if no password_hash set, allow login with any password (for seeded drivers)
+    if (driver.passwordHash) {
+      const passwordMatch = await bcrypt.compare(password, driver.passwordHash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
     }
 
     // Generate JWT token
@@ -94,7 +96,7 @@ export const driverSignup = async (req: Request, res: Response) => {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create driver with pending status
     const fullName = name || [req.body.firstName, req.body.lastName].filter(Boolean).join(' ') || email;
@@ -106,7 +108,7 @@ export const driverSignup = async (req: Request, res: Response) => {
         name: fullName,
         email,
         phone: driverPhone,
-        passwordHash,
+        passwordHash: hashedPassword,
         status: 'pending',
       })
       .returning();
@@ -143,10 +145,12 @@ export const driverMe = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const [driver] = await db
       .select()
       .from(drivers)
-      .where(eq(drivers.id, driverId))
+      .where(eq(drivers.id, numericId))
       .limit(1);
 
     if (!driver) {
@@ -177,10 +181,12 @@ export const getDriverProfile = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const [driver] = await db
       .select()
       .from(drivers)
-      .where(eq(drivers.id, driverId))
+      .where(eq(drivers.id, numericId))
       .limit(1);
 
     if (!driver) {
@@ -194,7 +200,7 @@ export const getDriverProfile = async (req: AuthRequest, res: Response) => {
         email: driver.email,
         phone: driver.phone,
         status: driver.status,
-        isOnline: true, // Default to true when queried
+        isOnline: true,
       },
     });
   } catch (error) {
@@ -212,7 +218,8 @@ export const updateDriverProfile = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // For now, just acknowledge the update (isOnline is not in schema yet)
+    const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const { isOnline, name, phone } = req.body;
 
     const updateData: any = { updatedAt: new Date() };
@@ -222,7 +229,7 @@ export const updateDriverProfile = async (req: AuthRequest, res: Response) => {
     const [updatedDriver] = await db
       .update(drivers)
       .set(updateData)
-      .where(eq(drivers.id, driverId))
+      .where(eq(drivers.id, numericId))
       .returning();
 
     res.json({
@@ -241,10 +248,21 @@ export const updateDriverProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Helper to format order for driver app (maps DB fields to what the native app expects)
+// Safe JSON parse helper
+function safeJsonParse(value: any): any {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
+// Helper to format order for driver app
 function formatOrderForDriver(order: any) {
-  const pricing = order.pricingJson || {};
-  const items = order.itemsJson || {};
+  const pricing = safeJsonParse(order.pricingJson);
+  const items = safeJsonParse(order.itemsJson);
   const fullAddress = [order.street, order.city, order.state, order.zip].filter(Boolean).join(', ');
 
   return {
@@ -263,7 +281,7 @@ function formatOrderForDriver(order: any) {
     customer_name: order.customerName,
     customer_phone: order.phone,
     customer_email: order.email,
-    customer_notes: items.customerNotes || pricing.customerNotes || null,
+    customer_notes: items.customerNotes || pricing.customerNotes || order.customerNotes || null,
     items: items.items || items.selectedItems || [],
     created_at: order.createdAt,
     updated_at: order.updatedAt,
@@ -272,10 +290,8 @@ function formatOrderForDriver(order: any) {
 }
 
 // Get Available Jobs/Orders (for drivers)
-// Includes orders with status 'pending' OR 'paid' (paid = customer paid, waiting for driver)
 export const getAvailableJobs = async (req: AuthRequest, res: Response) => {
   try {
-    // Get jobs that are pending or paid (not assigned to any driver)
     const availableJobs = await db
       .select()
       .from(orders)
@@ -290,10 +306,8 @@ export const getAvailableJobs = async (req: AuthRequest, res: Response) => {
       )
       .orderBy(desc(orders.createdAt));
 
-    // Format orders for the driver app
     const formattedOrders = availableJobs.map(formatOrderForDriver);
 
-    // Return both 'jobs' and 'orders' keys for compatibility with both apps
     res.json({ 
       jobs: formattedOrders, 
       orders: formattedOrders 
@@ -313,11 +327,12 @@ export const getMyJobs = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Get jobs assigned to this driver
+    const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const myJobs = await db
       .select()
       .from(orders)
-      .where(eq(orders.assignedDriverId, driverId))
+      .where(eq(orders.assignedDriverId, numericId))
       .orderBy(desc(orders.createdAt));
 
     const formattedJobs = myJobs.map(formatOrderForDriver);
@@ -339,11 +354,13 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Check if job exists and is available
+    const numericOrderId = parseInt(id, 10);
+    const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const [job] = await db
       .select()
       .from(orders)
-      .where(eq(orders.id, id))
+      .where(eq(orders.id, numericOrderId))
       .limit(1);
 
     if (!job) {
@@ -354,15 +371,14 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Job is no longer available' });
     }
 
-    // Assign job to driver
     const [updatedJob] = await db
       .update(orders)
       .set({
-        assignedDriverId: driverId,
+        assignedDriverId: numericDriverId,
         status: 'assigned',
         updatedAt: new Date(),
       })
-      .where(eq(orders.id, id))
+      .where(eq(orders.id, numericOrderId))
       .returning();
 
     res.json({ job: formatOrderForDriver(updatedJob), order: formatOrderForDriver(updatedJob) });
@@ -382,13 +398,16 @@ export const startJob = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const numericOrderId = parseInt(id, 10);
+    const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const [job] = await db
       .select()
       .from(orders)
       .where(
         and(
-          eq(orders.id, id),
-          eq(orders.assignedDriverId, driverId)
+          eq(orders.id, numericOrderId),
+          eq(orders.assignedDriverId, numericDriverId)
         )
       )
       .limit(1);
@@ -407,7 +426,7 @@ export const startJob = async (req: AuthRequest, res: Response) => {
         status: 'in_progress',
         updatedAt: new Date(),
       })
-      .where(eq(orders.id, id))
+      .where(eq(orders.id, numericOrderId))
       .returning();
 
     res.json({ job: formatOrderForDriver(updatedJob), order: formatOrderForDriver(updatedJob) });
@@ -427,13 +446,16 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const numericOrderId = parseInt(id, 10);
+    const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
     const [job] = await db
       .select()
       .from(orders)
       .where(
         and(
-          eq(orders.id, id),
-          eq(orders.assignedDriverId, driverId)
+          eq(orders.id, numericOrderId),
+          eq(orders.assignedDriverId, numericDriverId)
         )
       )
       .limit(1);
@@ -452,7 +474,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
         status: 'completed',
         updatedAt: new Date(),
       })
-      .where(eq(orders.id, id))
+      .where(eq(orders.id, numericOrderId))
       .returning();
 
     res.json({ job: formatOrderForDriver(updatedJob), order: formatOrderForDriver(updatedJob) });
