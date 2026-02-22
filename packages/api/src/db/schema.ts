@@ -1,27 +1,8 @@
-import { pgTable, text, timestamp, uuid, jsonb, decimal, serial } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, serial, doublePrecision, integer } from 'drizzle-orm/pg-core';
 
-// Users table for authentication
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  role: text('role').notNull().default('user'),
-  fullName: text('full_name'),
-  phone: text('phone'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-// Customers table
-export const customers = pgTable('customers', {
-  id: serial('id').primaryKey(),
-  userId: serial('user_id').references(() => users.id),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
+// Orders table - matches actual database
 export const orders = pgTable('orders', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: serial('id').primaryKey(),
   serviceType: text('service_type').notNull(),
   customerName: text('customer_name').notNull(),
   phone: text('phone').notNull(),
@@ -30,25 +11,29 @@ export const orders = pgTable('orders', {
   city: text('city').notNull(),
   state: text('state').notNull(),
   zip: text('zip').notNull(),
-  lat: decimal('lat', { precision: 10, scale: 7 }),
-  lng: decimal('lng', { precision: 10, scale: 7 }),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
   pickupDate: text('pickup_date').notNull(),
   pickupTimeWindow: text('pickup_time_window').notNull(),
-  itemsJson: jsonb('items_json').notNull(),
-  pricingJson: jsonb('pricing_json').notNull(),
+  itemsJson: text('items_json').notNull(),
+  pricingJson: text('pricing_json').notNull(),
   status: text('status').notNull().default('pending'),
-  assignedDriverId: uuid('assigned_driver_id'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  assignedDriverId: integer('assigned_driver_id'),
+  customerNotes: text('customer_notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// Drivers table - matches actual database + new columns
 export const drivers = pgTable('drivers', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
   phone: text('phone').notNull(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  status: text('status').notNull().default('pending'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  email: text('email').notNull(),
+  passwordHash: text('password_hash'),
+  vehicleType: text('vehicle_type'),
+  licensePlate: text('license_plate'),
+  status: text('status').notNull().default('available'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
