@@ -1,5 +1,6 @@
 import { pgTable, text, timestamp, serial, doublePrecision, integer } from 'drizzle-orm/pg-core';
 
+
 // Orders table - matches actual database
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
@@ -24,6 +25,7 @@ export const orders = pgTable('orders', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+
 // Drivers table - matches actual database + new columns
 export const drivers = pgTable('drivers', {
   id: serial('id').primaryKey(),
@@ -38,6 +40,7 @@ export const drivers = pgTable('drivers', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+
 // Users table - used by admin-routes and index.ts for admin/support accounts
 export const usersTable = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -49,6 +52,10 @@ export const usersTable = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+
+// Export alias for backward compatibility
+export const users = usersTable;
+
 // Customers table - used by admin-routes for customer management
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
@@ -59,3 +66,4 @@ export const customers = pgTable('customers', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
