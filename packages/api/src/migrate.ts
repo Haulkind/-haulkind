@@ -75,3 +75,11 @@ export async function runMigrations() {
 
 
         console.log('✅ Migrations completed successfully');
+
+    } catch (error) {
+        console.error('Migration failed:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
