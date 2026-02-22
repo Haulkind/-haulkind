@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const RAILWAY_BASE_URL = 'https://haulkind-production.up.railway.app';
+const RAILWAY_BASE_URL = 'https://haulkind-api-production-b00f.up.railway.app';
 const TIMEOUT_MS = 15000;
 
 export async function POST(request: NextRequest) {
