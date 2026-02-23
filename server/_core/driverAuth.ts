@@ -881,11 +881,11 @@ export function registerDriverAuthRoutes(app: Express) {
       
       // Update job status to cancelled
       await pool.query(
-        "UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1",
+        "UPDATE jobs SET status = 'pending', assigned_driver_id = NULL, updated_at = NOW() WHERE id = $1",
         [orderId]
       );
       
-      res.json({ success: true, message: 'Order cancelled successfully' });
+      res.json({ success: true, message: 'Order cancelled and returned to available orders' });
     } catch (err: any) {
       console.error('Cancel order error:', err);
       res.status(500).json({ error: 'Failed to cancel order' });
