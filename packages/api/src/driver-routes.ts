@@ -585,3 +585,116 @@ export const getEarnings = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+// ============================================================================
+// CANCEL ORDER (driver cancels an accepted order, returns to pending)
+// ============================================================================
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const numericOrderId = parseInt(id, 10);
+    const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
+    const [job] = await db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.id, numericOrderId),
+          eq(orders.assignedDriverId, numericDriverId)
+        )
+      )
+      .limit(1);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Order not found or not assigned to you' });
+    }
+
+    if (job.status !== 'assigned' && job.status !== 'in_progress') {
+      return res.status(400).json({ error: 'Order cannot be cancelled in current status' });
+    }
+
+    // Return order to pending status and clear driver assignment
+    const [updatedJob] = await db
+      .update(orders)
+      .set({
+        status: 'pending',
+        assignedDriverId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, numericOrderId))
+      .returning();
+
+    res.json({ 
+      success: true, 
+      message: 'Order cancelled successfully',
+      job: formatOrderForDriver(updatedJob), 
+      order: formatOrderForDriver(updatedJob) 
+    });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// ============================================================================
+// START TRIP (alias for startJob, used by native app with /start-trip path)
+// ============================================================================
+export const startTrip = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const numericOrderId = parseInt(id, 10);
+    const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+
+    const [job] = await db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.id, numericOrderId),
+          eq(orders.assignedDriverId, numericDriverId)
+        )
+      )
+      .limit(1);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Order not found or not assigned to you' });
+    }
+
+    if (job.status !== 'assigned') {
+      return res.status(400).json({ error: 'Order must be assigned to start trip' });
+    }
+
+    const [updatedJob] = await db
+      .update(orders)
+      .set({
+        status: 'in_progress',
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, numericOrderId))
+      .returning();
+
+    res.json({ 
+      success: true,
+      message: 'Trip started',
+      job: formatOrderForDriver(updatedJob), 
+      order: formatOrderForDriver(updatedJob) 
+    });
+  } catch (error) {
+    console.error('Start trip error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
