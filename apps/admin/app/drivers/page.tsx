@@ -373,13 +373,67 @@ export default function DriversPage() {
               )}
             </div>
 
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              >
-                Close
-              </button>
+            {/* Action Buttons */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="font-semibold text-gray-700 mb-3">Actions</h3>
+              <div className="flex gap-2 flex-wrap">
+                {(selectedDriver.driver_status === 'pending_review' || !selectedDriver.driver_status) && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleApprove(selectedDriver.id);
+                        setShowDetailsModal(false);
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold"
+                    >
+                      Approve Driver
+                    </button>
+                    <button
+                      onClick={() => {
+                        const reason = prompt('Reason for rejection:');
+                        if (reason) {
+                          handleReject(selectedDriver.id, reason);
+                          setShowDetailsModal(false);
+                        }
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold"
+                    >
+                      Reject Driver
+                    </button>
+                  </>
+                )}
+                {selectedDriver.driver_status === 'approved' && selectedDriver.is_active !== false && (
+                  <button
+                    onClick={() => {
+                      const reason = prompt('Reason for suspension:');
+                      if (reason) {
+                        handleSuspend(selectedDriver.id, reason);
+                        setShowDetailsModal(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 font-semibold"
+                  >
+                    Suspend Driver
+                  </button>
+                )}
+                {(selectedDriver.driver_status === 'suspended' || selectedDriver.driver_status === 'rejected') && (
+                  <button
+                    onClick={() => {
+                      handleActivate(selectedDriver.id);
+                      setShowDetailsModal(false);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                  >
+                    Reactivate Driver
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
