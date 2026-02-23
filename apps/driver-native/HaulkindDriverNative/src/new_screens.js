@@ -556,7 +556,10 @@ export function HomeScreen({ navigation }) {
       <TouchableOpacity style={[styles.orderCard, index === 0 && { marginLeft: 16 }]} onPress={() => openOrderDetail(o)} activeOpacity={0.9}>
         {o.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>NEW</Text></View>}
         <View style={styles.cardTopRow}>
-          <Text style={styles.cardPrice}>${parseFloat(price).toFixed(0)}</Text>
+          <View>
+            <Text style={{ fontSize: 11, color: C.gray, fontWeight: "600" }}>You earn:</Text>
+            <Text style={styles.cardPrice}>${parseFloat(price).toFixed(0)}</Text>
+          </View>
           <View style={styles.cardDistBadge}><Text style={styles.cardDistText}>{distText}</Text></View>
         </View>
         <Text style={styles.cardServiceType}>{o.service_type || "Haul Away"}</Text>
@@ -1021,7 +1024,7 @@ export function OrderDetailScreen({ route, navigation }) {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Price Card */}
         <View style={{ backgroundColor: C.primaryLight, margin: 16, borderRadius: 16, padding: 20, alignItems: "center" }}>
-          <Text style={{ fontSize: 13, color: C.primary, fontWeight: "600", marginBottom: 4 }}>ESTIMATED PRICE</Text>
+          <Text style={{ fontSize: 13, color: C.primary, fontWeight: "600", marginBottom: 4 }}>YOUR EARNINGS (70%)</Text>
           <Text style={{ fontSize: 36, fontWeight: "bold", color: C.primaryDark }}>${parseFloat(price).toFixed(0)}</Text>
           {timer > 0 && <Text style={{ fontSize: 14, color: C.primary, marginTop: 4 }}>{timer}s remaining to accept</Text>}
         </View>
@@ -1312,7 +1315,8 @@ export function ActiveOrderScreen({ route, navigation }) {
         {/* Order info */}
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 18, fontWeight: "700", color: C.dark }}>{serviceType}</Text>
-          <Text style={{ fontSize: 28, fontWeight: "bold", color: C.success, marginTop: 4 }}>${parseFloat(price).toFixed(0)}</Text>
+          <Text style={{ fontSize: 12, color: C.gray, fontWeight: "600", marginTop: 4 }}>You earn:</Text>
+          <Text style={{ fontSize: 28, fontWeight: "bold", color: C.success }}>${parseFloat(price).toFixed(0)}</Text>
           {description ? <Text style={{ fontSize: 13, color: C.gray, marginTop: 6 }}>{description}</Text> : null}
         </View>
 
