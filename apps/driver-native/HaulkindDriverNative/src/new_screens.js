@@ -5,6 +5,7 @@ import {
   Dimensions, FlatList, Modal, Vibration, Switch, PermissionsAndroid,
   Linking, PanResponder, Image,
 } from "react-native";
+import Sound from "react-native-sound";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import Geolocation from "@react-native-community/geolocation";
@@ -449,11 +450,25 @@ export function HomeScreen({ navigation }) {
       const withinRadius = enriched.filter((o) => o.distance === null || o.distance <= RADIUS_MILES);
       withinRadius.sort((a, b) => (a.distance || 999) - (b.distance || 999));
 
-      // Vibrate for new orders
+      // Vibrate and play sound for new orders
       const currentIds = new Set(withinRadius.map((o) => o.id));
       const brandNew = withinRadius.filter((o) => !previousOrderIds.has(o.id));
       if (brandNew.length > 0 && previousOrderIds.size > 0) {
         Vibration.vibrate([0, 300, 100, 300]);
+        // Play notification sound
+        try {
+          const sound = new Sound('notification_sound.mp3', Sound.MAIN_BUNDLE, (error) => {
+            if (error) {
+              // Fallback: use system notification sound
+              console.log('Using system sound');
+            } else {
+              sound.setVolume(1.0);
+              sound.play(() => sound.release());
+            }
+          });
+        } catch (e) {
+          console.log('Sound error:', e);
+        }
       }
       setPreviousOrderIds(currentIds);
       setOrders(withinRadius);
@@ -1766,7 +1781,7 @@ export function SettingsScreen({ navigation }) {
           { label: "My Profile", screen: "Profile" },
           { label: "Order History", screen: "OrderHistory" },
           { label: "Earnings", screen: "Earnings" },
-          { label: "Notifications", screen: null },
+          { label: "Notifications", screen: "Notifications" },
           { label: "Help & Support", screen: null },
           { label: "About", screen: null },
         ].map((item, i) => (
@@ -1809,6 +1824,75 @@ export function DocumentsScreen({ navigation }) {
           ))}
         </View>
         <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", marginTop: 8 }}>Contact support to update your documents</Text>
+      </ScrollView>
+    </View>
+  );
+}
+
+
+// ============================================================================
+// NOTIFICATIONS SCREEN
+// ============================================================================
+export function NotificationsScreen({ navigation }) {
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
+      <View style={{ paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Notifications</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 16 }}>Notification Settings</Text>
+          
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>Push Notifications</Text>
+              <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>Receive notifications for new orders</Text>
+            </View>
+            <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} />
+          </View>
+
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>Sound</Text>
+              <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>Play sound when new order arrives</Text>
+            </View>
+            <Switch value={soundEnabled} onValueChange={setSoundEnabled} />
+          </View>
+
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>Vibration</Text>
+              <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>Vibrate when new order arrives</Text>
+            </View>
+            <Switch value={vibrationEnabled} onValueChange={setVibrationEnabled} />
+          </View>
+        </View>
+
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16 }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 12 }}>Notification Types</Text>
+          {[
+            { label: "New Orders", desc: "Get notified when new orders are available" },
+            { label: "Order Updates", desc: "Get notified about order status changes" },
+            { label: "Messages", desc: "Get notified about new messages from customers" },
+            { label: "Earnings", desc: "Get notified about payment updates" },
+          ].map((item, i) => (
+            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: C.grayLight }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>{item.label}</Text>
+                <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{item.desc}</Text>
+              </View>
+              <Switch value={true} />
+            </View>
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
