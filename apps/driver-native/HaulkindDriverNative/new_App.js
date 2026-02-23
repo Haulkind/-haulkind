@@ -13,6 +13,7 @@ import {
   PendingScreen, ProfileScreen, OrderHistoryScreen,
   EarningsScreen, DocumentsScreen, SettingsScreen,
   OrderDetailScreen, ActiveOrderScreen, MyOrdersScreen,
+  NotificationsScreen,
 } from './src/new_screens';
 import { OnboardingScreen } from './src/screens/new_OnboardingScreen';
 
@@ -229,6 +230,7 @@ function MainApp({ initialRoute }) {
           <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
           <Stack.Screen name="ActiveOrder" component={ActiveOrderScreen} />
           <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
         </Stack.Navigator>
         <SideMenu
           visible={menuVisible}
