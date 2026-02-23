@@ -361,6 +361,11 @@ app.post('/jobs', async (req: Request, res: Response) => {
     const customerPhone = req.body.customerPhone || '';
     const customerEmail = req.body.customerEmail || '';
 
+    // Calculate financial breakdown (70/30 split)
+    const totalAmount = total;
+    const driverEarnings = Math.round(totalAmount * 0.70 * 100) / 100;
+    const platformFee = Math.round(totalAmount * 0.30 * 100) / 100;
+
     // Insert order into database
     const insertResult = await db.execute(sql`
       INSERT INTO orders (
@@ -378,7 +383,12 @@ app.post('/jobs', async (req: Request, res: Response) => {
         pickup_time_window,
         items_json,
         pricing_json,
-        status
+        status,
+        total_amount,
+        driver_earnings,
+        platform_fee,
+        payment_status,
+        driver_payout_status
       ) VALUES (
         ${serviceType},
         ${customerName},
@@ -394,7 +404,12 @@ app.post('/jobs', async (req: Request, res: Response) => {
         ${'ALL_DAY'},
         ${JSON.stringify({ volumeTier, addons, photoUrls, customerNotes })},
         ${JSON.stringify({ total, basePrice, addonTotal, disposalIncluded: 50 })},
-        ${'pending'}
+        ${'pending'},
+        ${totalAmount},
+        ${driverEarnings},
+        ${platformFee},
+        ${'pending'},
+        ${'unpaid'}
       )
       RETURNING id
     `);

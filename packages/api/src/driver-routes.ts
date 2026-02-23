@@ -265,6 +265,10 @@ function formatOrderForDriver(order: any) {
   const items = safeJsonParse(order.itemsJson);
   const fullAddress = [order.street, order.city, order.state, order.zip].filter(Boolean).join(', ');
 
+  // Calculate driver earnings (70% of total) - for backward compatibility with old orders
+  const totalPrice = order.totalAmount || pricing.total || pricing.estimatedPrice || 0;
+  const driverEarnings = order.driverEarnings || Math.round(totalPrice * 0.70 * 100) / 100;
+
   return {
     id: order.id,
     service_type: order.serviceType || 'HAUL_AWAY',
@@ -275,8 +279,10 @@ function formatOrderForDriver(order: any) {
     scheduled_for: order.pickupDate,
     pickup_time_window: order.pickupTimeWindow,
     status: order.status,
-    estimated_price: pricing.total || pricing.estimatedPrice || 0,
-    final_price: pricing.total || 0,
+    // Driver sees only their earnings (70% of total)
+    estimated_price: driverEarnings,
+    final_price: driverEarnings,
+    driver_earnings: driverEarnings,
     volume_tier: pricing.volumeTier || items.volumeTier || null,
     customer_name: order.customerName,
     customer_phone: order.phone,
@@ -286,6 +292,9 @@ function formatOrderForDriver(order: any) {
     created_at: order.createdAt,
     updated_at: order.updatedAt,
     assigned_driver_id: order.assignedDriverId,
+    // Financial status fields
+    payment_status: order.paymentStatus,
+    driver_payout_status: order.driverPayoutStatus,
   };
 }
 
@@ -468,11 +477,13 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Job must be in progress to complete' });
     }
 
+    const now = new Date();
     const [updatedJob] = await db
       .update(orders)
       .set({
         status: 'completed',
-        updatedAt: new Date(),
+        completedAt: now,
+        updatedAt: now,
       })
       .where(eq(orders.id, numericOrderId))
       .returning();
@@ -564,14 +575,18 @@ export const getEarnings = async (req: AuthRequest, res: Response) => {
     let totalEarnings = 0;
     const earningsHistory = completedOrders.map(order => {
       const pricing = safeJsonParse(order.pricingJson);
-      const amount = pricing?.total || pricing?.amount || 0;
-      totalEarnings += Number(amount);
+      // Use driver_earnings field (70%), or calculate from total for old orders
+      const totalPrice = order.totalAmount || pricing?.total || pricing?.amount || 0;
+      const driverAmount = order.driverEarnings || Math.round(totalPrice * 0.70 * 100) / 100;
+      totalEarnings += Number(driverAmount);
       return {
         id: order.id,
         customer_name: order.customerName,
         service_type: order.serviceType,
-        amount: Number(amount),
+        amount: Number(driverAmount),
         completed_at: order.updatedAt,
+        payment_status: order.paymentStatus,
+        payout_status: order.driverPayoutStatus,
       };
     });
 
