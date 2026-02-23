@@ -31,16 +31,17 @@ app.get('/updates', (req, res) => {
 });
 
 // NÃO iniciar o servidor aqui - o backend real vai fazer isso
-// Carregar o backend real compilado
+// Carregar o backend real compilado usando dynamic import() para ESM
 console.log('Loading real backend from dist/index.js...');
-try {
-  require('./dist/index.js');
-  console.log('Backend real loaded successfully');
-} catch (error) {
-  console.error('Failed to load backend:', error);
-  // Fallback: rodar apenas o servidor de diagnóstico
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Diagnostic server listening on port ${PORT} (backend failed to load)`);
+import('./dist/index.js')
+  .then(() => {
+    console.log('Backend real loaded successfully');
+  })
+  .catch((error) => {
+    console.error('Failed to load backend:', error);
+    // Fallback: rodar apenas o servidor de diagnóstico
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Diagnostic server listening on port ${PORT} (backend failed to load)`);
+    });
   });
-}
