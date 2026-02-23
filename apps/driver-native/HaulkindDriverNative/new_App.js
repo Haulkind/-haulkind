@@ -12,7 +12,7 @@ import {
   LoginScreen, SignupScreen, HomeScreen,
   PendingScreen, ProfileScreen, OrderHistoryScreen,
   EarningsScreen, DocumentsScreen, SettingsScreen,
-  OrderDetailScreen, ActiveOrderScreen,
+  OrderDetailScreen, ActiveOrderScreen, MyOrdersScreen,
 } from './src/new_screens';
 import { OnboardingScreen } from './src/screens/new_OnboardingScreen';
 
@@ -103,6 +103,7 @@ function SideMenu({ visible, onClose, navigation }) {
   const menuItems = [
     { label: 'Dashboard', screen: 'Home', icon: 'H' },
     { label: 'My Profile', screen: 'Profile', icon: 'P' },
+    { label: 'My Orders', screen: 'MyOrders', icon: 'M' },
     { label: 'Order History', screen: 'OrderHistory', icon: 'O' },
     { label: 'Earnings', screen: 'Earnings', icon: 'E' },
     { label: 'My Documents', screen: 'Documents', icon: 'D' },
@@ -227,6 +228,7 @@ function MainApp({ initialRoute }) {
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
           <Stack.Screen name="ActiveOrder" component={ActiveOrderScreen} />
+          <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
         </Stack.Navigator>
         <SideMenu
           visible={menuVisible}
