@@ -1,6 +1,9 @@
+"use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
@@ -17,130 +20,126 @@ var __copyProps = (to, from, except, desc2) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // drizzle/schema.ts
-import {
-  int,
-  mysqlEnum,
-  mysqlTable,
-  text,
-  timestamp,
-  varchar,
-  decimal,
-  boolean,
-  json,
-  index,
-  unique
-} from "drizzle-orm/mysql-core";
-var users, customers, drivers, driverDocuments, serviceAreas, volumePricing, disposalCaps, addons, distanceRules, laborRates, jobs, haulAwayDetails, laborOnlyDetails, jobOffers, jobAssignments, timeExtensionRequests, payments, payouts, jobPhotos, driverLocations, conversations, messages, ratings, auditLogs, driverStrikes, items, promoCodes, savedQuotes;
+var import_mysql_core, users, customers, drivers, driverDocuments, serviceAreas, volumePricing, disposalCaps, addons, distanceRules, laborRates, jobs, haulAwayDetails, laborOnlyDetails, jobOffers, jobAssignments, timeExtensionRequests, payments, payouts, jobPhotos, driverLocations, conversations, messages, ratings, auditLogs, driverStrikes, items, promoCodes, savedQuotes;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
-    users = mysqlTable("users", {
-      id: int("id").autoincrement().primaryKey(),
-      openId: varchar("openId", { length: 64 }).notNull().unique(),
-      name: text("name"),
-      email: varchar("email", { length: 320 }),
-      phone: varchar("phone", { length: 20 }),
-      photoUrl: text("photoUrl"),
-      loginMethod: varchar("loginMethod", { length: 64 }),
-      password: varchar("password", { length: 255 }),
-      role: mysqlEnum("role", ["user", "admin", "customer", "driver"]).default("user").notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-      lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
+    import_mysql_core = require("drizzle-orm/mysql-core");
+    users = (0, import_mysql_core.mysqlTable)("users", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      openId: (0, import_mysql_core.varchar)("openId", { length: 64 }).notNull().unique(),
+      name: (0, import_mysql_core.text)("name"),
+      email: (0, import_mysql_core.varchar)("email", { length: 320 }),
+      phone: (0, import_mysql_core.varchar)("phone", { length: 20 }),
+      photoUrl: (0, import_mysql_core.text)("photoUrl"),
+      loginMethod: (0, import_mysql_core.varchar)("loginMethod", { length: 64 }),
+      password: (0, import_mysql_core.varchar)("password", { length: 255 }),
+      role: (0, import_mysql_core.mysqlEnum)("role", ["user", "admin", "customer", "driver"]).default("user").notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull(),
+      lastSignedIn: (0, import_mysql_core.timestamp)("lastSignedIn").defaultNow().notNull()
     });
-    customers = mysqlTable("customers", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull().references(() => users.id),
-      stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
-      defaultPaymentMethodId: varchar("defaultPaymentMethodId", { length: 255 }),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    customers = (0, import_mysql_core.mysqlTable)("customers", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      userId: (0, import_mysql_core.int)("userId").notNull().references(() => users.id),
+      stripeCustomerId: (0, import_mysql_core.varchar)("stripeCustomerId", { length: 255 }),
+      defaultPaymentMethodId: (0, import_mysql_core.varchar)("defaultPaymentMethodId", { length: 255 }),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      userIdIdx: index("customers_userId_idx").on(table.userId)
+      userIdIdx: (0, import_mysql_core.index)("customers_userId_idx").on(table.userId)
     }));
-    drivers = mysqlTable("drivers", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").notNull().references(() => users.id),
-      status: mysqlEnum("status", ["pending", "approved", "blocked"]).default("pending").notNull(),
-      isOnline: boolean("isOnline").default(false).notNull(),
-      vehicleType: varchar("vehicleType", { length: 50 }),
-      vehicleCapacity: decimal("vehicleCapacity", { precision: 10, scale: 2 }),
-      liftingLimit: int("liftingLimit"),
-      canHaulAway: boolean("canHaulAway").default(false).notNull(),
-      canLaborOnly: boolean("canLaborOnly").default(false).notNull(),
-      insuranceProvider: varchar("insuranceProvider", { length: 255 }),
-      insurancePolicyNumber: varchar("insurancePolicyNumber", { length: 255 }),
-      insuranceExpiresAt: timestamp("insuranceExpiresAt"),
-      acceptanceRate: decimal("acceptanceRate", { precision: 5, scale: 2 }).default("0").notNull(),
-      cancelRate: decimal("cancelRate", { precision: 5, scale: 2 }).default("0").notNull(),
-      totalOffers: int("totalOffers").default(0).notNull(),
-      totalAccepted: int("totalAccepted").default(0).notNull(),
-      totalCompleted: int("totalCompleted").default(0).notNull(),
-      totalCancelled: int("totalCancelled").default(0).notNull(),
-      averageRating: decimal("averageRating", { precision: 3, scale: 2 }),
-      totalRatings: int("totalRatings").default(0).notNull(),
-      stripeAccountId: varchar("stripeAccountId", { length: 255 }),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    drivers = (0, import_mysql_core.mysqlTable)("drivers", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      userId: (0, import_mysql_core.int)("userId").notNull().references(() => users.id),
+      status: (0, import_mysql_core.mysqlEnum)("status", ["pending", "approved", "blocked"]).default("pending").notNull(),
+      isOnline: (0, import_mysql_core.boolean)("isOnline").default(false).notNull(),
+      vehicleType: (0, import_mysql_core.varchar)("vehicleType", { length: 50 }),
+      vehicleCapacity: (0, import_mysql_core.decimal)("vehicleCapacity", { precision: 10, scale: 2 }),
+      liftingLimit: (0, import_mysql_core.int)("liftingLimit"),
+      canHaulAway: (0, import_mysql_core.boolean)("canHaulAway").default(false).notNull(),
+      canLaborOnly: (0, import_mysql_core.boolean)("canLaborOnly").default(false).notNull(),
+      insuranceProvider: (0, import_mysql_core.varchar)("insuranceProvider", { length: 255 }),
+      insurancePolicyNumber: (0, import_mysql_core.varchar)("insurancePolicyNumber", { length: 255 }),
+      insuranceExpiresAt: (0, import_mysql_core.timestamp)("insuranceExpiresAt"),
+      acceptanceRate: (0, import_mysql_core.decimal)("acceptanceRate", { precision: 5, scale: 2 }).default("0").notNull(),
+      cancelRate: (0, import_mysql_core.decimal)("cancelRate", { precision: 5, scale: 2 }).default("0").notNull(),
+      totalOffers: (0, import_mysql_core.int)("totalOffers").default(0).notNull(),
+      totalAccepted: (0, import_mysql_core.int)("totalAccepted").default(0).notNull(),
+      totalCompleted: (0, import_mysql_core.int)("totalCompleted").default(0).notNull(),
+      totalCancelled: (0, import_mysql_core.int)("totalCancelled").default(0).notNull(),
+      averageRating: (0, import_mysql_core.decimal)("averageRating", { precision: 3, scale: 2 }),
+      totalRatings: (0, import_mysql_core.int)("totalRatings").default(0).notNull(),
+      stripeAccountId: (0, import_mysql_core.varchar)("stripeAccountId", { length: 255 }),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      userIdIdx: index("drivers_userId_idx").on(table.userId),
-      statusIdx: index("drivers_status_idx").on(table.status),
-      isOnlineIdx: index("drivers_isOnline_idx").on(table.isOnline)
+      userIdIdx: (0, import_mysql_core.index)("drivers_userId_idx").on(table.userId),
+      statusIdx: (0, import_mysql_core.index)("drivers_status_idx").on(table.status),
+      isOnlineIdx: (0, import_mysql_core.index)("drivers_isOnline_idx").on(table.isOnline)
     }));
-    driverDocuments = mysqlTable("driverDocuments", {
-      id: int("id").autoincrement().primaryKey(),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      documentType: varchar("documentType", { length: 50 }).notNull(),
-      fileUrl: text("fileUrl").notNull(),
-      storageKey: text("storageKey").notNull(),
-      uploadedAt: timestamp("uploadedAt").defaultNow().notNull()
+    driverDocuments = (0, import_mysql_core.mysqlTable)("driverDocuments", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      documentType: (0, import_mysql_core.varchar)("documentType", { length: 50 }).notNull(),
+      fileUrl: (0, import_mysql_core.text)("fileUrl").notNull(),
+      storageKey: (0, import_mysql_core.text)("storageKey").notNull(),
+      uploadedAt: (0, import_mysql_core.timestamp)("uploadedAt").defaultNow().notNull()
     }, (table) => ({
-      driverIdIdx: index("driverDocuments_driverId_idx").on(table.driverId)
+      driverIdIdx: (0, import_mysql_core.index)("driverDocuments_driverId_idx").on(table.driverId)
     }));
-    serviceAreas = mysqlTable("serviceAreas", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      name: varchar("name", { length: 255 }).notNull(),
-      state: varchar("state", { length: 2 }).notNull(),
-      type: mysqlEnum("type", ["radius", "polygon"]).notNull(),
-      centerLat: decimal("centerLat", { precision: 10, scale: 7 }),
-      centerLng: decimal("centerLng", { precision: 10, scale: 7 }),
-      radiusMiles: decimal("radiusMiles", { precision: 10, scale: 2 }),
-      polygonGeoJson: json("polygonGeoJson"),
-      isActive: boolean("isActive").default(true).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    serviceAreas = (0, import_mysql_core.mysqlTable)("serviceAreas", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      name: (0, import_mysql_core.varchar)("name", { length: 255 }).notNull(),
+      state: (0, import_mysql_core.varchar)("state", { length: 2 }).notNull(),
+      type: (0, import_mysql_core.mysqlEnum)("type", ["radius", "polygon"]).notNull(),
+      centerLat: (0, import_mysql_core.decimal)("centerLat", { precision: 10, scale: 7 }),
+      centerLng: (0, import_mysql_core.decimal)("centerLng", { precision: 10, scale: 7 }),
+      radiusMiles: (0, import_mysql_core.decimal)("radiusMiles", { precision: 10, scale: 2 }),
+      polygonGeoJson: (0, import_mysql_core.json)("polygonGeoJson"),
+      isActive: (0, import_mysql_core.boolean)("isActive").default(true).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      stateIdx: index("serviceAreas_state_idx").on(table.state)
+      stateIdx: (0, import_mysql_core.index)("serviceAreas_state_idx").on(table.state)
     }));
-    volumePricing = mysqlTable("volumePricing", {
-      id: int("id").autoincrement().primaryKey(),
-      serviceAreaId: varchar("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
-      volumeTier: mysqlEnum("volumeTier", ["1_8", "1_4", "1_2", "3_4", "full"]).notNull(),
-      basePrice: decimal("basePrice", { precision: 10, scale: 2 }).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    volumePricing = (0, import_mysql_core.mysqlTable)("volumePricing", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      serviceAreaId: (0, import_mysql_core.varchar)("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
+      volumeTier: (0, import_mysql_core.mysqlEnum)("volumeTier", ["1_8", "1_4", "1_2", "3_4", "full"]).notNull(),
+      basePrice: (0, import_mysql_core.decimal)("basePrice", { precision: 10, scale: 2 }).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      serviceAreaIdIdx: index("volumePricing_serviceAreaId_idx").on(table.serviceAreaId),
-      uniqueAreaTier: unique("volumePricing_area_tier_unique").on(table.serviceAreaId, table.volumeTier)
+      serviceAreaIdIdx: (0, import_mysql_core.index)("volumePricing_serviceAreaId_idx").on(table.serviceAreaId),
+      uniqueAreaTier: (0, import_mysql_core.unique)("volumePricing_area_tier_unique").on(table.serviceAreaId, table.volumeTier)
     }));
-    disposalCaps = mysqlTable("disposalCaps", {
-      id: int("id").autoincrement().primaryKey(),
-      serviceAreaId: varchar("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
-      volumeTier: mysqlEnum("volumeTier", ["1_8", "1_4", "1_2", "3_4", "full"]).notNull(),
-      capAmount: decimal("capAmount", { precision: 10, scale: 2 }).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    disposalCaps = (0, import_mysql_core.mysqlTable)("disposalCaps", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      serviceAreaId: (0, import_mysql_core.varchar)("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
+      volumeTier: (0, import_mysql_core.mysqlEnum)("volumeTier", ["1_8", "1_4", "1_2", "3_4", "full"]).notNull(),
+      capAmount: (0, import_mysql_core.decimal)("capAmount", { precision: 10, scale: 2 }).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      serviceAreaIdIdx: index("disposalCaps_serviceAreaId_idx").on(table.serviceAreaId),
-      uniqueAreaTier: unique("disposalCaps_area_tier_unique").on(table.serviceAreaId, table.volumeTier)
+      serviceAreaIdIdx: (0, import_mysql_core.index)("disposalCaps_serviceAreaId_idx").on(table.serviceAreaId),
+      uniqueAreaTier: (0, import_mysql_core.unique)("disposalCaps_area_tier_unique").on(table.serviceAreaId, table.volumeTier)
     }));
-    addons = mysqlTable("addons", {
-      id: int("id").autoincrement().primaryKey(),
-      serviceAreaId: varchar("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
-      addonType: mysqlEnum("addonType", [
+    addons = (0, import_mysql_core.mysqlTable)("addons", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      serviceAreaId: (0, import_mysql_core.varchar)("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
+      addonType: (0, import_mysql_core.mysqlEnum)("addonType", [
         "stairs_1",
         "stairs_2plus",
         "long_carry",
@@ -149,42 +148,42 @@ var init_schema = __esm({
         "appliances",
         "same_day"
       ]).notNull(),
-      price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      price: (0, import_mysql_core.decimal)("price", { precision: 10, scale: 2 }).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      serviceAreaIdIdx: index("addons_serviceAreaId_idx").on(table.serviceAreaId),
-      uniqueAreaAddon: unique("addons_area_addon_unique").on(table.serviceAreaId, table.addonType)
+      serviceAreaIdIdx: (0, import_mysql_core.index)("addons_serviceAreaId_idx").on(table.serviceAreaId),
+      uniqueAreaAddon: (0, import_mysql_core.unique)("addons_area_addon_unique").on(table.serviceAreaId, table.addonType)
     }));
-    distanceRules = mysqlTable("distanceRules", {
-      id: int("id").autoincrement().primaryKey(),
-      serviceAreaId: varchar("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
-      minMiles: decimal("minMiles", { precision: 10, scale: 2 }).notNull(),
-      maxMiles: decimal("maxMiles", { precision: 10, scale: 2 }),
-      surcharge: decimal("surcharge", { precision: 10, scale: 2 }).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    distanceRules = (0, import_mysql_core.mysqlTable)("distanceRules", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      serviceAreaId: (0, import_mysql_core.varchar)("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
+      minMiles: (0, import_mysql_core.decimal)("minMiles", { precision: 10, scale: 2 }).notNull(),
+      maxMiles: (0, import_mysql_core.decimal)("maxMiles", { precision: 10, scale: 2 }),
+      surcharge: (0, import_mysql_core.decimal)("surcharge", { precision: 10, scale: 2 }).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      serviceAreaIdIdx: index("distanceRules_serviceAreaId_idx").on(table.serviceAreaId)
+      serviceAreaIdIdx: (0, import_mysql_core.index)("distanceRules_serviceAreaId_idx").on(table.serviceAreaId)
     }));
-    laborRates = mysqlTable("laborRates", {
-      id: int("id").autoincrement().primaryKey(),
-      serviceAreaId: varchar("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
-      helpersCount: int("helpersCount").notNull(),
-      hourlyRate: decimal("hourlyRate", { precision: 10, scale: 2 }).notNull(),
-      minimumHours: int("minimumHours").default(2).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    laborRates = (0, import_mysql_core.mysqlTable)("laborRates", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      serviceAreaId: (0, import_mysql_core.varchar)("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
+      helpersCount: (0, import_mysql_core.int)("helpersCount").notNull(),
+      hourlyRate: (0, import_mysql_core.decimal)("hourlyRate", { precision: 10, scale: 2 }).notNull(),
+      minimumHours: (0, import_mysql_core.int)("minimumHours").default(2).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      serviceAreaIdIdx: index("laborRates_serviceAreaId_idx").on(table.serviceAreaId),
-      uniqueAreaHelpers: unique("laborRates_area_helpers_unique").on(table.serviceAreaId, table.helpersCount)
+      serviceAreaIdIdx: (0, import_mysql_core.index)("laborRates_serviceAreaId_idx").on(table.serviceAreaId),
+      uniqueAreaHelpers: (0, import_mysql_core.unique)("laborRates_area_helpers_unique").on(table.serviceAreaId, table.helpersCount)
     }));
-    jobs = mysqlTable("jobs", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      customerId: int("customerId").notNull().references(() => customers.id),
-      serviceAreaId: varchar("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
-      jobType: mysqlEnum("jobType", ["HAUL_AWAY", "LABOR_ONLY"]).notNull(),
-      status: mysqlEnum("status", [
+    jobs = (0, import_mysql_core.mysqlTable)("jobs", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      customerId: (0, import_mysql_core.int)("customerId").notNull().references(() => customers.id),
+      serviceAreaId: (0, import_mysql_core.varchar)("serviceAreaId", { length: 100 }).notNull().references(() => serviceAreas.id),
+      jobType: (0, import_mysql_core.mysqlEnum)("jobType", ["HAUL_AWAY", "LABOR_ONLY"]).notNull(),
+      status: (0, import_mysql_core.mysqlEnum)("status", [
         "draft",
         "quoted",
         "dispatching",
@@ -196,252 +195,252 @@ var init_schema = __esm({
         "cancelled",
         "no_coverage"
       ]).default("draft").notNull(),
-      contactName: varchar("contactName", { length: 255 }).notNull(),
-      contactPhone: varchar("contactPhone", { length: 20 }).notNull(),
-      contactEmail: varchar("contactEmail", { length: 320 }),
-      pickupAddress: text("pickupAddress").notNull(),
-      pickupLat: decimal("pickupLat", { precision: 10, scale: 7 }).notNull(),
-      pickupLng: decimal("pickupLng", { precision: 10, scale: 7 }).notNull(),
-      pickupUnit: varchar("pickupUnit", { length: 50 }),
-      pickupNotes: text("pickupNotes"),
-      servicePrice: decimal("servicePrice", { precision: 10, scale: 2 }),
-      disposalCap: decimal("disposalCap", { precision: 10, scale: 2 }),
-      total: decimal("total", { precision: 10, scale: 2 }),
-      platformFee: decimal("platformFee", { precision: 10, scale: 2 }),
-      driverPayout: decimal("driverPayout", { precision: 10, scale: 2 }),
-      paidAt: timestamp("paidAt"),
-      scheduledFor: timestamp("scheduledFor"),
-      completedAt: timestamp("completedAt"),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+      contactName: (0, import_mysql_core.varchar)("contactName", { length: 255 }).notNull(),
+      contactPhone: (0, import_mysql_core.varchar)("contactPhone", { length: 20 }).notNull(),
+      contactEmail: (0, import_mysql_core.varchar)("contactEmail", { length: 320 }),
+      pickupAddress: (0, import_mysql_core.text)("pickupAddress").notNull(),
+      pickupLat: (0, import_mysql_core.decimal)("pickupLat", { precision: 10, scale: 7 }).notNull(),
+      pickupLng: (0, import_mysql_core.decimal)("pickupLng", { precision: 10, scale: 7 }).notNull(),
+      pickupUnit: (0, import_mysql_core.varchar)("pickupUnit", { length: 50 }),
+      pickupNotes: (0, import_mysql_core.text)("pickupNotes"),
+      servicePrice: (0, import_mysql_core.decimal)("servicePrice", { precision: 10, scale: 2 }),
+      disposalCap: (0, import_mysql_core.decimal)("disposalCap", { precision: 10, scale: 2 }),
+      total: (0, import_mysql_core.decimal)("total", { precision: 10, scale: 2 }),
+      platformFee: (0, import_mysql_core.decimal)("platformFee", { precision: 10, scale: 2 }),
+      driverPayout: (0, import_mysql_core.decimal)("driverPayout", { precision: 10, scale: 2 }),
+      paidAt: (0, import_mysql_core.timestamp)("paidAt"),
+      scheduledFor: (0, import_mysql_core.timestamp)("scheduledFor"),
+      completedAt: (0, import_mysql_core.timestamp)("completedAt"),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (table) => ({
-      customerIdIdx: index("jobs_customerId_idx").on(table.customerId),
-      serviceAreaIdIdx: index("jobs_serviceAreaId_idx").on(table.serviceAreaId),
-      statusIdx: index("jobs_status_idx").on(table.status)
+      customerIdIdx: (0, import_mysql_core.index)("jobs_customerId_idx").on(table.customerId),
+      serviceAreaIdIdx: (0, import_mysql_core.index)("jobs_serviceAreaId_idx").on(table.serviceAreaId),
+      statusIdx: (0, import_mysql_core.index)("jobs_status_idx").on(table.status)
     }));
-    haulAwayDetails = mysqlTable("haulAwayDetails", {
-      id: int("id").autoincrement().primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      volumeTier: mysqlEnum("volumeTier", ["1_8", "1_4", "1_2", "3_4", "full"]).notNull(),
-      addonsJson: json("addonsJson"),
-      disposalCap: decimal("disposalCap", { precision: 10, scale: 2 }).notNull(),
-      distanceBand: varchar("distanceBand", { length: 50 }),
-      sameDay: boolean("sameDay").default(false).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    haulAwayDetails = (0, import_mysql_core.mysqlTable)("haulAwayDetails", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      volumeTier: (0, import_mysql_core.mysqlEnum)("volumeTier", ["1_8", "1_4", "1_2", "3_4", "full"]).notNull(),
+      addonsJson: (0, import_mysql_core.json)("addonsJson"),
+      disposalCap: (0, import_mysql_core.decimal)("disposalCap", { precision: 10, scale: 2 }).notNull(),
+      distanceBand: (0, import_mysql_core.varchar)("distanceBand", { length: 50 }),
+      sameDay: (0, import_mysql_core.boolean)("sameDay").default(false).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("haulAwayDetails_jobId_idx").on(table.jobId)
+      jobIdIdx: (0, import_mysql_core.index)("haulAwayDetails_jobId_idx").on(table.jobId)
     }));
-    laborOnlyDetails = mysqlTable("laborOnlyDetails", {
-      id: int("id").autoincrement().primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      helpersCount: int("helpersCount").notNull(),
-      hoursBooked: int("hoursBooked").notNull(),
-      laborScopeNotes: text("laborScopeNotes"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    laborOnlyDetails = (0, import_mysql_core.mysqlTable)("laborOnlyDetails", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      helpersCount: (0, import_mysql_core.int)("helpersCount").notNull(),
+      hoursBooked: (0, import_mysql_core.int)("hoursBooked").notNull(),
+      laborScopeNotes: (0, import_mysql_core.text)("laborScopeNotes"),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("laborOnlyDetails_jobId_idx").on(table.jobId)
+      jobIdIdx: (0, import_mysql_core.index)("laborOnlyDetails_jobId_idx").on(table.jobId)
     }));
-    jobOffers = mysqlTable("jobOffers", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      wave: int("wave").notNull(),
-      status: mysqlEnum("status", ["pending", "accepted", "rejected", "expired"]).default("pending").notNull(),
-      expiresAt: timestamp("expiresAt").notNull(),
-      respondedAt: timestamp("respondedAt"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    jobOffers = (0, import_mysql_core.mysqlTable)("jobOffers", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      wave: (0, import_mysql_core.int)("wave").notNull(),
+      status: (0, import_mysql_core.mysqlEnum)("status", ["pending", "accepted", "rejected", "expired"]).default("pending").notNull(),
+      expiresAt: (0, import_mysql_core.timestamp)("expiresAt").notNull(),
+      respondedAt: (0, import_mysql_core.timestamp)("respondedAt"),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("jobOffers_jobId_idx").on(table.jobId),
-      driverIdIdx: index("jobOffers_driverId_idx").on(table.driverId),
-      statusIdx: index("jobOffers_status_idx").on(table.status)
+      jobIdIdx: (0, import_mysql_core.index)("jobOffers_jobId_idx").on(table.jobId),
+      driverIdIdx: (0, import_mysql_core.index)("jobOffers_driverId_idx").on(table.driverId),
+      statusIdx: (0, import_mysql_core.index)("jobOffers_status_idx").on(table.status)
     }));
-    jobAssignments = mysqlTable("jobAssignments", {
-      id: int("id").autoincrement().primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      assignedAt: timestamp("assignedAt").defaultNow().notNull()
+    jobAssignments = (0, import_mysql_core.mysqlTable)("jobAssignments", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      assignedAt: (0, import_mysql_core.timestamp)("assignedAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("jobAssignments_jobId_idx").on(table.jobId),
-      driverIdIdx: index("jobAssignments_driverId_idx").on(table.driverId)
+      jobIdIdx: (0, import_mysql_core.index)("jobAssignments_jobId_idx").on(table.jobId),
+      driverIdIdx: (0, import_mysql_core.index)("jobAssignments_driverId_idx").on(table.driverId)
     }));
-    timeExtensionRequests = mysqlTable("timeExtensionRequests", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      additionalHours: int("additionalHours").notNull(),
-      additionalCost: decimal("additionalCost", { precision: 10, scale: 2 }).notNull(),
-      status: mysqlEnum("status", ["pending", "approved", "declined"]).default("pending").notNull(),
-      requestedAt: timestamp("requestedAt").defaultNow().notNull(),
-      respondedAt: timestamp("respondedAt")
+    timeExtensionRequests = (0, import_mysql_core.mysqlTable)("timeExtensionRequests", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      additionalHours: (0, import_mysql_core.int)("additionalHours").notNull(),
+      additionalCost: (0, import_mysql_core.decimal)("additionalCost", { precision: 10, scale: 2 }).notNull(),
+      status: (0, import_mysql_core.mysqlEnum)("status", ["pending", "approved", "declined"]).default("pending").notNull(),
+      requestedAt: (0, import_mysql_core.timestamp)("requestedAt").defaultNow().notNull(),
+      respondedAt: (0, import_mysql_core.timestamp)("respondedAt")
     }, (table) => ({
-      jobIdIdx: index("timeExtensionRequests_jobId_idx").on(table.jobId)
+      jobIdIdx: (0, import_mysql_core.index)("timeExtensionRequests_jobId_idx").on(table.jobId)
     }));
-    payments = mysqlTable("payments", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      customerId: int("customerId").notNull().references(() => customers.id),
-      amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-      currency: varchar("currency", { length: 3 }).default("USD").notNull(),
-      provider: varchar("provider", { length: 50 }).notNull(),
-      providerRef: varchar("providerRef", { length: 255 }),
-      status: mysqlEnum("status", ["pending", "succeeded", "failed"]).default("pending").notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    payments = (0, import_mysql_core.mysqlTable)("payments", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      customerId: (0, import_mysql_core.int)("customerId").notNull().references(() => customers.id),
+      amount: (0, import_mysql_core.decimal)("amount", { precision: 10, scale: 2 }).notNull(),
+      currency: (0, import_mysql_core.varchar)("currency", { length: 3 }).default("USD").notNull(),
+      provider: (0, import_mysql_core.varchar)("provider", { length: 50 }).notNull(),
+      providerRef: (0, import_mysql_core.varchar)("providerRef", { length: 255 }),
+      status: (0, import_mysql_core.mysqlEnum)("status", ["pending", "succeeded", "failed"]).default("pending").notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("payments_jobId_idx").on(table.jobId),
-      customerIdIdx: index("payments_customerId_idx").on(table.customerId)
+      jobIdIdx: (0, import_mysql_core.index)("payments_jobId_idx").on(table.jobId),
+      customerIdIdx: (0, import_mysql_core.index)("payments_customerId_idx").on(table.customerId)
     }));
-    payouts = mysqlTable("payouts", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      driverPayout: decimal("driverPayout", { precision: 10, scale: 2 }).notNull(),
-      disposalReimbursement: decimal("disposalReimbursement", { precision: 10, scale: 2 }).default("0").notNull(),
-      totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
-      status: mysqlEnum("status", ["eligible", "completed", "failed"]).default("eligible").notNull(),
-      completedAt: timestamp("completedAt"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    payouts = (0, import_mysql_core.mysqlTable)("payouts", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      driverPayout: (0, import_mysql_core.decimal)("driverPayout", { precision: 10, scale: 2 }).notNull(),
+      disposalReimbursement: (0, import_mysql_core.decimal)("disposalReimbursement", { precision: 10, scale: 2 }).default("0").notNull(),
+      totalAmount: (0, import_mysql_core.decimal)("totalAmount", { precision: 10, scale: 2 }).notNull(),
+      status: (0, import_mysql_core.mysqlEnum)("status", ["eligible", "completed", "failed"]).default("eligible").notNull(),
+      completedAt: (0, import_mysql_core.timestamp)("completedAt"),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("payouts_jobId_idx").on(table.jobId),
-      driverIdIdx: index("payouts_driverId_idx").on(table.driverId),
-      statusIdx: index("payouts_status_idx").on(table.status)
+      jobIdIdx: (0, import_mysql_core.index)("payouts_jobId_idx").on(table.jobId),
+      driverIdIdx: (0, import_mysql_core.index)("payouts_driverId_idx").on(table.driverId),
+      statusIdx: (0, import_mysql_core.index)("payouts_status_idx").on(table.status)
     }));
-    jobPhotos = mysqlTable("jobPhotos", {
-      id: int("id").autoincrement().primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      photoType: mysqlEnum("photoType", ["customer_upload", "before", "after", "receipt"]).notNull(),
-      fileUrl: text("fileUrl").notNull(),
-      storageKey: text("storageKey").notNull(),
-      caption: text("caption"),
-      uploadedBy: int("uploadedBy").notNull().references(() => users.id),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    jobPhotos = (0, import_mysql_core.mysqlTable)("jobPhotos", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      photoType: (0, import_mysql_core.mysqlEnum)("photoType", ["customer_upload", "before", "after", "receipt"]).notNull(),
+      fileUrl: (0, import_mysql_core.text)("fileUrl").notNull(),
+      storageKey: (0, import_mysql_core.text)("storageKey").notNull(),
+      caption: (0, import_mysql_core.text)("caption"),
+      uploadedBy: (0, import_mysql_core.int)("uploadedBy").notNull().references(() => users.id),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("jobPhotos_jobId_idx").on(table.jobId)
+      jobIdIdx: (0, import_mysql_core.index)("jobPhotos_jobId_idx").on(table.jobId)
     }));
-    driverLocations = mysqlTable("driverLocations", {
-      id: int("id").autoincrement().primaryKey(),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      lat: decimal("lat", { precision: 10, scale: 7 }).notNull(),
-      lng: decimal("lng", { precision: 10, scale: 7 }).notNull(),
-      heading: decimal("heading", { precision: 5, scale: 2 }),
-      speed: decimal("speed", { precision: 5, scale: 2 }),
-      accuracy: decimal("accuracy", { precision: 10, scale: 2 }),
-      timestamp: timestamp("timestamp").notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    driverLocations = (0, import_mysql_core.mysqlTable)("driverLocations", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      lat: (0, import_mysql_core.decimal)("lat", { precision: 10, scale: 7 }).notNull(),
+      lng: (0, import_mysql_core.decimal)("lng", { precision: 10, scale: 7 }).notNull(),
+      heading: (0, import_mysql_core.decimal)("heading", { precision: 5, scale: 2 }),
+      speed: (0, import_mysql_core.decimal)("speed", { precision: 5, scale: 2 }),
+      accuracy: (0, import_mysql_core.decimal)("accuracy", { precision: 10, scale: 2 }),
+      timestamp: (0, import_mysql_core.timestamp)("timestamp").notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      driverIdIdx: index("driverLocations_driverId_idx").on(table.driverId),
-      timestampIdx: index("driverLocations_timestamp_idx").on(table.timestamp)
+      driverIdIdx: (0, import_mysql_core.index)("driverLocations_driverId_idx").on(table.driverId),
+      timestampIdx: (0, import_mysql_core.index)("driverLocations_timestamp_idx").on(table.timestamp)
     }));
-    conversations = mysqlTable("conversations", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      customerId: int("customerId").notNull().references(() => customers.id),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    conversations = (0, import_mysql_core.mysqlTable)("conversations", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      customerId: (0, import_mysql_core.int)("customerId").notNull().references(() => customers.id),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("conversations_jobId_idx").on(table.jobId)
+      jobIdIdx: (0, import_mysql_core.index)("conversations_jobId_idx").on(table.jobId)
     }));
-    messages = mysqlTable("messages", {
-      id: int("id").autoincrement().primaryKey(),
-      conversationId: varchar("conversationId", { length: 100 }).notNull().references(() => conversations.id),
-      senderId: int("senderId").notNull().references(() => users.id),
-      messageText: text("messageText").notNull(),
-      isRead: boolean("isRead").default(false).notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    messages = (0, import_mysql_core.mysqlTable)("messages", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      conversationId: (0, import_mysql_core.varchar)("conversationId", { length: 100 }).notNull().references(() => conversations.id),
+      senderId: (0, import_mysql_core.int)("senderId").notNull().references(() => users.id),
+      messageText: (0, import_mysql_core.text)("messageText").notNull(),
+      isRead: (0, import_mysql_core.boolean)("isRead").default(false).notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      conversationIdIdx: index("messages_conversationId_idx").on(table.conversationId)
+      conversationIdIdx: (0, import_mysql_core.index)("messages_conversationId_idx").on(table.conversationId)
     }));
-    ratings = mysqlTable("ratings", {
-      id: int("id").autoincrement().primaryKey(),
-      jobId: varchar("jobId", { length: 100 }).notNull().references(() => jobs.id),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      customerId: int("customerId").notNull().references(() => customers.id),
-      rating: int("rating").notNull(),
-      comment: text("comment"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    ratings = (0, import_mysql_core.mysqlTable)("ratings", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).notNull().references(() => jobs.id),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      customerId: (0, import_mysql_core.int)("customerId").notNull().references(() => customers.id),
+      rating: (0, import_mysql_core.int)("rating").notNull(),
+      comment: (0, import_mysql_core.text)("comment"),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      jobIdIdx: index("ratings_jobId_idx").on(table.jobId),
-      driverIdIdx: index("ratings_driverId_idx").on(table.driverId)
+      jobIdIdx: (0, import_mysql_core.index)("ratings_jobId_idx").on(table.jobId),
+      driverIdIdx: (0, import_mysql_core.index)("ratings_driverId_idx").on(table.driverId)
     }));
-    auditLogs = mysqlTable("auditLogs", {
-      id: int("id").autoincrement().primaryKey(),
-      userId: int("userId").references(() => users.id),
-      action: varchar("action", { length: 100 }).notNull(),
-      entityType: varchar("entityType", { length: 50 }),
-      entityId: varchar("entityId", { length: 100 }),
-      metadata: json("metadata"),
-      ipAddress: varchar("ipAddress", { length: 45 }),
-      userAgent: text("userAgent"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    auditLogs = (0, import_mysql_core.mysqlTable)("auditLogs", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      userId: (0, import_mysql_core.int)("userId").references(() => users.id),
+      action: (0, import_mysql_core.varchar)("action", { length: 100 }).notNull(),
+      entityType: (0, import_mysql_core.varchar)("entityType", { length: 50 }),
+      entityId: (0, import_mysql_core.varchar)("entityId", { length: 100 }),
+      metadata: (0, import_mysql_core.json)("metadata"),
+      ipAddress: (0, import_mysql_core.varchar)("ipAddress", { length: 45 }),
+      userAgent: (0, import_mysql_core.text)("userAgent"),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      userIdIdx: index("auditLogs_userId_idx").on(table.userId),
-      actionIdx: index("auditLogs_action_idx").on(table.action)
+      userIdIdx: (0, import_mysql_core.index)("auditLogs_userId_idx").on(table.userId),
+      actionIdx: (0, import_mysql_core.index)("auditLogs_action_idx").on(table.action)
     }));
-    driverStrikes = mysqlTable("driverStrikes", {
-      id: int("id").autoincrement().primaryKey(),
-      driverId: int("driverId").notNull().references(() => drivers.id),
-      jobId: varchar("jobId", { length: 100 }).references(() => jobs.id),
-      reason: text("reason").notNull(),
-      severity: mysqlEnum("severity", ["minor", "major", "critical"]).notNull(),
-      createdBy: int("createdBy").notNull().references(() => users.id),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    driverStrikes = (0, import_mysql_core.mysqlTable)("driverStrikes", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      driverId: (0, import_mysql_core.int)("driverId").notNull().references(() => drivers.id),
+      jobId: (0, import_mysql_core.varchar)("jobId", { length: 100 }).references(() => jobs.id),
+      reason: (0, import_mysql_core.text)("reason").notNull(),
+      severity: (0, import_mysql_core.mysqlEnum)("severity", ["minor", "major", "critical"]).notNull(),
+      createdBy: (0, import_mysql_core.int)("createdBy").notNull().references(() => users.id),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      driverIdIdx: index("driverStrikes_driverId_idx").on(table.driverId)
+      driverIdIdx: (0, import_mysql_core.index)("driverStrikes_driverId_idx").on(table.driverId)
     }));
-    items = mysqlTable("items", {
-      id: int("id").autoincrement().primaryKey(),
-      name: varchar("name", { length: 255 }).notNull(),
-      slug: varchar("slug", { length: 255 }),
-      description: text("description"),
-      category: varchar("category", { length: 100 }),
-      parentId: int("parentId"),
-      basePrice: decimal("basePrice", { precision: 10, scale: 2 }).notNull().default("0.00"),
-      isPopular: boolean("isPopular").default(false),
-      displayOrder: int("displayOrder").default(0),
-      sortOrder: int("sortOrder").default(0),
-      imageUrl: varchar("imageUrl", { length: 500 }),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    items = (0, import_mysql_core.mysqlTable)("items", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      name: (0, import_mysql_core.varchar)("name", { length: 255 }).notNull(),
+      slug: (0, import_mysql_core.varchar)("slug", { length: 255 }),
+      description: (0, import_mysql_core.text)("description"),
+      category: (0, import_mysql_core.varchar)("category", { length: 100 }),
+      parentId: (0, import_mysql_core.int)("parentId"),
+      basePrice: (0, import_mysql_core.decimal)("basePrice", { precision: 10, scale: 2 }).notNull().default("0.00"),
+      isPopular: (0, import_mysql_core.boolean)("isPopular").default(false),
+      displayOrder: (0, import_mysql_core.int)("displayOrder").default(0),
+      sortOrder: (0, import_mysql_core.int)("sortOrder").default(0),
+      imageUrl: (0, import_mysql_core.varchar)("imageUrl", { length: 500 }),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull(),
+      updatedAt: (0, import_mysql_core.timestamp)("updatedAt").defaultNow().notNull()
     }, (table) => ({
-      parentIdIdx: index("items_parentId_idx").on(table.parentId),
-      categoryIdx: index("items_category_idx").on(table.category)
+      parentIdIdx: (0, import_mysql_core.index)("items_parentId_idx").on(table.parentId),
+      categoryIdx: (0, import_mysql_core.index)("items_category_idx").on(table.category)
     }));
-    promoCodes = mysqlTable("promoCodes", {
-      id: int("id").autoincrement().primaryKey(),
-      code: varchar("code", { length: 50 }).notNull().unique(),
-      description: text("description"),
-      discountType: mysqlEnum("discountType", ["percentage", "fixed"]).notNull(),
-      discountValue: decimal("discountValue", { precision: 10, scale: 2 }).notNull(),
-      minOrderAmount: decimal("minOrderAmount", { precision: 10, scale: 2 }),
-      minOrderValue: decimal("minOrderValue", { precision: 10, scale: 2 }),
-      maxDiscountAmount: decimal("maxDiscountAmount", { precision: 10, scale: 2 }),
-      maxDiscount: decimal("maxDiscount", { precision: 10, scale: 2 }),
-      validFrom: timestamp("validFrom"),
-      validUntil: timestamp("validUntil"),
-      maxUses: int("maxUses"),
-      currentUses: int("currentUses").default(0),
-      isActive: boolean("isActive").default(true),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    promoCodes = (0, import_mysql_core.mysqlTable)("promoCodes", {
+      id: (0, import_mysql_core.int)("id").autoincrement().primaryKey(),
+      code: (0, import_mysql_core.varchar)("code", { length: 50 }).notNull().unique(),
+      description: (0, import_mysql_core.text)("description"),
+      discountType: (0, import_mysql_core.mysqlEnum)("discountType", ["percentage", "fixed"]).notNull(),
+      discountValue: (0, import_mysql_core.decimal)("discountValue", { precision: 10, scale: 2 }).notNull(),
+      minOrderAmount: (0, import_mysql_core.decimal)("minOrderAmount", { precision: 10, scale: 2 }),
+      minOrderValue: (0, import_mysql_core.decimal)("minOrderValue", { precision: 10, scale: 2 }),
+      maxDiscountAmount: (0, import_mysql_core.decimal)("maxDiscountAmount", { precision: 10, scale: 2 }),
+      maxDiscount: (0, import_mysql_core.decimal)("maxDiscount", { precision: 10, scale: 2 }),
+      validFrom: (0, import_mysql_core.timestamp)("validFrom"),
+      validUntil: (0, import_mysql_core.timestamp)("validUntil"),
+      maxUses: (0, import_mysql_core.int)("maxUses"),
+      currentUses: (0, import_mysql_core.int)("currentUses").default(0),
+      isActive: (0, import_mysql_core.boolean)("isActive").default(true),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     });
-    savedQuotes = mysqlTable("savedQuotes", {
-      id: varchar("id", { length: 100 }).primaryKey(),
-      quoteId: varchar("quoteId", { length: 100 }).notNull().unique(),
-      customerName: varchar("customerName", { length: 255 }).notNull(),
-      customerEmail: varchar("customerEmail", { length: 255 }).notNull(),
-      customerPhone: varchar("customerPhone", { length: 50 }).notNull(),
-      serviceStreet: varchar("serviceStreet", { length: 500 }).notNull(),
-      serviceCity: varchar("serviceCity", { length: 255 }).notNull(),
-      serviceState: varchar("serviceState", { length: 50 }).notNull(),
-      serviceZip: varchar("serviceZip", { length: 20 }).notNull(),
-      items: json("items").notNull(),
-      subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-      tax: decimal("tax", { precision: 10, scale: 2 }).notNull(),
-      discount: decimal("discount", { precision: 10, scale: 2 }).default("0.00"),
-      total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-      promoCode: varchar("promoCode", { length: 50 }),
-      expiresAt: timestamp("expiresAt").notNull(),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+    savedQuotes = (0, import_mysql_core.mysqlTable)("savedQuotes", {
+      id: (0, import_mysql_core.varchar)("id", { length: 100 }).primaryKey(),
+      quoteId: (0, import_mysql_core.varchar)("quoteId", { length: 100 }).notNull().unique(),
+      customerName: (0, import_mysql_core.varchar)("customerName", { length: 255 }).notNull(),
+      customerEmail: (0, import_mysql_core.varchar)("customerEmail", { length: 255 }).notNull(),
+      customerPhone: (0, import_mysql_core.varchar)("customerPhone", { length: 50 }).notNull(),
+      serviceStreet: (0, import_mysql_core.varchar)("serviceStreet", { length: 500 }).notNull(),
+      serviceCity: (0, import_mysql_core.varchar)("serviceCity", { length: 255 }).notNull(),
+      serviceState: (0, import_mysql_core.varchar)("serviceState", { length: 50 }).notNull(),
+      serviceZip: (0, import_mysql_core.varchar)("serviceZip", { length: 20 }).notNull(),
+      items: (0, import_mysql_core.json)("items").notNull(),
+      subtotal: (0, import_mysql_core.decimal)("subtotal", { precision: 10, scale: 2 }).notNull(),
+      tax: (0, import_mysql_core.decimal)("tax", { precision: 10, scale: 2 }).notNull(),
+      discount: (0, import_mysql_core.decimal)("discount", { precision: 10, scale: 2 }).default("0.00"),
+      total: (0, import_mysql_core.decimal)("total", { precision: 10, scale: 2 }).notNull(),
+      promoCode: (0, import_mysql_core.varchar)("promoCode", { length: 50 }),
+      expiresAt: (0, import_mysql_core.timestamp)("expiresAt").notNull(),
+      createdAt: (0, import_mysql_core.timestamp)("createdAt").defaultNow().notNull()
     }, (table) => ({
-      quoteIdIdx: index("savedQuotes_quoteId_idx").on(table.quoteId),
-      emailIdx: index("savedQuotes_email_idx").on(table.customerEmail)
+      quoteIdIdx: (0, import_mysql_core.index)("savedQuotes_quoteId_idx").on(table.quoteId),
+      emailIdx: (0, import_mysql_core.index)("savedQuotes_email_idx").on(table.customerEmail)
     }));
   }
 });
@@ -519,12 +518,10 @@ __export(db_exports, {
   updateServiceArea: () => updateServiceArea,
   upsertUser: () => upsertUser
 });
-import { eq, and, desc, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
 async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = (0, import_mysql2.drizzle)(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -583,71 +580,71 @@ async function upsertUser(user) {
 async function getUserByOpenId(openId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db.select().from(users).where((0, import_drizzle_orm.eq)(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getUserById(id) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const result = await db.select().from(users).where((0, import_drizzle_orm.eq)(users.id, id)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getAllServiceAreas() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(serviceAreas).where(eq(serviceAreas.isActive, true));
+  return await db.select().from(serviceAreas).where((0, import_drizzle_orm.eq)(serviceAreas.isActive, true));
 }
 async function getServiceAreaById(id) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(serviceAreas).where(eq(serviceAreas.id, id)).limit(1);
+  const result = await db.select().from(serviceAreas).where((0, import_drizzle_orm.eq)(serviceAreas.id, id)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getVolumePricing(serviceAreaId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(volumePricing).where(eq(volumePricing.serviceAreaId, serviceAreaId));
+  return await db.select().from(volumePricing).where((0, import_drizzle_orm.eq)(volumePricing.serviceAreaId, serviceAreaId));
 }
 async function getDisposalCaps(serviceAreaId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(disposalCaps).where(eq(disposalCaps.serviceAreaId, serviceAreaId));
+  return await db.select().from(disposalCaps).where((0, import_drizzle_orm.eq)(disposalCaps.serviceAreaId, serviceAreaId));
 }
 async function getAddons(serviceAreaId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(addons).where(eq(addons.serviceAreaId, serviceAreaId));
+  return await db.select().from(addons).where((0, import_drizzle_orm.eq)(addons.serviceAreaId, serviceAreaId));
 }
 async function getDistanceRules(serviceAreaId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(distanceRules).where(eq(distanceRules.serviceAreaId, serviceAreaId));
+  return await db.select().from(distanceRules).where((0, import_drizzle_orm.eq)(distanceRules.serviceAreaId, serviceAreaId));
 }
 async function getLaborRates(serviceAreaId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(laborRates).where(eq(laborRates.serviceAreaId, serviceAreaId));
+  return await db.select().from(laborRates).where((0, import_drizzle_orm.eq)(laborRates.serviceAreaId, serviceAreaId));
 }
 async function getOrCreateCustomer(userId) {
   const db = await getDb();
   if (!db) return void 0;
-  let result = await db.select().from(customers).where(eq(customers.userId, userId)).limit(1);
+  let result = await db.select().from(customers).where((0, import_drizzle_orm.eq)(customers.userId, userId)).limit(1);
   if (result.length === 0) {
     await db.insert(customers).values({ userId });
-    result = await db.select().from(customers).where(eq(customers.userId, userId)).limit(1);
+    result = await db.select().from(customers).where((0, import_drizzle_orm.eq)(customers.userId, userId)).limit(1);
   }
   return result[0];
 }
 async function getDriverByUserId(userId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(drivers).where(eq(drivers.userId, userId)).limit(1);
+  const result = await db.select().from(drivers).where((0, import_drizzle_orm.eq)(drivers.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getDriverById(id) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(drivers).where(eq(drivers.id, id)).limit(1);
+  const result = await db.select().from(drivers).where((0, import_drizzle_orm.eq)(drivers.id, id)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getAllDrivers(filters) {
@@ -655,61 +652,61 @@ async function getAllDrivers(filters) {
   if (!db) return [];
   const conditions = [];
   if (filters?.status) {
-    conditions.push(eq(drivers.status, filters.status));
+    conditions.push((0, import_drizzle_orm.eq)(drivers.status, filters.status));
   }
   if (filters?.isOnline !== void 0) {
-    conditions.push(eq(drivers.isOnline, filters.isOnline));
+    conditions.push((0, import_drizzle_orm.eq)(drivers.isOnline, filters.isOnline));
   }
   if (conditions.length > 0) {
-    return await db.select().from(drivers).where(and(...conditions)).orderBy(desc(drivers.createdAt));
+    return await db.select().from(drivers).where((0, import_drizzle_orm.and)(...conditions)).orderBy((0, import_drizzle_orm.desc)(drivers.createdAt));
   }
-  return await db.select().from(drivers).orderBy(desc(drivers.createdAt));
+  return await db.select().from(drivers).orderBy((0, import_drizzle_orm.desc)(drivers.createdAt));
 }
 async function getJobById(id) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+  const result = await db.select().from(jobs).where((0, import_drizzle_orm.eq)(jobs.id, id)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getJobsByCustomerId(customerId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(jobs).where(eq(jobs.customerId, customerId)).orderBy(desc(jobs.createdAt));
+  return await db.select().from(jobs).where((0, import_drizzle_orm.eq)(jobs.customerId, customerId)).orderBy((0, import_drizzle_orm.desc)(jobs.createdAt));
 }
 async function getHaulAwayDetails(jobId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(haulAwayDetails).where(eq(haulAwayDetails.jobId, jobId)).limit(1);
+  const result = await db.select().from(haulAwayDetails).where((0, import_drizzle_orm.eq)(haulAwayDetails.jobId, jobId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getLaborOnlyDetails(jobId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(laborOnlyDetails).where(eq(laborOnlyDetails.jobId, jobId)).limit(1);
+  const result = await db.select().from(laborOnlyDetails).where((0, import_drizzle_orm.eq)(laborOnlyDetails.jobId, jobId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getJobPhotos(jobId, photoType) {
   const db = await getDb();
   if (!db) return [];
-  const conditions = [eq(jobPhotos.jobId, jobId)];
+  const conditions = [(0, import_drizzle_orm.eq)(jobPhotos.jobId, jobId)];
   if (photoType) {
-    conditions.push(eq(jobPhotos.photoType, photoType));
+    conditions.push((0, import_drizzle_orm.eq)(jobPhotos.photoType, photoType));
   }
-  return await db.select().from(jobPhotos).where(and(...conditions)).orderBy(jobPhotos.createdAt);
+  return await db.select().from(jobPhotos).where((0, import_drizzle_orm.and)(...conditions)).orderBy(jobPhotos.createdAt);
 }
 async function getJobAssignment(jobId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(jobAssignments).where(eq(jobAssignments.jobId, jobId)).limit(1);
+  const result = await db.select().from(jobAssignments).where((0, import_drizzle_orm.eq)(jobAssignments.jobId, jobId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getDriverActiveJob(driverId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select({ job: jobs, assignment: jobAssignments }).from(jobAssignments).innerJoin(jobs, eq(jobs.id, jobAssignments.jobId)).where(
-    and(
-      eq(jobAssignments.driverId, driverId),
-      sql`${jobs.status} IN ('assigned', 'en_route', 'arrived', 'started')`
+  const result = await db.select({ job: jobs, assignment: jobAssignments }).from(jobAssignments).innerJoin(jobs, (0, import_drizzle_orm.eq)(jobs.id, jobAssignments.jobId)).where(
+    (0, import_drizzle_orm.and)(
+      (0, import_drizzle_orm.eq)(jobAssignments.driverId, driverId),
+      import_drizzle_orm.sql`${jobs.status} IN ('assigned', 'en_route', 'arrived', 'started')`
     )
   ).limit(1);
   return result.length > 0 ? result[0] : void 0;
@@ -717,24 +714,24 @@ async function getDriverActiveJob(driverId) {
 async function getPaymentByJobId(jobId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(payments).where(eq(payments.jobId, jobId)).limit(1);
+  const result = await db.select().from(payments).where((0, import_drizzle_orm.eq)(payments.jobId, jobId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getPayoutByJobId(jobId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(payouts).where(eq(payouts.jobId, jobId)).limit(1);
+  const result = await db.select().from(payouts).where((0, import_drizzle_orm.eq)(payouts.jobId, jobId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getEligiblePayouts() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(payouts).where(eq(payouts.status, "eligible")).orderBy(desc(payouts.createdAt));
+  return await db.select().from(payouts).where((0, import_drizzle_orm.eq)(payouts.status, "eligible")).orderBy((0, import_drizzle_orm.desc)(payouts.createdAt));
 }
 async function getLatestDriverLocation(driverId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(driverLocations).where(eq(driverLocations.driverId, driverId)).orderBy(desc(driverLocations.timestamp)).limit(1);
+  const result = await db.select().from(driverLocations).where((0, import_drizzle_orm.eq)(driverLocations.driverId, driverId)).orderBy((0, import_drizzle_orm.desc)(driverLocations.timestamp)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function createAuditLog(log) {
@@ -745,7 +742,7 @@ async function createAuditLog(log) {
 async function getDriverRatings(driverId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(ratings).where(eq(ratings.driverId, driverId)).orderBy(desc(ratings.createdAt));
+  return await db.select().from(ratings).where((0, import_drizzle_orm.eq)(ratings.driverId, driverId)).orderBy((0, import_drizzle_orm.desc)(ratings.createdAt));
 }
 async function createServiceArea(data) {
   const db = await getDb();
@@ -776,19 +773,19 @@ async function updateServiceArea(id, updates) {
   if (updates.radiusMiles) updateData.radiusMiles = updates.radiusMiles.toString();
   if (updates.polygonGeoJson !== void 0) updateData.polygonGeoJson = updates.polygonGeoJson;
   if (updates.isActive !== void 0) updateData.isActive = updates.isActive;
-  await db.update(serviceAreas).set(updateData).where(eq(serviceAreas.id, id));
+  await db.update(serviceAreas).set(updateData).where((0, import_drizzle_orm.eq)(serviceAreas.id, id));
   return await getServiceAreaById(id);
 }
 async function deleteServiceArea(id) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(serviceAreas).set({ isActive: false }).where(eq(serviceAreas.id, id));
+  await db.update(serviceAreas).set({ isActive: false }).where((0, import_drizzle_orm.eq)(serviceAreas.id, id));
   return { success: true };
 }
 async function findServiceAreaByCoordinates(lat, lon) {
   const db = await getDb();
   if (!db) return void 0;
-  const areas = await db.select().from(serviceAreas).where(eq(serviceAreas.isActive, true));
+  const areas = await db.select().from(serviceAreas).where((0, import_drizzle_orm.eq)(serviceAreas.isActive, true));
   for (const area of areas) {
     if (area.radiusMiles && area.centerLat && area.centerLng) {
       const centerLat = parseFloat(area.centerLat);
@@ -844,7 +841,7 @@ async function updateJob(id, updates) {
   if (updates.paidAt) updateData.paidAt = updates.paidAt;
   if (updates.completedAt) updateData.completedAt = updates.completedAt;
   if (updates.cancellationReason) updateData.pickupNotes = updates.cancellationReason;
-  await db.update(jobs).set(updateData).where(eq(jobs.id, id));
+  await db.update(jobs).set(updateData).where((0, import_drizzle_orm.eq)(jobs.id, id));
   return await getJobById(id);
 }
 async function getAllJobs(filters) {
@@ -853,17 +850,17 @@ async function getAllJobs(filters) {
   let query = db.select().from(jobs);
   const conditions = [];
   if (filters?.status) {
-    conditions.push(eq(jobs.status, filters.status));
+    conditions.push((0, import_drizzle_orm.eq)(jobs.status, filters.status));
   }
   if (filters?.customerId) {
-    conditions.push(eq(jobs.customerId, filters.customerId));
+    conditions.push((0, import_drizzle_orm.eq)(jobs.customerId, filters.customerId));
   }
   if (conditions.length > 0) {
-    query = query.where(and(...conditions));
+    query = query.where((0, import_drizzle_orm.and)(...conditions));
   }
   const limit = filters?.limit || 20;
   const offset = filters?.offset || 0;
-  return await query.orderBy(desc(jobs.createdAt)).limit(limit).offset(offset);
+  return await query.orderBy((0, import_drizzle_orm.desc)(jobs.createdAt)).limit(limit).offset(offset);
 }
 async function createHaulAwayDetails(data) {
   const db = await getDb();
@@ -898,19 +895,19 @@ async function createPayment(data) {
     providerRef: data.providerRef || null,
     status: data.status
   });
-  const result = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+  const result = await db.select().from(payments).where((0, import_drizzle_orm.eq)(payments.id, id)).limit(1);
   return result[0];
 }
 async function getCustomerByUserId(userId) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(customers).where(eq(customers.userId, userId)).limit(1);
+  const result = await db.select().from(customers).where((0, import_drizzle_orm.eq)(customers.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getCustomerById(id) {
   const db = await getDb();
   if (!db) return void 0;
-  const result = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
+  const result = await db.select().from(customers).where((0, import_drizzle_orm.eq)(customers.id, id)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function createCustomer(data) {
@@ -932,7 +929,7 @@ async function createJobPhoto(data) {
     // Use URL as key for now
     uploadedBy: parseInt(data.uploadedBy)
   });
-  const photos = await db.select().from(jobPhotos).where(eq(jobPhotos.jobId, data.jobId)).orderBy(desc(jobPhotos.createdAt)).limit(1);
+  const photos = await db.select().from(jobPhotos).where((0, import_drizzle_orm.eq)(jobPhotos.jobId, data.jobId)).orderBy((0, import_drizzle_orm.desc)(jobPhotos.createdAt)).limit(1);
   return photos[0];
 }
 async function createDriver(data) {
@@ -953,7 +950,7 @@ async function updateDriver(id, updates) {
   const updateData = {};
   if (updates.status) updateData.status = updates.status;
   if (updates.isOnline !== void 0) updateData.isOnline = updates.isOnline;
-  await db.update(drivers).set(updateData).where(eq(drivers.id, id));
+  await db.update(drivers).set(updateData).where((0, import_drizzle_orm.eq)(drivers.id, id));
   return await getDriverById(id);
 }
 async function createDriverVehicle(data) {
@@ -961,7 +958,7 @@ async function createDriverVehicle(data) {
   if (!db) throw new Error("Database not available");
   await db.update(drivers).set({
     vehicleType: data.vehicleType
-  }).where(eq(drivers.id, data.driverId));
+  }).where((0, import_drizzle_orm.eq)(drivers.id, data.driverId));
 }
 async function getDriverVehicles(driverId) {
   const db = await getDb();
@@ -983,13 +980,13 @@ async function createJobOffer(data) {
     wave: data.wave,
     expiresAt: data.expiresAt
   });
-  const result = await db.select().from(jobOffers).where(eq(jobOffers.id, id)).limit(1);
+  const result = await db.select().from(jobOffers).where((0, import_drizzle_orm.eq)(jobOffers.id, id)).limit(1);
   return result[0];
 }
 async function getJobOffers(jobId) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(jobOffers).where(eq(jobOffers.jobId, jobId));
+  return await db.select().from(jobOffers).where((0, import_drizzle_orm.eq)(jobOffers.jobId, jobId));
 }
 async function updateJobOffer(id, updates) {
   const db = await getDb();
@@ -997,8 +994,8 @@ async function updateJobOffer(id, updates) {
   const updateData = {};
   if (updates.status) updateData.status = updates.status;
   if (updates.respondedAt) updateData.respondedAt = updates.respondedAt;
-  await db.update(jobOffers).set(updateData).where(eq(jobOffers.id, id));
-  const result = await db.select().from(jobOffers).where(eq(jobOffers.id, id)).limit(1);
+  await db.update(jobOffers).set(updateData).where((0, import_drizzle_orm.eq)(jobOffers.id, id));
+  const result = await db.select().from(jobOffers).where((0, import_drizzle_orm.eq)(jobOffers.id, id)).limit(1);
   return result[0];
 }
 async function createJobAssignment(data) {
@@ -1008,7 +1005,7 @@ async function createJobAssignment(data) {
     jobId: data.jobId,
     driverId: data.driverId
   });
-  const result = await db.select().from(jobAssignments).where(eq(jobAssignments.jobId, data.jobId)).limit(1);
+  const result = await db.select().from(jobAssignments).where((0, import_drizzle_orm.eq)(jobAssignments.jobId, data.jobId)).limit(1);
   return result[0];
 }
 async function createPayout(data) {
@@ -1023,13 +1020,15 @@ async function createPayout(data) {
     disposalReimbursement: data.disposalReimbursement,
     totalAmount: data.totalAmount
   });
-  const result = await db.select().from(payouts).where(eq(payouts.id, id)).limit(1);
+  const result = await db.select().from(payouts).where((0, import_drizzle_orm.eq)(payouts.id, id)).limit(1);
   return result[0];
 }
-var _db;
+var import_drizzle_orm, import_mysql2, _db;
 var init_db = __esm({
   "server/db.ts"() {
     "use strict";
+    import_drizzle_orm = require("drizzle-orm");
+    import_mysql2 = require("drizzle-orm/mysql2");
     init_schema();
     init_env();
     _db = null;
@@ -1037,31 +1036,32 @@ var init_db = __esm({
 });
 
 // vite.config.ts
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
-import { defineConfig } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
-var plugins, vite_config_default;
+var import_vite_plugin_jsx_loc, import_vite, import_plugin_react, import_path, import_vite2, import_vite_plugin_manus_runtime, import_meta, plugins, vite_config_default;
 var init_vite_config = __esm({
   "vite.config.ts"() {
     "use strict";
-    plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
-    vite_config_default = defineConfig({
+    import_vite_plugin_jsx_loc = require("@builder.io/vite-plugin-jsx-loc");
+    import_vite = __toESM(require("@tailwindcss/vite"), 1);
+    import_plugin_react = __toESM(require("@vitejs/plugin-react"), 1);
+    import_path = __toESM(require("path"), 1);
+    import_vite2 = require("vite");
+    import_vite_plugin_manus_runtime = require("vite-plugin-manus-runtime");
+    import_meta = {};
+    plugins = [(0, import_plugin_react.default)(), (0, import_vite.default)(), (0, import_vite_plugin_jsx_loc.jsxLocPlugin)(), (0, import_vite_plugin_manus_runtime.vitePluginManusRuntime)()];
+    vite_config_default = (0, import_vite2.defineConfig)({
       plugins,
       resolve: {
         alias: {
-          "@": path.resolve(import.meta.dirname, "client", "src"),
-          "@shared": path.resolve(import.meta.dirname, "shared"),
-          "@assets": path.resolve(import.meta.dirname, "attached_assets")
+          "@": import_path.default.resolve(import_meta.dirname, "client", "src"),
+          "@shared": import_path.default.resolve(import_meta.dirname, "shared"),
+          "@assets": import_path.default.resolve(import_meta.dirname, "attached_assets")
         }
       },
-      envDir: path.resolve(import.meta.dirname),
-      root: path.resolve(import.meta.dirname, "client"),
-      publicDir: path.resolve(import.meta.dirname, "client", "public"),
+      envDir: import_path.default.resolve(import_meta.dirname),
+      root: import_path.default.resolve(import_meta.dirname, "client"),
+      publicDir: import_path.default.resolve(import_meta.dirname, "client", "public"),
       build: {
-        outDir: path.resolve(import.meta.dirname, "dist/public"),
+        outDir: import_path.default.resolve(import_meta.dirname, "dist/public"),
         emptyOutDir: true
       },
       server: {
@@ -1090,18 +1090,13 @@ __export(vite_exports, {
   serveStatic: () => serveStatic,
   setupVite: () => setupVite
 });
-import express from "express";
-import fs from "fs";
-import { nanoid as nanoid2 } from "nanoid";
-import path2 from "path";
-import { createServer as createViteServer } from "vite";
 async function setupVite(app, server) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true
   };
-  const vite = await createViteServer({
+  const vite = await (0, import_vite3.createServer)({
     ...vite_config_default,
     configFile: false,
     server: serverOptions,
@@ -1111,16 +1106,16 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path2.resolve(
-        import.meta.dirname,
+      const clientTemplate = import_path2.default.resolve(
+        import_meta2.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      let template = await import_fs.default.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid2()}"`
+        `src="/src/main.tsx?v=${(0, import_nanoid2.nanoid)()}"`
       );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
@@ -1131,30 +1126,37 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = process.env.NODE_ENV === "development" ? path2.resolve(import.meta.dirname, "../..", "dist", "public") : path2.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
+  const distPath = process.env.NODE_ENV === "development" ? import_path2.default.resolve(import_meta2.dirname, "../..", "dist", "public") : import_path2.default.resolve(import_meta2.dirname, "public");
+  if (!import_fs.default.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
-  app.use(express.static(distPath));
+  app.use(import_express4.default.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
+    res.sendFile(import_path2.default.resolve(distPath, "index.html"));
   });
 }
+var import_express4, import_fs, import_nanoid2, import_path2, import_vite3, import_meta2;
 var init_vite = __esm({
   "server/_core/vite.ts"() {
     "use strict";
+    import_express4 = __toESM(require("express"), 1);
+    import_fs = __toESM(require("fs"), 1);
+    import_nanoid2 = require("nanoid");
+    import_path2 = __toESM(require("path"), 1);
+    import_vite3 = require("vite");
     init_vite_config();
+    import_meta2 = {};
   }
 });
 
 // server/_core/index.ts
-import "dotenv/config";
-import express2 from "express";
-import { createServer } from "http";
-import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
+var import_config = require("dotenv/config");
+var import_express5 = __toESM(require("express"), 1);
+var import_http = require("http");
+var import_net = __toESM(require("net"), 1);
+var import_express6 = require("@trpc/server/adapters/express");
 
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
@@ -1194,11 +1196,11 @@ var HttpError = class extends Error {
 var ForbiddenError = (msg) => new HttpError(403, msg);
 
 // server/_core/sdk.ts
+var import_axios = __toESM(require("axios"), 1);
+var import_cookie = require("cookie");
+var import_jose = require("jose");
 init_db();
 init_env();
-import axios from "axios";
-import { parse as parseCookieHeader } from "cookie";
-import { SignJWT, jwtVerify } from "jose";
 var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
 var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -1240,7 +1242,7 @@ var OAuthService = class {
     return data;
   }
 };
-var createOAuthHttpClient = () => axios.create({
+var createOAuthHttpClient = () => import_axios.default.create({
   baseURL: ENV.oAuthServerUrl,
   timeout: AXIOS_TIMEOUT_MS
 });
@@ -1297,7 +1299,7 @@ var SDKServer = class {
     if (!cookieHeader) {
       return /* @__PURE__ */ new Map();
     }
-    const parsed = parseCookieHeader(cookieHeader);
+    const parsed = (0, import_cookie.parse)(cookieHeader);
     return new Map(Object.entries(parsed));
   }
   getSessionSecret() {
@@ -1324,7 +1326,7 @@ var SDKServer = class {
     const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1e3);
     const secretKey = this.getSessionSecret();
-    return new SignJWT({
+    return new import_jose.SignJWT({
       openId: payload.openId,
       appId: payload.appId,
       name: payload.name
@@ -1337,7 +1339,7 @@ var SDKServer = class {
     }
     try {
       const secretKey = this.getSessionSecret();
-      const { payload } = await jwtVerify(cookieValue, secretKey, {
+      const { payload } = await (0, import_jose.jwtVerify)(cookieValue, secretKey, {
         algorithms: ["HS256"]
       });
       const { openId, appId, name } = payload;
@@ -1454,11 +1456,11 @@ function registerOAuthRoutes(app) {
 }
 
 // server/_core/systemRouter.ts
-import { z } from "zod";
+var import_zod = require("zod");
 
 // server/_core/notification.ts
+var import_server = require("@trpc/server");
 init_env();
-import { TRPCError } from "@trpc/server";
 var TITLE_MAX_LENGTH = 1200;
 var CONTENT_MAX_LENGTH = 2e4;
 var trimValue = (value) => value.trim();
@@ -1472,13 +1474,13 @@ var buildEndpointUrl = (baseUrl) => {
 };
 var validatePayload = (input) => {
   if (!isNonEmptyString2(input.title)) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: "Notification title is required."
     });
   }
   if (!isNonEmptyString2(input.content)) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: "Notification content is required."
     });
@@ -1486,13 +1488,13 @@ var validatePayload = (input) => {
   const title = trimValue(input.title);
   const content = trimValue(input.content);
   if (title.length > TITLE_MAX_LENGTH) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
     });
   }
   if (content.length > CONTENT_MAX_LENGTH) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "BAD_REQUEST",
       message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
     });
@@ -1502,13 +1504,13 @@ var validatePayload = (input) => {
 async function notifyOwner(payload) {
   const { title, content } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service URL is not configured."
     });
   }
   if (!ENV.forgeApiKey) {
-    throw new TRPCError({
+    throw new import_server.TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service API key is not configured."
     });
@@ -1540,17 +1542,17 @@ async function notifyOwner(payload) {
 }
 
 // server/_core/trpc.ts
-import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
-import superjson from "superjson";
-var t = initTRPC.context().create({
-  transformer: superjson
+var import_server2 = require("@trpc/server");
+var import_superjson = __toESM(require("superjson"), 1);
+var t = import_server2.initTRPC.context().create({
+  transformer: import_superjson.default
 });
 var router = t.router;
 var publicProcedure = t.procedure;
 var requireUser = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    throw new import_server2.TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
   return next({
     ctx: {
@@ -1564,7 +1566,7 @@ var adminProcedure = t.procedure.use(
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
     if (!ctx.user || ctx.user.role !== "admin") {
-      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      throw new import_server2.TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
     return next({
       ctx: {
@@ -1578,16 +1580,16 @@ var adminProcedure = t.procedure.use(
 // server/_core/systemRouter.ts
 var systemRouter = router({
   health: publicProcedure.input(
-    z.object({
-      timestamp: z.number().min(0, "timestamp cannot be negative")
+    import_zod.z.object({
+      timestamp: import_zod.z.number().min(0, "timestamp cannot be negative")
     })
   ).query(() => ({
     ok: true
   })),
   notifyOwner: adminProcedure.input(
-    z.object({
-      title: z.string().min(1, "title is required"),
-      content: z.string().min(1, "content is required")
+    import_zod.z.object({
+      title: import_zod.z.string().min(1, "title is required"),
+      content: import_zod.z.string().min(1, "content is required")
     })
   ).mutation(async ({ input }) => {
     const delivered = await notifyOwner(input);
@@ -1598,19 +1600,19 @@ var systemRouter = router({
 });
 
 // server/routers/serviceAreas.ts
-import { z as z2 } from "zod";
+var import_zod2 = require("zod");
+var import_server3 = require("@trpc/server");
 init_db();
-import { TRPCError as TRPCError3 } from "@trpc/server";
 var serviceAreasRouter = router({
   // Public: Get all service areas
   list: publicProcedure.query(async () => {
     return await getAllServiceAreas();
   }),
   // Public: Get service area by ID
-  getById: publicProcedure.input(z2.object({ id: z2.string() })).query(async ({ input }) => {
+  getById: publicProcedure.input(import_zod2.z.object({ id: import_zod2.z.string() })).query(async ({ input }) => {
     const area = await getServiceAreaById(input.id);
     if (!area) {
-      throw new TRPCError3({
+      throw new import_server3.TRPCError({
         code: "NOT_FOUND",
         message: "Service area not found"
       });
@@ -1619,9 +1621,9 @@ var serviceAreasRouter = router({
   }),
   // Public: Check if coordinates are within service area
   checkCoverage: publicProcedure.input(
-    z2.object({
-      latitude: z2.number().min(-90).max(90),
-      longitude: z2.number().min(-180).max(180)
+    import_zod2.z.object({
+      latitude: import_zod2.z.number().min(-90).max(90),
+      longitude: import_zod2.z.number().min(-180).max(180)
     })
   ).query(async ({ input }) => {
     const area = await findServiceAreaByCoordinates(
@@ -1635,46 +1637,46 @@ var serviceAreasRouter = router({
   }),
   // Admin: Create service area
   create: protectedProcedure.input(
-    z2.object({
-      name: z2.string().min(1),
-      state: z2.string().length(2),
-      type: z2.enum(["radius", "polygon"]),
-      centerLat: z2.number().min(-90).max(90),
-      centerLng: z2.number().min(-180).max(180),
-      radiusMiles: z2.number().positive().optional(),
-      polygonGeoJson: z2.any().optional(),
-      isActive: z2.boolean().default(true)
+    import_zod2.z.object({
+      name: import_zod2.z.string().min(1),
+      state: import_zod2.z.string().length(2),
+      type: import_zod2.z.enum(["radius", "polygon"]),
+      centerLat: import_zod2.z.number().min(-90).max(90),
+      centerLng: import_zod2.z.number().min(-180).max(180),
+      radiusMiles: import_zod2.z.number().positive().optional(),
+      polygonGeoJson: import_zod2.z.any().optional(),
+      isActive: import_zod2.z.boolean().default(true)
     })
   ).mutation(async ({ input, ctx }) => {
     return await createServiceArea(input);
   }),
   // Admin: Update service area
   update: protectedProcedure.input(
-    z2.object({
-      id: z2.string(),
-      name: z2.string().min(1).optional(),
-      state: z2.string().length(2).optional(),
-      type: z2.enum(["radius", "polygon"]).optional(),
-      centerLat: z2.number().min(-90).max(90).optional(),
-      centerLng: z2.number().min(-180).max(180).optional(),
-      radiusMiles: z2.number().positive().optional(),
-      polygonGeoJson: z2.any().optional(),
-      isActive: z2.boolean().optional()
+    import_zod2.z.object({
+      id: import_zod2.z.string(),
+      name: import_zod2.z.string().min(1).optional(),
+      state: import_zod2.z.string().length(2).optional(),
+      type: import_zod2.z.enum(["radius", "polygon"]).optional(),
+      centerLat: import_zod2.z.number().min(-90).max(90).optional(),
+      centerLng: import_zod2.z.number().min(-180).max(180).optional(),
+      radiusMiles: import_zod2.z.number().positive().optional(),
+      polygonGeoJson: import_zod2.z.any().optional(),
+      isActive: import_zod2.z.boolean().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const { id, ...updates } = input;
     return await updateServiceArea(id, updates);
   }),
   // Admin: Delete service area
-  delete: protectedProcedure.input(z2.object({ id: z2.string() })).mutation(async ({ input, ctx }) => {
+  delete: protectedProcedure.input(import_zod2.z.object({ id: import_zod2.z.string() })).mutation(async ({ input, ctx }) => {
     return await deleteServiceArea(input.id);
   })
 });
 
 // server/routers/pricing.ts
-import { z as z3 } from "zod";
+var import_zod3 = require("zod");
+var import_server4 = require("@trpc/server");
 init_db();
-import { TRPCError as TRPCError4 } from "@trpc/server";
 var VOLUME_TIERS = {
   "1_8": { min: 0, max: 3, label: "1/8 truck" },
   "1_4": { min: 3, max: 6, label: "1/4 truck" },
@@ -1703,23 +1705,23 @@ function getVolumeTier(cubicYards) {
 var pricingRouter = router({
   // Calculate quote for HAUL_AWAY service
   calculateHaulAway: publicProcedure.input(
-    z3.object({
-      serviceAreaId: z3.string(),
-      volumeCubicYards: z3.number().positive(),
-      distanceMiles: z3.number().nonnegative(),
-      addonIds: z3.array(z3.number()).optional()
+    import_zod3.z.object({
+      serviceAreaId: import_zod3.z.string(),
+      volumeCubicYards: import_zod3.z.number().positive(),
+      distanceMiles: import_zod3.z.number().nonnegative(),
+      addonIds: import_zod3.z.array(import_zod3.z.number()).optional()
     })
   ).mutation(async ({ input }) => {
     const serviceArea = await getServiceAreaById(input.serviceAreaId);
     if (!serviceArea) {
-      throw new TRPCError4({
+      throw new import_server4.TRPCError({
         code: "NOT_FOUND",
         message: "Service area not found"
       });
     }
     const volumeTier = getVolumeTier(input.volumeCubicYards);
     if (!volumeTier) {
-      throw new TRPCError4({
+      throw new import_server4.TRPCError({
         code: "BAD_REQUEST",
         message: "Invalid volume amount"
       });
@@ -1803,23 +1805,23 @@ var pricingRouter = router({
   }),
   // Calculate quote for LABOR_ONLY service
   calculateLaborOnly: publicProcedure.input(
-    z3.object({
-      serviceAreaId: z3.string(),
-      hours: z3.number().min(2),
+    import_zod3.z.object({
+      serviceAreaId: import_zod3.z.string(),
+      hours: import_zod3.z.number().min(2),
       // 2-hour minimum
-      distanceMiles: z3.number().nonnegative()
+      distanceMiles: import_zod3.z.number().nonnegative()
     })
   ).mutation(async ({ input }) => {
     const serviceArea = await getServiceAreaById(input.serviceAreaId);
     if (!serviceArea) {
-      throw new TRPCError4({
+      throw new import_server4.TRPCError({
         code: "NOT_FOUND",
         message: "Service area not found"
       });
     }
     const laborRates2 = await getLaborRates(input.serviceAreaId);
     if (laborRates2.length === 0) {
-      throw new TRPCError4({
+      throw new import_server4.TRPCError({
         code: "NOT_FOUND",
         message: "No labor rates configured for this service area"
       });
@@ -1874,7 +1876,7 @@ var pricingRouter = router({
     };
   }),
   // Get available addons for service area
-  getAddons: publicProcedure.input(z3.object({ serviceAreaId: z3.string() })).query(async ({ input }) => {
+  getAddons: publicProcedure.input(import_zod3.z.object({ serviceAreaId: import_zod3.z.string() })).query(async ({ input }) => {
     const addons2 = await getAddons(input.serviceAreaId);
     return addons2.map((addon) => {
       const addonInfo = ADDON_LABELS[addon.addonType] || {
@@ -1893,35 +1895,35 @@ var pricingRouter = router({
 });
 
 // server/routers/jobs.ts
-import { z as z4 } from "zod";
+var import_zod4 = require("zod");
+var import_server5 = require("@trpc/server");
 init_db();
-import { TRPCError as TRPCError5 } from "@trpc/server";
 var jobsRouter = router({
   // Create a new job (customer)
   create: protectedProcedure.input(
-    z4.object({
-      serviceAreaId: z4.string(),
-      serviceType: z4.enum(["HAUL_AWAY", "LABOR_ONLY"]),
-      pickupAddress: z4.string(),
-      pickupLat: z4.number(),
-      pickupLon: z4.number(),
-      scheduledFor: z4.string().optional(),
+    import_zod4.z.object({
+      serviceAreaId: import_zod4.z.string(),
+      serviceType: import_zod4.z.enum(["HAUL_AWAY", "LABOR_ONLY"]),
+      pickupAddress: import_zod4.z.string(),
+      pickupLat: import_zod4.z.number(),
+      pickupLon: import_zod4.z.number(),
+      scheduledFor: import_zod4.z.string().optional(),
       // ISO date string
-      specialInstructions: z4.string().optional(),
+      specialInstructions: import_zod4.z.string().optional(),
       // Haul Away specific
-      volumeCubicYards: z4.number().optional(),
-      volumeTier: z4.enum(["1_8", "1_4", "1_2", "3_4", "full"]).optional(),
-      addonIds: z4.array(z4.number()).optional(),
+      volumeCubicYards: import_zod4.z.number().optional(),
+      volumeTier: import_zod4.z.enum(["1_8", "1_4", "1_2", "3_4", "full"]).optional(),
+      addonIds: import_zod4.z.array(import_zod4.z.number()).optional(),
       // Labor Only specific
-      estimatedHours: z4.number().optional(),
+      estimatedHours: import_zod4.z.number().optional(),
       // Pricing
-      subtotal: z4.number(),
-      platformFee: z4.number(),
-      totalAmount: z4.number()
+      subtotal: import_zod4.z.number(),
+      platformFee: import_zod4.z.number(),
+      totalAmount: import_zod4.z.number()
     })
   ).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError5({ code: "UNAUTHORIZED" });
+      throw new import_server5.TRPCError({ code: "UNAUTHORIZED" });
     }
     let customer = await getCustomerByUserId(ctx.user.id);
     if (!customer) {
@@ -1930,7 +1932,7 @@ var jobsRouter = router({
       });
     }
     if (!customer) {
-      throw new TRPCError5({
+      throw new import_server5.TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create customer"
       });
@@ -1950,7 +1952,7 @@ var jobsRouter = router({
       totalAmount: input.totalAmount.toString()
     });
     if (!job) {
-      throw new TRPCError5({
+      throw new import_server5.TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create job"
       });
@@ -1972,21 +1974,21 @@ var jobsRouter = router({
     return job;
   }),
   // Get job by ID
-  getById: protectedProcedure.input(z4.object({ id: z4.string() })).query(async ({ input, ctx }) => {
+  getById: protectedProcedure.input(import_zod4.z.object({ id: import_zod4.z.string() })).query(async ({ input, ctx }) => {
     const job = await getJobById(input.id);
     if (!job) {
-      throw new TRPCError5({ code: "NOT_FOUND", message: "Job not found" });
+      throw new import_server5.TRPCError({ code: "NOT_FOUND", message: "Job not found" });
     }
     return job;
   }),
   // List jobs (with filters)
   list: protectedProcedure.input(
-    z4.object({
-      status: z4.string().optional(),
-      customerId: z4.number().optional(),
-      driverId: z4.number().optional(),
-      limit: z4.number().min(1).max(100).default(20),
-      offset: z4.number().min(0).default(0)
+    import_zod4.z.object({
+      status: import_zod4.z.string().optional(),
+      customerId: import_zod4.z.number().optional(),
+      driverId: import_zod4.z.number().optional(),
+      limit: import_zod4.z.number().min(1).max(100).default(20),
+      offset: import_zod4.z.number().min(0).default(0)
     }).optional()
   ).query(async ({ input, ctx }) => {
     const filters = input || {};
@@ -1994,9 +1996,9 @@ var jobsRouter = router({
   }),
   // Update job status
   updateStatus: protectedProcedure.input(
-    z4.object({
-      id: z4.string(),
-      status: z4.enum([
+    import_zod4.z.object({
+      id: import_zod4.z.string(),
+      status: import_zod4.z.enum([
         "draft",
         "quoted",
         "dispatching",
@@ -2014,21 +2016,21 @@ var jobsRouter = router({
   }),
   // Process payment for job
   pay: protectedProcedure.input(
-    z4.object({
-      jobId: z4.string(),
-      paymentMethod: z4.string(),
-      paymentIntentId: z4.string().optional()
+    import_zod4.z.object({
+      jobId: import_zod4.z.string(),
+      paymentMethod: import_zod4.z.string(),
+      paymentIntentId: import_zod4.z.string().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError5({ code: "UNAUTHORIZED" });
+      throw new import_server5.TRPCError({ code: "UNAUTHORIZED" });
     }
     const job = await getJobById(input.jobId);
     if (!job) {
-      throw new TRPCError5({ code: "NOT_FOUND", message: "Job not found" });
+      throw new import_server5.TRPCError({ code: "NOT_FOUND", message: "Job not found" });
     }
     if (job.status !== "draft" && job.status !== "quoted") {
-      throw new TRPCError5({
+      throw new import_server5.TRPCError({
         code: "BAD_REQUEST",
         message: "Job has already been paid or cancelled"
       });
@@ -2050,14 +2052,14 @@ var jobsRouter = router({
   }),
   // Cancel job
   cancel: protectedProcedure.input(
-    z4.object({
-      jobId: z4.string(),
-      reason: z4.string().optional()
+    import_zod4.z.object({
+      jobId: import_zod4.z.string(),
+      reason: import_zod4.z.string().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const job = await getJobById(input.jobId);
     if (!job) {
-      throw new TRPCError5({ code: "NOT_FOUND", message: "Job not found" });
+      throw new import_server5.TRPCError({ code: "NOT_FOUND", message: "Job not found" });
     }
     return await updateJob(job.id, {
       status: "cancelled",
@@ -2068,8 +2070,8 @@ var jobsRouter = router({
 });
 
 // server/routers/media.ts
-import { z as z5 } from "zod";
-import { TRPCError as TRPCError6 } from "@trpc/server";
+var import_zod5 = require("zod");
+var import_server6 = require("@trpc/server");
 
 // server/storage.ts
 init_env();
@@ -2128,14 +2130,14 @@ init_db();
 var mediaRouter = router({
   // Generate upload URL for client-side upload
   getUploadUrl: protectedProcedure.input(
-    z5.object({
-      filename: z5.string(),
-      contentType: z5.string(),
-      jobId: z5.string().optional()
+    import_zod5.z.object({
+      filename: import_zod5.z.string(),
+      contentType: import_zod5.z.string(),
+      jobId: import_zod5.z.string().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError6({ code: "UNAUTHORIZED" });
+      throw new import_server6.TRPCError({ code: "UNAUTHORIZED" });
     }
     const timestamp2 = Date.now();
     const random = Math.random().toString(36).substring(7);
@@ -2148,17 +2150,17 @@ var mediaRouter = router({
   }),
   // Upload file (called from client)
   upload: protectedProcedure.input(
-    z5.object({
-      fileKey: z5.string(),
-      fileData: z5.string(),
+    import_zod5.z.object({
+      fileKey: import_zod5.z.string(),
+      fileData: import_zod5.z.string(),
       // Base64 encoded
-      contentType: z5.string(),
-      jobId: z5.string().optional(),
-      photoType: z5.string().optional()
+      contentType: import_zod5.z.string(),
+      jobId: import_zod5.z.string().optional(),
+      photoType: import_zod5.z.string().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError6({ code: "UNAUTHORIZED" });
+      throw new import_server6.TRPCError({ code: "UNAUTHORIZED" });
     }
     const buffer = Buffer.from(input.fileData, "base64");
     const result = await storagePut(input.fileKey, buffer, input.contentType);
@@ -2178,9 +2180,9 @@ var mediaRouter = router({
   }),
   // Get photos for a job
   getJobPhotos: protectedProcedure.input(
-    z5.object({
-      jobId: z5.string(),
-      photoType: z5.string().optional()
+    import_zod5.z.object({
+      jobId: import_zod5.z.string(),
+      photoType: import_zod5.z.string().optional()
     })
   ).query(async ({ input, ctx }) => {
     return await getJobPhotos(input.jobId, input.photoType);
@@ -2188,35 +2190,35 @@ var mediaRouter = router({
 });
 
 // server/routers/drivers.ts
-import { z as z6 } from "zod";
+var import_zod6 = require("zod");
+var import_server7 = require("@trpc/server");
 init_db();
-import { TRPCError as TRPCError7 } from "@trpc/server";
 var driversRouter = router({
   // Driver onboarding (create driver profile)
   onboard: protectedProcedure.input(
-    z6.object({
-      licenseNumber: z6.string(),
-      licenseState: z6.string(),
-      licenseExpiry: z6.string(),
+    import_zod6.z.object({
+      licenseNumber: import_zod6.z.string(),
+      licenseState: import_zod6.z.string(),
+      licenseExpiry: import_zod6.z.string(),
       // ISO date
-      vehicleType: z6.string(),
-      vehicleMake: z6.string(),
-      vehicleModel: z6.string(),
-      vehicleYear: z6.number(),
-      vehiclePlate: z6.string(),
-      vehicleState: z6.string(),
-      insuranceProvider: z6.string(),
-      insurancePolicy: z6.string(),
-      insuranceExpiry: z6.string()
+      vehicleType: import_zod6.z.string(),
+      vehicleMake: import_zod6.z.string(),
+      vehicleModel: import_zod6.z.string(),
+      vehicleYear: import_zod6.z.number(),
+      vehiclePlate: import_zod6.z.string(),
+      vehicleState: import_zod6.z.string(),
+      insuranceProvider: import_zod6.z.string(),
+      insurancePolicy: import_zod6.z.string(),
+      insuranceExpiry: import_zod6.z.string()
       // ISO date
     })
   ).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError7({ code: "UNAUTHORIZED" });
+      throw new import_server7.TRPCError({ code: "UNAUTHORIZED" });
     }
     const existing = await getDriverByUserId(ctx.user.id);
     if (existing) {
-      throw new TRPCError7({
+      throw new import_server7.TRPCError({
         code: "BAD_REQUEST",
         message: "Driver profile already exists"
       });
@@ -2232,7 +2234,7 @@ var driversRouter = router({
       status: "pending_approval"
     });
     if (!driver) {
-      throw new TRPCError7({
+      throw new import_server7.TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create driver profile"
       });
@@ -2255,7 +2257,7 @@ var driversRouter = router({
   // Get driver profile
   getProfile: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError7({ code: "UNAUTHORIZED" });
+      throw new import_server7.TRPCError({ code: "UNAUTHORIZED" });
     }
     const driver = await getDriverByUserId(ctx.user.id);
     if (!driver) {
@@ -2269,17 +2271,17 @@ var driversRouter = router({
   }),
   // Admin: List all drivers
   listAll: protectedProcedure.input(
-    z6.object({
-      status: z6.string().optional(),
-      limit: z6.number().min(1).max(100).default(20),
-      offset: z6.number().min(0).default(0)
+    import_zod6.z.object({
+      status: import_zod6.z.string().optional(),
+      limit: import_zod6.z.number().min(1).max(100).default(20),
+      offset: import_zod6.z.number().min(0).default(0)
     }).optional()
   ).query(async ({ input, ctx }) => {
     const filters = input || {};
     return await getAllDrivers(filters);
   }),
   // Admin: Approve driver
-  approve: protectedProcedure.input(z6.object({ driverId: z6.number() })).mutation(async ({ input, ctx }) => {
+  approve: protectedProcedure.input(import_zod6.z.object({ driverId: import_zod6.z.number() })).mutation(async ({ input, ctx }) => {
     return await updateDriver(input.driverId, {
       status: "approved",
       approvedAt: /* @__PURE__ */ new Date()
@@ -2287,9 +2289,9 @@ var driversRouter = router({
   }),
   // Admin: Reject driver
   reject: protectedProcedure.input(
-    z6.object({
-      driverId: z6.number(),
-      reason: z6.string()
+    import_zod6.z.object({
+      driverId: import_zod6.z.number(),
+      reason: import_zod6.z.string()
     })
   ).mutation(async ({ input, ctx }) => {
     return await updateDriver(input.driverId, {
@@ -2299,17 +2301,17 @@ var driversRouter = router({
   // Driver: Go online
   goOnline: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError7({ code: "UNAUTHORIZED" });
+      throw new import_server7.TRPCError({ code: "UNAUTHORIZED" });
     }
     const driver = await getDriverByUserId(ctx.user.id);
     if (!driver) {
-      throw new TRPCError7({
+      throw new import_server7.TRPCError({
         code: "NOT_FOUND",
         message: "Driver profile not found"
       });
     }
     if (driver.status !== "approved") {
-      throw new TRPCError7({
+      throw new import_server7.TRPCError({
         code: "FORBIDDEN",
         message: "Driver must be approved to go online"
       });
@@ -2319,11 +2321,11 @@ var driversRouter = router({
   // Driver: Go offline
   goOffline: protectedProcedure.mutation(async ({ ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError7({ code: "UNAUTHORIZED" });
+      throw new import_server7.TRPCError({ code: "UNAUTHORIZED" });
     }
     const driver = await getDriverByUserId(ctx.user.id);
     if (!driver) {
-      throw new TRPCError7({
+      throw new import_server7.TRPCError({
         code: "NOT_FOUND",
         message: "Driver profile not found"
       });
@@ -2331,13 +2333,13 @@ var driversRouter = router({
     return await updateDriver(driver.id, { isOnline: false });
   }),
   // Driver: Cancel order
-  cancelOrder: protectedProcedure.input(z6.object({ orderId: z6.string() })).mutation(async ({ input, ctx }) => {
+  cancelOrder: protectedProcedure.input(import_zod6.z.object({ orderId: import_zod6.z.string() })).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError7({ code: "UNAUTHORIZED" });
+      throw new import_server7.TRPCError({ code: "UNAUTHORIZED" });
     }
     const driver = await getDriverByUserId(ctx.user.id);
     if (!driver) {
-      throw new TRPCError7({
+      throw new import_server7.TRPCError({
         code: "NOT_FOUND",
         message: "Driver profile not found"
       });
@@ -2352,18 +2354,18 @@ var driversRouter = router({
 });
 
 // server/routers/dispatch.ts
-import { z as z7 } from "zod";
+var import_zod7 = require("zod");
+var import_server8 = require("@trpc/server");
 init_db();
-import { TRPCError as TRPCError8 } from "@trpc/server";
 var dispatchRouter = router({
   // Start dispatch process (find drivers)
-  startDispatch: protectedProcedure.input(z7.object({ jobId: z7.string() })).mutation(async ({ input, ctx }) => {
+  startDispatch: protectedProcedure.input(import_zod7.z.object({ jobId: import_zod7.z.string() })).mutation(async ({ input, ctx }) => {
     const job = await getJobById(input.jobId);
     if (!job) {
-      throw new TRPCError8({ code: "NOT_FOUND", message: "Job not found" });
+      throw new import_server8.TRPCError({ code: "NOT_FOUND", message: "Job not found" });
     }
     if (job.status !== "dispatching") {
-      throw new TRPCError8({
+      throw new import_server8.TRPCError({
         code: "BAD_REQUEST",
         message: "Job must be in dispatching status"
       });
@@ -2396,16 +2398,16 @@ var dispatchRouter = router({
     };
   }),
   // Driver accepts offer
-  acceptOffer: protectedProcedure.input(z7.object({ offerId: z7.string() })).mutation(async ({ input, ctx }) => {
+  acceptOffer: protectedProcedure.input(import_zod7.z.object({ offerId: import_zod7.z.string() })).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new import_server8.TRPCError({ code: "UNAUTHORIZED" });
     }
     const offer = await updateJobOffer(input.offerId, {
       status: "accepted",
       respondedAt: /* @__PURE__ */ new Date()
     });
     if (!offer) {
-      throw new TRPCError8({ code: "NOT_FOUND", message: "Offer not found" });
+      throw new import_server8.TRPCError({ code: "NOT_FOUND", message: "Offer not found" });
     }
     await createJobAssignment({
       jobId: offer.jobId,
@@ -2418,9 +2420,9 @@ var dispatchRouter = router({
     };
   }),
   // Driver rejects offer
-  rejectOffer: protectedProcedure.input(z7.object({ offerId: z7.string() })).mutation(async ({ input, ctx }) => {
+  rejectOffer: protectedProcedure.input(import_zod7.z.object({ offerId: import_zod7.z.string() })).mutation(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new import_server8.TRPCError({ code: "UNAUTHORIZED" });
     }
     await updateJobOffer(input.offerId, {
       status: "rejected",
@@ -2431,31 +2433,31 @@ var dispatchRouter = router({
   // Get pending offers for driver
   getMyOffers: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError8({ code: "UNAUTHORIZED" });
+      throw new import_server8.TRPCError({ code: "UNAUTHORIZED" });
     }
     return [];
   })
 });
 
 // server/routers/ledger.ts
-import { z as z8 } from "zod";
+var import_zod8 = require("zod");
+var import_server9 = require("@trpc/server");
 init_db();
-import { TRPCError as TRPCError9 } from "@trpc/server";
 var ledgerRouter = router({
   // Finalize job and create payout
   finalizeJob: protectedProcedure.input(
-    z8.object({
-      jobId: z8.string(),
-      disposalCostActual: z8.number().optional(),
-      disposalReceiptUrl: z8.string().optional()
+    import_zod8.z.object({
+      jobId: import_zod8.z.string(),
+      disposalCostActual: import_zod8.z.number().optional(),
+      disposalReceiptUrl: import_zod8.z.string().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const job = await getJobById(input.jobId);
     if (!job) {
-      throw new TRPCError9({ code: "NOT_FOUND", message: "Job not found" });
+      throw new import_server9.TRPCError({ code: "NOT_FOUND", message: "Job not found" });
     }
     if (job.status !== "completed") {
-      throw new TRPCError9({
+      throw new import_server9.TRPCError({
         code: "BAD_REQUEST",
         message: "Job must be completed before finalization"
       });
@@ -2489,49 +2491,49 @@ var ledgerRouter = router({
   }),
   // Get payout history for driver
   getMyPayouts: protectedProcedure.input(
-    z8.object({
-      limit: z8.number().min(1).max(100).default(20),
-      offset: z8.number().min(0).default(0)
+    import_zod8.z.object({
+      limit: import_zod8.z.number().min(1).max(100).default(20),
+      offset: import_zod8.z.number().min(0).default(0)
     }).optional()
   ).query(async ({ input, ctx }) => {
     if (!ctx.user) {
-      throw new TRPCError9({ code: "UNAUTHORIZED" });
+      throw new import_server9.TRPCError({ code: "UNAUTHORIZED" });
     }
     return [];
   })
 });
 
 // server/routers/items.ts
-import { z as z9 } from "zod";
+var import_zod9 = require("zod");
 init_db();
 init_schema();
-import { eq as eq2, and as and2, isNull, or } from "drizzle-orm";
-import { nanoid } from "nanoid";
-var ItemSchema = z9.object({
-  id: z9.number(),
-  name: z9.string(),
-  slug: z9.string().nullable(),
-  description: z9.string().nullable(),
-  category: z9.string().nullable(),
-  parentId: z9.number().nullable(),
-  basePrice: z9.string(),
-  isPopular: z9.boolean().nullable(),
-  displayOrder: z9.number().nullable(),
-  sortOrder: z9.number().nullable(),
-  imageUrl: z9.string().nullable(),
-  createdAt: z9.date(),
-  updatedAt: z9.date()
+var import_drizzle_orm2 = require("drizzle-orm");
+var import_nanoid = require("nanoid");
+var ItemSchema = import_zod9.z.object({
+  id: import_zod9.z.number(),
+  name: import_zod9.z.string(),
+  slug: import_zod9.z.string().nullable(),
+  description: import_zod9.z.string().nullable(),
+  category: import_zod9.z.string().nullable(),
+  parentId: import_zod9.z.number().nullable(),
+  basePrice: import_zod9.z.string(),
+  isPopular: import_zod9.z.boolean().nullable(),
+  displayOrder: import_zod9.z.number().nullable(),
+  sortOrder: import_zod9.z.number().nullable(),
+  imageUrl: import_zod9.z.string().nullable(),
+  createdAt: import_zod9.z.date(),
+  updatedAt: import_zod9.z.date()
 });
-var ItemsListOutputSchema = z9.object({
-  items: z9.array(ItemSchema)
+var ItemsListOutputSchema = import_zod9.z.object({
+  items: import_zod9.z.array(ItemSchema)
 });
 var itemsRouter = router({
   // Get items catalog with optional filtering
   list: publicProcedure.input(
-    z9.object({
-      parentId: z9.union([z9.string(), z9.number()]).nullable().optional(),
-      popular: z9.boolean().optional(),
-      category: z9.string().optional()
+    import_zod9.z.object({
+      parentId: import_zod9.z.union([import_zod9.z.string(), import_zod9.z.number()]).nullable().optional(),
+      popular: import_zod9.z.boolean().optional(),
+      category: import_zod9.z.string().optional()
     }).optional()
   ).output(ItemsListOutputSchema).query(async ({ input }) => {
     const db = await getDb();
@@ -2539,25 +2541,25 @@ var itemsRouter = router({
     let conditions = [];
     if (input?.parentId !== void 0) {
       conditions.push(
-        input.parentId === null ? isNull(items.parentId) : eq2(items.parentId, typeof input.parentId === "string" ? parseInt(input.parentId) : input.parentId)
+        input.parentId === null ? (0, import_drizzle_orm2.isNull)(items.parentId) : (0, import_drizzle_orm2.eq)(items.parentId, typeof input.parentId === "string" ? parseInt(input.parentId) : input.parentId)
       );
     }
     if (input?.popular) {
-      conditions.push(eq2(items.isPopular, true));
+      conditions.push((0, import_drizzle_orm2.eq)(items.isPopular, true));
     }
     if (input?.category) {
-      conditions.push(eq2(items.category, input.category));
+      conditions.push((0, import_drizzle_orm2.eq)(items.category, input.category));
     }
-    const result = await db.select().from(items).where(conditions.length > 0 ? and2(...conditions) : void 0).orderBy(items.displayOrder);
+    const result = await db.select().from(items).where(conditions.length > 0 ? (0, import_drizzle_orm2.and)(...conditions) : void 0).orderBy(items.displayOrder);
     return { items: result };
   }),
   // Calculate price for selected items
   calculatePrice: publicProcedure.input(
-    z9.object({
-      items: z9.array(
-        z9.object({
-          id: z9.string(),
-          quantity: z9.number().min(1)
+    import_zod9.z.object({
+      items: import_zod9.z.array(
+        import_zod9.z.object({
+          id: import_zod9.z.string(),
+          quantity: import_zod9.z.number().min(1)
         })
       )
     })
@@ -2566,7 +2568,7 @@ var itemsRouter = router({
     if (!db) throw new Error("Database not available");
     const itemIds = input.items.map((i) => i.id);
     const itemDetails = await db.select().from(items).where(
-      or(...itemIds.map((id) => eq2(items.id, parseInt(id))))
+      (0, import_drizzle_orm2.or)(...itemIds.map((id) => (0, import_drizzle_orm2.eq)(items.id, parseInt(id))))
     );
     let subtotal = 0;
     const breakdown = input.items.map((selectedItem) => {
@@ -2597,14 +2599,14 @@ var itemsRouter = router({
   }),
   // Apply promo code
   applyPromoCode: publicProcedure.input(
-    z9.object({
-      code: z9.string(),
-      subtotal: z9.number()
+    import_zod9.z.object({
+      code: import_zod9.z.string(),
+      subtotal: import_zod9.z.number()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const [promoCode] = await db.select().from(promoCodes).where(eq2(promoCodes.code, input.code.toUpperCase())).limit(1);
+    const [promoCode] = await db.select().from(promoCodes).where((0, import_drizzle_orm2.eq)(promoCodes.code, input.code.toUpperCase())).limit(1);
     if (!promoCode) {
       throw new Error("Invalid promo code");
     }
@@ -2644,42 +2646,42 @@ var itemsRouter = router({
   }),
   // Save quote
   saveQuote: publicProcedure.input(
-    z9.object({
-      customerInfo: z9.object({
-        name: z9.string(),
-        email: z9.string().email(),
-        phone: z9.string()
+    import_zod9.z.object({
+      customerInfo: import_zod9.z.object({
+        name: import_zod9.z.string(),
+        email: import_zod9.z.string().email(),
+        phone: import_zod9.z.string()
       }),
-      serviceAddress: z9.object({
-        street: z9.string(),
-        city: z9.string(),
-        state: z9.string(),
-        zip: z9.string()
+      serviceAddress: import_zod9.z.object({
+        street: import_zod9.z.string(),
+        city: import_zod9.z.string(),
+        state: import_zod9.z.string(),
+        zip: import_zod9.z.string()
       }),
-      items: z9.array(
-        z9.object({
-          id: z9.string(),
-          name: z9.string(),
-          quantity: z9.number(),
-          pricePerUnit: z9.number()
+      items: import_zod9.z.array(
+        import_zod9.z.object({
+          id: import_zod9.z.string(),
+          name: import_zod9.z.string(),
+          quantity: import_zod9.z.number(),
+          pricePerUnit: import_zod9.z.number()
         })
       ),
-      pricing: z9.object({
-        subtotal: z9.number(),
-        tax: z9.number(),
-        discount: z9.number().optional(),
-        total: z9.number()
+      pricing: import_zod9.z.object({
+        subtotal: import_zod9.z.number(),
+        tax: import_zod9.z.number(),
+        discount: import_zod9.z.number().optional(),
+        total: import_zod9.z.number()
       }),
-      promoCode: z9.string().optional()
+      promoCode: import_zod9.z.string().optional()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const quoteId = `HK-${(/* @__PURE__ */ new Date()).getFullYear()}-${nanoid(8).toUpperCase()}`;
+    const quoteId = `HK-${(/* @__PURE__ */ new Date()).getFullYear()}-${(0, import_nanoid.nanoid)(8).toUpperCase()}`;
     const expiresAt = /* @__PURE__ */ new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
     await db.insert(savedQuotes).values({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       quoteId,
       customerName: input.customerInfo.name,
       customerEmail: input.customerInfo.email,
@@ -2705,13 +2707,13 @@ var itemsRouter = router({
   }),
   // Get saved quote
   getQuote: publicProcedure.input(
-    z9.object({
-      quoteId: z9.string()
+    import_zod9.z.object({
+      quoteId: import_zod9.z.string()
     })
   ).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const [quote] = await db.select().from(savedQuotes).where(eq2(savedQuotes.quoteId, input.quoteId)).limit(1);
+    const [quote] = await db.select().from(savedQuotes).where((0, import_drizzle_orm2.eq)(savedQuotes.quoteId, input.quoteId)).limit(1);
     if (!quote) {
       throw new Error("Quote not found");
     }
@@ -2726,28 +2728,28 @@ var itemsRouter = router({
 });
 
 // server/routers/customerAuth.ts
+var import_zod10 = require("zod");
 init_db();
 init_schema();
 init_db();
-import { z as z10 } from "zod";
-import { eq as eq3 } from "drizzle-orm";
-import * as bcrypt from "bcryptjs";
-import * as jwt from "jsonwebtoken";
+var import_drizzle_orm3 = require("drizzle-orm");
+var bcrypt = __toESM(require("bcryptjs"), 1);
+var jwt = __toESM(require("jsonwebtoken"), 1);
 var JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 var customerAuthRouter = router({
   signup: publicProcedure.input(
-    z10.object({
-      name: z10.string(),
-      email: z10.string().email(),
-      password: z10.string().min(6),
-      phone: z10.string().optional()
+    import_zod10.z.object({
+      name: import_zod10.z.string(),
+      email: import_zod10.z.string().email(),
+      password: import_zod10.z.string().min(6),
+      phone: import_zod10.z.string().optional()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) {
       throw new Error("Database not available");
     }
-    const existingUser = await db.select().from(users).where(eq3(users.email, input.email)).limit(1).then((rows) => rows[0]);
+    const existingUser = await db.select().from(users).where((0, import_drizzle_orm3.eq)(users.email, input.email)).limit(1).then((rows) => rows[0]);
     if (existingUser) {
       throw new Error("Email already registered");
     }
@@ -2785,16 +2787,16 @@ var customerAuthRouter = router({
     };
   }),
   login: publicProcedure.input(
-    z10.object({
-      email: z10.string().email(),
-      password: z10.string()
+    import_zod10.z.object({
+      email: import_zod10.z.string().email(),
+      password: import_zod10.z.string()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) {
       throw new Error("Database not available");
     }
-    const user = await db.select().from(users).where(eq3(users.email, input.email)).limit(1).then((rows) => rows[0]);
+    const user = await db.select().from(users).where((0, import_drizzle_orm3.eq)(users.email, input.email)).limit(1).then((rows) => rows[0]);
     if (!user) {
       throw new Error("Invalid email or password");
     }
@@ -2866,8 +2868,8 @@ async function createContext(opts) {
 }
 
 // server/_core/health.ts
-import { Router } from "express";
-var healthRouter = Router();
+var import_express = require("express");
+var healthRouter = (0, import_express.Router)();
 healthRouter.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString(), socketio: "enabled" });
 });
@@ -2917,8 +2919,8 @@ healthRouter.get("/health/db", async (_req, res) => {
 });
 
 // server/_core/driverAuth.ts
-import bcrypt2 from "bcryptjs";
-import jwt2 from "jsonwebtoken";
+var import_bcryptjs = __toESM(require("bcryptjs"), 1);
+var import_jsonwebtoken = __toESM(require("jsonwebtoken"), 1);
 var pgPool = null;
 async function getPgPool() {
   if (pgPool) return pgPool;
@@ -2946,7 +2948,7 @@ function verifyToken(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   try {
-    return jwt2.verify(authHeader.split(" ")[1], process.env.JWT_SECRET || "secret");
+    return import_jsonwebtoken.default.verify(authHeader.split(" ")[1], process.env.JWT_SECRET || "secret");
   } catch (e) {
     return null;
   }
@@ -3165,7 +3167,7 @@ function registerDriverAuthRoutes(app) {
         return res.status(400).json({ error: "Email already registered as driver" });
       }
       const fullName = firstName && lastName ? `${firstName} ${lastName}` : name || "";
-      const hashedPassword = await bcrypt2.hash(password, 10);
+      const hashedPassword = await import_bcryptjs.default.hash(password, 10);
       const insertResult = await pool.query(
         `INSERT INTO users (email, name, phone, password_hash)
          VALUES ($1, $2, $3, $4)
@@ -3195,7 +3197,7 @@ function registerDriverAuthRoutes(app) {
         ]
       );
       const driverId = driverResult.rows[0]?.id;
-      const token = jwt2.sign(
+      const token = import_jsonwebtoken.default.sign(
         { userId, email, role: "driver", driverId },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "7d" }
@@ -3234,7 +3236,7 @@ function registerDriverAuthRoutes(app) {
       if (!user || !user.password_hash) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      const isValid = await bcrypt2.compare(password, user.password_hash);
+      const isValid = await import_bcryptjs.default.compare(password, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
@@ -3246,7 +3248,7 @@ function registerDriverAuthRoutes(app) {
       if (!driver) {
         return res.status(404).json({ error: "Driver profile not found" });
       }
-      const token = jwt2.sign(
+      const token = import_jsonwebtoken.default.sign(
         { userId: user.id, email: user.email, role: "driver", driverId: driver.id },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "7d" }
@@ -3638,7 +3640,7 @@ function registerDriverAuthRoutes(app) {
         )
       `);
       const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
-      const hash2 = await bcrypt2.hash(password, 10);
+      const hash2 = await import_bcryptjs.default.hash(password, 10);
       if (existing.rows.length > 0) {
         await pool.query("UPDATE users SET password_hash = $1, name = $2 WHERE email = $3", [hash2, name || "Admin", email]);
         return res.json({ success: true, message: "Admin user updated" });
@@ -3672,8 +3674,8 @@ function registerDriverAuthRoutes(app) {
 }
 
 // server/_core/adminAuth.ts
-import bcrypt3 from "bcryptjs";
-import jwt3 from "jsonwebtoken";
+var import_bcryptjs2 = __toESM(require("bcryptjs"), 1);
+var import_jsonwebtoken2 = __toESM(require("jsonwebtoken"), 1);
 var pgPool2 = null;
 async function getPgPool2() {
   if (pgPool2) return pgPool2;
@@ -3704,7 +3706,7 @@ function requireAdmin(req, res, next) {
   }
   const token = authHeader.substring(7);
   try {
-    const decoded = jwt3.verify(token, process.env.JWT_SECRET || "secret");
+    const decoded = import_jsonwebtoken2.default.verify(token, process.env.JWT_SECRET || "secret");
     if (decoded.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -3739,11 +3741,11 @@ function registerAdminAuthRoutes(app) {
       if (!adminEmails.includes(email.toLowerCase())) {
         return res.status(403).json({ error: "Admin access required" });
       }
-      const isValid = await bcrypt3.compare(password, user.password_hash);
+      const isValid = await import_bcryptjs2.default.compare(password, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      const token = jwt3.sign(
+      const token = import_jsonwebtoken2.default.sign(
         { userId: user.id, email: user.email, role: "admin" },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "24h" }
@@ -4109,14 +4111,14 @@ function registerAdminApiRoutes(app) {
 }
 
 // server/_core/socket.ts
-import { Server as SocketIOServer } from "socket.io";
+var import_socket = require("socket.io");
 var io = null;
 var connectedUsers = /* @__PURE__ */ new Map();
 var driverSockets = /* @__PURE__ */ new Map();
 var customerSockets = /* @__PURE__ */ new Map();
 var adminSockets = /* @__PURE__ */ new Set();
 function initializeSocket(httpServer) {
-  io = new SocketIOServer(httpServer, {
+  io = new import_socket.Server(httpServer, {
     cors: {
       origin: "*",
       // In production, specify allowed origins
@@ -4209,8 +4211,8 @@ function initializeSocket(httpServer) {
 }
 
 // server/_core/realtime.ts
-import { Router as Router2 } from "express";
-var realtimeRouter = Router2();
+var import_express2 = require("express");
+var realtimeRouter = (0, import_express2.Router)();
 realtimeRouter.get("/api/realtime/health", (req, res) => {
   res.json({ ok: true, realtime: "active" });
 });
@@ -4230,8 +4232,8 @@ realtimeRouter.get("/api/realtime/orders", (req, res) => {
 });
 
 // server/_core/migrate.ts
-import { Router as Router3 } from "express";
-var migrateRouter = Router3();
+var import_express3 = require("express");
+var migrateRouter = (0, import_express3.Router)();
 migrateRouter.post("/migrate/events", async (req, res) => {
   try {
     const { authorization } = req.headers;
@@ -4261,13 +4263,13 @@ migrateRouter.post("/migrate/events", async (req, res) => {
 });
 
 // server/_core/index.ts
+var import_bcryptjs3 = __toESM(require("bcryptjs"), 1);
+var import_jsonwebtoken3 = __toESM(require("jsonwebtoken"), 1);
 init_db();
-import bcrypt4 from "bcryptjs";
-import jwt4 from "jsonwebtoken";
-import { sql as sql2 } from "drizzle-orm";
+var import_drizzle_orm4 = require("drizzle-orm");
 function isPortAvailable(port) {
   return new Promise((resolve) => {
-    const server = net.createServer();
+    const server = import_net.default.createServer();
     server.listen(port, () => {
       server.close(() => resolve(true));
     });
@@ -4283,8 +4285,8 @@ async function findAvailablePort(startPort = 3e3) {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 async function startServer() {
-  const app = express2();
-  const server = createServer(app);
+  const app = (0, import_express5.default)();
+  const server = (0, import_http.createServer)(app);
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowedOrigins = [
@@ -4308,8 +4310,8 @@ async function startServer() {
     }
     next();
   });
-  app.use(express2.json({ limit: "50mb" }));
-  app.use(express2.urlencoded({ limit: "50mb", extended: true }));
+  app.use(import_express5.default.json({ limit: "50mb" }));
+  app.use(import_express5.default.urlencoded({ limit: "50mb", extended: true }));
   app.use(healthRouter);
   app.use(realtimeRouter);
   app.use(migrateRouter);
@@ -4324,15 +4326,15 @@ async function startServer() {
       if (!db) {
         return res.status(500).json({ error: "Database not available" });
       }
-      const existingResult = await db.execute(sql2`
+      const existingResult = await db.execute(import_drizzle_orm4.sql`
         SELECT id FROM users WHERE email = ${email} LIMIT 1
       `);
       const existing = existingResult[0] || [];
       if (existing.length > 0) {
         return res.status(400).json({ error: "Email already registered" });
       }
-      const hashedPassword = await bcrypt4.hash(password, 10);
-      const insertResult = await db.execute(sql2`
+      const hashedPassword = await import_bcryptjs3.default.hash(password, 10);
+      const insertResult = await db.execute(import_drizzle_orm4.sql`
         INSERT INTO users (email, password_hash, role, full_name, created_at, updated_at)
         VALUES (${email}, ${hashedPassword}, 'customer', ${name}, NOW(), NOW())
       `);
@@ -4340,11 +4342,11 @@ async function startServer() {
       if (!userId) {
         return res.status(500).json({ error: "Failed to create user account" });
       }
-      await db.execute(sql2`
+      await db.execute(import_drizzle_orm4.sql`
         INSERT INTO customers (user_id, name, email, created_at)
         VALUES (${userId}, ${name}, ${email}, NOW())
       `);
-      const token = jwt4.sign(
+      const token = import_jsonwebtoken3.default.sign(
         { userId, email, role: "customer" },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "7d" }
@@ -4369,7 +4371,7 @@ async function startServer() {
       if (!db) {
         return res.status(500).json({ error: "Database not available" });
       }
-      const result = await db.execute(sql2`
+      const result = await db.execute(import_drizzle_orm4.sql`
         SELECT id, email, password_hash, full_name, role FROM users WHERE email = ${email} LIMIT 1
       `);
       const rows = result[0] || [];
@@ -4377,11 +4379,11 @@ async function startServer() {
       if (!user || !user.password_hash) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      const isValid = await bcrypt4.compare(password, user.password_hash);
+      const isValid = await import_bcryptjs3.default.compare(password, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      const token = jwt4.sign(
+      const token = import_jsonwebtoken3.default.sign(
         { userId: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "7d" }
@@ -4401,7 +4403,7 @@ async function startServer() {
   registerAdminApiRoutes(app);
   app.use(
     "/api/trpc",
-    createExpressMiddleware({
+    (0, import_express6.createExpressMiddleware)({
       router: appRouter,
       createContext
     })
