@@ -125,8 +125,6 @@ export const driverSignup = async (req: Request, res: Response) => {
         phone: driverPhone,
         passwordHash: hashedPassword,
         status: 'pending',
-        driverStatus: 'pending_review',
-        isActive: 0,
       })
       .returning();
 
