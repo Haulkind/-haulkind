@@ -867,4 +867,28 @@ export function registerDriverAuthRoutes(app: Express) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // POST /driver/orders/:id/cancel - Cancel order
+  app.post('/driver/orders/:id/cancel', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      
+      const orderId = req.params.id;
+      
+      // Update job status to cancelled
+      await pool.query(
+        "UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1",
+        [orderId]
+      );
+      
+      res.json({ success: true, message: 'Order cancelled successfully' });
+    } catch (err: any) {
+      console.error('Cancel order error:', err);
+      res.status(500).json({ error: 'Failed to cancel order' });
+    }
+  });
 }
