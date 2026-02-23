@@ -36,42 +36,16 @@ export const orders = pgTable('orders', {
 });
 
 
-// Drivers table - matches actual database + new columns
+// Drivers table - matches actual database columns ONLY
 export const drivers = pgTable('drivers', {
   id: serial('id').primaryKey(),
-  // Basic info
   name: text('name').notNull(),
   phone: text('phone').notNull(),
   email: text('email').notNull(),
   passwordHash: text('password_hash'),
-  
-  // Identity documents
-  selfiePhoto: text('selfie_photo'),
-  driverLicenseFront: text('driver_license_front'),
-  driverLicenseBack: text('driver_license_back'),
-  licenseExpirationDate: text('license_expiration_date'),
-  
-  // Vehicle info
   vehicleType: text('vehicle_type'),
-  vehicleMake: text('vehicle_make'),
-  vehicleModel: text('vehicle_model'),
-  vehicleYear: text('vehicle_year'),
-  vehicleColor: text('vehicle_color'),
   licensePlate: text('license_plate'),
-  vehicleRegistrationDoc: text('vehicle_registration_doc'),
-  insuranceDoc: text('insurance_doc'),
-  insuranceExpirationDate: text('insurance_expiration_date'),
-  
-  // Compliance status
-  driverStatus: text('driver_status').notNull().default('pending_review'), // pending_review, approved, rejected, needs_more_info, suspended
-  isActive: integer('is_active').notNull().default(0), // 0=inactive, 1=active
-  adminNotes: text('admin_notes'),
-  rejectionReason: text('rejection_reason'),
-  requestedFields: text('requested_fields'), // JSON array of missing fields
-  
-  // Legacy status field (for backward compatibility)
   status: text('status').notNull().default('available'),
-  
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -101,16 +75,4 @@ export const customers = pgTable('customers', {
   address: text('address'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-});
-
-
-// Admin audit log table
-export const adminAuditLog = pgTable('admin_audit_log', {
-  id: serial('id').primaryKey(),
-  adminUserId: integer('admin_user_id').notNull(),
-  actionType: text('action_type').notNull(), // approve_driver, reject_driver, suspend_driver, assign_order, etc
-  targetDriverId: integer('target_driver_id'),
-  targetOrderId: integer('target_order_id'),
-  notes: text('notes'),
-  createdAt: timestamp('created_at').defaultNow(),
 });
