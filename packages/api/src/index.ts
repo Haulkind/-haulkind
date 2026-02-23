@@ -8,7 +8,6 @@ import { db } from "./db/index.js";
 import { orders, drivers, users as usersTable, customers } from "./db/schema.js";
 import * as adminRoutes from "./admin-routes.js";
 import * as driverRoutes from "./driver-routes.js";
-import * as adminDriverRoutes from "./admin-driver-routes.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 const app = express();
@@ -362,11 +361,6 @@ app.post('/jobs', async (req: Request, res: Response) => {
     const customerPhone = req.body.customerPhone || '';
     const customerEmail = req.body.customerEmail || '';
 
-    // Calculate financial breakdown (70/30 split)
-    const totalAmount = total;
-    const driverEarnings = Math.round(totalAmount * 0.70 * 100) / 100;
-    const platformFee = Math.round(totalAmount * 0.30 * 100) / 100;
-
     // Insert order into database
     const insertResult = await db.execute(sql`
       INSERT INTO orders (
@@ -384,12 +378,7 @@ app.post('/jobs', async (req: Request, res: Response) => {
         pickup_time_window,
         items_json,
         pricing_json,
-        status,
-        total_amount,
-        driver_earnings,
-        platform_fee,
-        payment_status,
-        driver_payout_status
+        status
       ) VALUES (
         ${serviceType},
         ${customerName},
@@ -405,12 +394,7 @@ app.post('/jobs', async (req: Request, res: Response) => {
         ${'ALL_DAY'},
         ${JSON.stringify({ volumeTier, addons, photoUrls, customerNotes })},
         ${JSON.stringify({ total, basePrice, addonTotal, disposalIncluded: 50 })},
-        ${'pending'},
-        ${totalAmount},
-        ${driverEarnings},
-        ${platformFee},
-        ${'pending'},
-        ${'unpaid'}
+        ${'pending'}
       )
       RETURNING id
     `);
@@ -747,20 +731,10 @@ app.get("/admin/auth/me", authenticateToken, adminRoutes.requireAdmin, adminRout
 // Admin Stats
 app.get("/admin/stats/overview", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getStatsOverview);
 
-// Admin Drivers (legacy)
+// Admin Drivers
 app.get("/admin/drivers", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getDrivers);
 app.get("/admin/drivers/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getDriver);
 app.put("/admin/drivers/:id/status", authenticateToken, adminRoutes.requireAdmin, adminRoutes.updateDriverStatus);
-
-// Admin Driver Management (compliance)
-app.get("/admin/drivers/list", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.listDrivers);
-app.get("/admin/drivers/:id/details", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.getDriverDetails);
-app.post("/admin/drivers/:id/approve", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.approveDriver);
-app.post("/admin/drivers/:id/reject", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.rejectDriver);
-app.post("/admin/drivers/:id/suspend", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.suspendDriver);
-app.post("/admin/drivers/:id/request-info", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.requestMoreInfo);
-app.post("/admin/drivers/:id/toggle-active", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.toggleDriverActive);
-app.get("/admin/audit-log", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.getAuditLog);
 
 // Admin Customers
 app.get("/admin/customers", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getCustomers);
@@ -770,7 +744,6 @@ app.get("/admin/customers/:id", authenticateToken, adminRoutes.requireAdmin, adm
 app.get("/admin/orders", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrders);
 app.get("/admin/orders/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrder);
 app.put("/admin/orders/:id/assign", authenticateToken, adminRoutes.requireAdmin, adminRoutes.assignOrder);
-app.post("/admin/orders/:id/assign-driver", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.assignOrderToDriver);
 
 // =====================================================
 // DRIVER ROUTES
@@ -800,10 +773,6 @@ app.post("/driver/orders/:id/start", authenticateToken, driverRoutes.requireDriv
 app.post("/driver/orders/:id/complete", authenticateToken, driverRoutes.requireDriver, driverRoutes.completeJob);
 app.post("/driver/orders/:id/cancel", authenticateToken, driverRoutes.requireDriver, driverRoutes.cancelOrder);
 app.post("/driver/orders/:id/start-trip", authenticateToken, driverRoutes.requireDriver, driverRoutes.startTrip);
-
-// Driver Jobs cancel and start-trip aliases
-app.post("/driver/jobs/:id/cancel", authenticateToken, driverRoutes.requireDriver, driverRoutes.cancelOrder);
-app.post("/driver/jobs/:id/start-trip", authenticateToken, driverRoutes.requireDriver, driverRoutes.startTrip);
 
 // Driver Status endpoints (for Expo app)
 app.post("/driver/status/online", authenticateToken, driverRoutes.requireDriver, driverRoutes.updateDriverProfile);
