@@ -7,6 +7,14 @@ export interface Driver {
   email: string;
   phone: string;
   status: 'pending' | 'approved' | 'blocked';
+  driver_status?: 'pending_review' | 'approved' | 'rejected' | 'suspended';
+  is_active?: boolean;
+  selfie_url?: string | null;
+  license_url?: string | null;
+  vehicle_registration_url?: string | null;
+  insurance_url?: string | null;
+  rejection_reason?: string | null;
+  suspension_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -140,6 +148,32 @@ class ApiClient {
     return this.request(`/admin/drivers/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
+    });
+  }
+
+  async approveDriver(id: string): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async rejectDriver(id: string, reason: string): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async suspendDriver(id: string, reason: string): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async activateDriver(id: string): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}/activate`, {
+      method: 'POST',
     });
   }
 
