@@ -62,11 +62,9 @@ export function registerAdminAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // Get user with password_hash
-      // For now, we'll use the users table and check if email is an admin email
-      // In production, you'd want a separate admin_users table or a role column
+      // Get user with password_hash and role
       const result = await pool.query(
-        'SELECT id, email, password_hash, name FROM users WHERE email = $1 LIMIT 1',
+        'SELECT id, email, password_hash, name, role FROM users WHERE email = $1 LIMIT 1',
         [email]
       );
       const user = result.rows[0];
@@ -75,12 +73,8 @@ export function registerAdminAuthRoutes(app: Express) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // Check if this is an admin email (hardcoded for now)
-      // TODO: Add proper role management
-      const adminEmails = [
-        'support@haulkind.com'
-      ];
-      if (!adminEmails.includes(email.toLowerCase())) {
+      // Check if user has admin role
+      if (user.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
       }
 
