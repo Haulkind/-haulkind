@@ -21,6 +21,13 @@ export const orders = pgTable('orders', {
   status: text('status').notNull().default('pending'),
   assignedDriverId: integer('assigned_driver_id'),
   customerNotes: text('customer_notes'),
+  // Financial fields
+  totalAmount: doublePrecision('total_amount'),
+  driverEarnings: doublePrecision('driver_earnings'),
+  platformFee: doublePrecision('platform_fee'),
+  paymentStatus: text('payment_status').default('pending'),
+  driverPayoutStatus: text('driver_payout_status').default('unpaid'),
+  completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
