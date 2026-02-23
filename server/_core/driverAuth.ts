@@ -62,7 +62,15 @@ export function registerDriverAuthRoutes(app: Express) {
           ADD COLUMN IF NOT EXISTS lifting_limit TEXT,
           ADD COLUMN IF NOT EXISTS license_plate TEXT,
           ADD COLUMN IF NOT EXISTS services TEXT,
-          ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT false
+          ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT false,
+          ADD COLUMN IF NOT EXISTS driver_status TEXT DEFAULT 'pending_review',
+          ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+          ADD COLUMN IF NOT EXISTS selfie_url TEXT,
+          ADD COLUMN IF NOT EXISTS license_url TEXT,
+          ADD COLUMN IF NOT EXISTS vehicle_registration_url TEXT,
+          ADD COLUMN IF NOT EXISTS insurance_url TEXT,
+          ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+          ADD COLUMN IF NOT EXISTS suspension_reason TEXT
         `);
         console.log('[DriverAuth] Driver columns ensured');
 
@@ -375,7 +383,7 @@ export function registerDriverAuthRoutes(app: Express) {
       }
 
       const driverResult = await pool.query(
-        'SELECT id, status, first_name, last_name, vehicle_type FROM drivers WHERE email = $1 LIMIT 1',
+        'SELECT id, status, first_name, last_name, vehicle_type, driver_status, is_active, rejection_reason FROM drivers WHERE email = $1 LIMIT 1',
         [email]
       );
       const driver = driverResult.rows[0];
@@ -395,9 +403,12 @@ export function registerDriverAuthRoutes(app: Express) {
         driver: { 
           id: driver.id, 
           status: driver.status,
+          driverStatus: driver.driver_status || 'pending_review',
+          isActive: driver.is_active !== false,
           firstName: driver.first_name,
           lastName: driver.last_name,
-          vehicleType: driver.vehicle_type
+          vehicleType: driver.vehicle_type,
+          rejectionReason: driver.rejection_reason
         } 
       });
     } catch (err: any) {
@@ -447,7 +458,50 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
-  // POST /driver/online - Toggle online/offline status
+  // POST /driver/documents - Upload document URLs (selfie, license, vehicle_registration, insurance)
+  app.post('/driver/documents', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const { selfieUrl, licenseUrl, vehicleRegistrationUrl, insuranceUrl } = req.body;
+
+      const updates: string[] = [];
+      const values: any[] = [];
+      let idx = 1;
+
+      if (selfieUrl !== undefined) { updates.push(`selfie_url = $${idx++}`); values.push(selfieUrl); }
+      if (licenseUrl !== undefined) { updates.push(`license_url = $${idx++}`); values.push(licenseUrl); }
+      if (vehicleRegistrationUrl !== undefined) { updates.push(`vehicle_registration_url = $${idx++}`); values.push(vehicleRegistrationUrl); }
+      if (insuranceUrl !== undefined) { updates.push(`insurance_url = $${idx++}`); values.push(insuranceUrl); }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ error: 'No document URLs provided' });
+      }
+
+      updates.push(`updated_at = NOW()`);
+      values.push(decoded.driverId);
+
+      await pool.query(
+        `UPDATE drivers SET ${updates.join(', ')} WHERE id = $${idx}`,
+        values
+      );
+
+      res.json({ success: true, message: 'Documents saved successfully' });
+    } catch (err: any) {
+      console.error('Document upload error:', err);
+      res.status(500).json({ error: 'Failed to save documents' });
+    }
+  });
+
+  // POST /driver/online - Toggle online/offline status (only if approved)
   app.post('/driver/online', async (req, res) => {
     try {
       const decoded = verifyToken(req);
@@ -461,6 +515,28 @@ export function registerDriverAuthRoutes(app: Express) {
       }
 
       const { online } = req.body;
+
+      // Check if driver is approved before allowing to go online
+      if (online) {
+        const driverCheck = await pool.query(
+          'SELECT driver_status, is_active FROM drivers WHERE id = $1',
+          [decoded.driverId]
+        );
+        const driverData = driverCheck.rows[0];
+        if (driverData && driverData.driver_status !== 'approved') {
+          return res.status(403).json({ 
+            error: 'Your account is not yet approved. Please wait for admin approval before going online.',
+            driverStatus: driverData.driver_status || 'pending_review'
+          });
+        }
+        if (driverData && driverData.is_active === false) {
+          return res.status(403).json({ 
+            error: 'Your account has been suspended. Please contact support.',
+            driverStatus: 'suspended'
+          });
+        }
+      }
+
       await pool.query(
         'UPDATE drivers SET is_online = $1, updated_at = NOW() WHERE id = $2',
         [!!online, decoded.driverId]
@@ -534,9 +610,16 @@ export function registerDriverAuthRoutes(app: Express) {
           state: driver.state,
           zipCode: driver.zip_code,
           status: driver.status,
+          driverStatus: driver.driver_status || 'pending_review',
+          isActive: driver.is_active !== false,
           vehicleType: driver.vehicle_type,
           vehicleCapacity: driver.vehicle_capacity,
           isOnline: driver.is_online,
+          selfieUrl: driver.selfie_url,
+          licenseUrl: driver.license_url,
+          vehicleRegistrationUrl: driver.vehicle_registration_url,
+          insuranceUrl: driver.insurance_url,
+          rejectionReason: driver.rejection_reason,
           createdAt: driver.created_at
         }
       });

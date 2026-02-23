@@ -114,12 +114,13 @@ export function registerAdminApiRoutes(app: Express) {
 
       const { status, search, limit = 50, offset = 0 } = req.query;
       
-      let query = 'SELECT * FROM drivers WHERE 1=1';
+      let query = 'SELECT id, name, phone, email, status, created_at, updated_at, first_name, last_name, address, city, state, zip_code, vehicle_type, vehicle_capacity, lifting_limit, license_plate, services, is_online, driver_status, is_active, selfie_url, license_url, vehicle_registration_url, insurance_url, rejection_reason, suspension_reason FROM drivers WHERE 1=1';
       const params: any[] = [];
       let paramIndex = 1;
 
       if (status) {
-        query += ` AND status = $${paramIndex++}`;
+        query += ` AND (status = $${paramIndex} OR driver_status = $${paramIndex})`;
+        paramIndex++;
         params.push(status);
       }
 
@@ -199,6 +200,100 @@ export function registerAdminApiRoutes(app: Express) {
       res.json({ driver: result.rows[0] });
     } catch (err: any) {
       console.error('Update driver status error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /admin/drivers/:id/approve - Approve a driver
+  app.post('/admin/drivers/:id/approve', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const result = await pool.query(
+        `UPDATE drivers SET driver_status = 'approved', is_active = true, status = 'approved', rejection_reason = NULL, suspension_reason = NULL, updated_at = NOW() WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      console.log(`[Admin] Driver ${req.params.id} APPROVED`);
+      res.json({ driver: result.rows[0] });
+    } catch (err: any) {
+      console.error('Approve driver error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /admin/drivers/:id/reject - Reject a driver
+  app.post('/admin/drivers/:id/reject', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { reason } = req.body;
+      const result = await pool.query(
+        `UPDATE drivers SET driver_status = 'rejected', status = 'blocked', rejection_reason = $1, is_active = false, is_online = false, updated_at = NOW() WHERE id = $2 RETURNING *`,
+        [reason || 'Documents not approved', req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      console.log(`[Admin] Driver ${req.params.id} REJECTED: ${reason}`);
+      res.json({ driver: result.rows[0] });
+    } catch (err: any) {
+      console.error('Reject driver error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /admin/drivers/:id/suspend - Suspend a driver
+  app.post('/admin/drivers/:id/suspend', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { reason } = req.body;
+      const result = await pool.query(
+        `UPDATE drivers SET driver_status = 'suspended', is_active = false, is_online = false, suspension_reason = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+        [reason || 'Account suspended', req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      console.log(`[Admin] Driver ${req.params.id} SUSPENDED: ${reason}`);
+      res.json({ driver: result.rows[0] });
+    } catch (err: any) {
+      console.error('Suspend driver error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /admin/drivers/:id/activate - Reactivate a driver
+  app.post('/admin/drivers/:id/activate', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const result = await pool.query(
+        `UPDATE drivers SET driver_status = 'approved', is_active = true, suspension_reason = NULL, updated_at = NOW() WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      console.log(`[Admin] Driver ${req.params.id} ACTIVATED`);
+      res.json({ driver: result.rows[0] });
+    } catch (err: any) {
+      console.error('Activate driver error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
