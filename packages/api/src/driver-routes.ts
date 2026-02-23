@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { db } from "./db/index.js";
-import { drivers, orders } from "./db/schema.js";
+import { drivers, orders, usersTable } from "./db/schema.js";
 import { eq, and, isNull, or, desc } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -19,7 +19,7 @@ export const requireDriver = (req: AuthRequest, res: Response, next: Function) =
   next();
 };
 
-// Driver Auth - Login
+// Driver Auth - Login (uses users table)
 export const driverLogin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -28,45 +28,42 @@ export const driverLogin = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find driver by email
-    const [driver] = await db
+    // Find user by email with role driver
+    const [user] = await db
       .select()
-      .from(drivers)
-      .where(eq(drivers.email, email))
+      .from(usersTable)
+      .where(and(eq(usersTable.email, email), eq(usersTable.role, 'driver')))
       .limit(1);
 
-    if (!driver) {
+    if (!user || !user.password) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check driver compliance status
-    if (driver.driverStatus === 'rejected') {
-      return res.status(403).json({ 
-        error: 'Driver account rejected', 
-        driverStatus: driver.driverStatus,
-        rejectionReason: driver.rejectionReason 
-      });
-    }
-    
-    if (driver.driverStatus === 'suspended') {
-      return res.status(403).json({ 
-        error: 'Driver account suspended', 
-        driverStatus: driver.driverStatus,
-        adminNotes: driver.adminNotes 
-      });
+    // Verify password
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Verify password - if no password_hash set, allow login with any password (for seeded drivers)
-    if (driver.passwordHash) {
-      const passwordMatch = await bcrypt.compare(password, driver.passwordHash);
-      if (!passwordMatch) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
+    // Find driver record
+    const [driver] = await db
+      .select()
+      .from(drivers)
+      .where(eq(drivers.userId, user.id))
+      .limit(1);
+
+    if (!driver) {
+      return res.status(401).json({ error: 'Driver record not found' });
+    }
+
+    // Check if driver is blocked
+    if (driver.status === 'blocked') {
+      return res.status(403).json({ error: 'Driver account suspended' });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: driver.id, email: driver.email, role: 'driver', name: driver.name },
+      { id: driver.id, userId: user.id, email: user.email, role: 'driver', name: user.name },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
@@ -75,13 +72,11 @@ export const driverLogin = async (req: Request, res: Response) => {
       token,
       driver: {
         id: driver.id,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
         status: driver.status,
-        driverStatus: driver.driverStatus,
-        isActive: driver.isActive,
-        requestedFields: driver.requestedFields,
       },
     });
   } catch (error) {
@@ -90,47 +85,56 @@ export const driverLogin = async (req: Request, res: Response) => {
   }
 };
 
-// Driver Auth - Signup
+// Driver Auth - Signup (creates user + driver)
 export const driverSignup = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, phone, address, city, state, zipCode } = req.body;
+    const { name, email, password, phone } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Check if driver already exists
-    const existing = await db
+    // Check if user already exists
+    const existingUser = await db
       .select()
-      .from(drivers)
-      .where(eq(drivers.email, email))
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
       .limit(1);
 
-    if (existing.length > 0) {
+    if (existingUser.length > 0) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create driver with pending status
-    const fullName = name || [req.body.firstName, req.body.lastName].filter(Boolean).join(' ') || email;
+    // Create user first
+    const fullName = name || [req.body.firstName, req.body.lastName].filter(Boolean).join(' ') || 'Driver';
     const driverPhone = phone || '';
 
-    const [newDriver] = await db
-      .insert(drivers)
+    const [newUser] = await db
+      .insert(usersTable)
       .values({
         name: fullName,
         email,
+        password: hashedPassword,
         phone: driverPhone,
-        passwordHash: hashedPassword,
+        role: 'driver',
+      })
+      .returning();
+
+    // Create driver record
+    const [newDriver] = await db
+      .insert(drivers)
+      .values({
+        userId: newUser.id,
         status: 'pending',
       })
       .returning();
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: newDriver.id, email: newDriver.email, role: 'driver', name: newDriver.name },
+      { id: newDriver.id, userId: newUser.id, email: newUser.email, role: 'driver', name: newUser.name },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
@@ -139,9 +143,10 @@ export const driverSignup = async (req: Request, res: Response) => {
       token,
       driver: {
         id: newDriver.id,
-        name: newDriver.name,
-        email: newDriver.email,
-        phone: newDriver.phone,
+        userId: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone || '',
         status: newDriver.status,
       },
     });
@@ -151,34 +156,37 @@ export const driverSignup = async (req: Request, res: Response) => {
   }
 };
 
-// Driver Me
+// Driver Me (get current driver info)
 export const driverMe = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [driver] = await db
-      .select()
+    const [result] = await db
+      .select({
+        id: drivers.id,
+        userId: drivers.userId,
+        status: drivers.status,
+        userName: usersTable.name,
+        userEmail: usersTable.email,
+        userPhone: usersTable.phone,
+      })
       .from(drivers)
+      .leftJoin(usersTable, eq(drivers.userId, usersTable.id))
       .where(eq(drivers.id, numericId))
       .limit(1);
 
-    if (!driver) {
-      return res.status(404).json({ error: 'Driver not found' });
-    }
+    if (!result) return res.status(404).json({ error: 'Driver not found' });
 
     res.json({
       driver: {
-        id: driver.id,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-        status: driver.status,
+        id: result.id,
+        name: result.userName || '',
+        email: result.userEmail || '',
+        phone: result.userPhone || '',
+        status: result.status,
       },
     });
   } catch (error) {
@@ -187,35 +195,40 @@ export const driverMe = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Driver Profile - GET (alias for driverMe, but with extra fields for native app)
+// Driver Profile - GET
 export const getDriverProfile = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [driver] = await db
-      .select()
+    const [result] = await db
+      .select({
+        id: drivers.id,
+        userId: drivers.userId,
+        status: drivers.status,
+        isOnline: drivers.isOnline,
+        vehicleType: drivers.vehicleType,
+        userName: usersTable.name,
+        userEmail: usersTable.email,
+        userPhone: usersTable.phone,
+      })
       .from(drivers)
+      .leftJoin(usersTable, eq(drivers.userId, usersTable.id))
       .where(eq(drivers.id, numericId))
       .limit(1);
 
-    if (!driver) {
-      return res.status(404).json({ error: 'Driver not found' });
-    }
+    if (!result) return res.status(404).json({ error: 'Driver not found' });
 
     res.json({
       driver: {
-        id: driver.id,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-        status: driver.status,
-        isOnline: true,
+        id: result.id,
+        name: result.userName || '',
+        email: result.userEmail || '',
+        phone: result.userPhone || '',
+        status: result.status,
+        isOnline: result.isOnline,
       },
     });
   } catch (error) {
@@ -224,22 +237,17 @@ export const getDriverProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Driver Profile - PUT (update profile/online status)
+// Driver Profile - PUT
 export const updateDriverProfile = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
-
-    const { isOnline, name, phone } = req.body;
+    const { isOnline } = req.body;
 
     const updateData: any = { updatedAt: new Date() };
-    if (name) updateData.name = name;
-    if (phone) updateData.phone = phone;
+    if (isOnline !== undefined) updateData.isOnline = !!isOnline;
 
     const [updatedDriver] = await db
       .update(drivers)
@@ -247,14 +255,21 @@ export const updateDriverProfile = async (req: AuthRequest, res: Response) => {
       .where(eq(drivers.id, numericId))
       .returning();
 
+    // Get user info
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, updatedDriver.userId))
+      .limit(1);
+
     res.json({
       driver: {
         id: updatedDriver.id,
-        name: updatedDriver.name,
-        email: updatedDriver.email,
-        phone: updatedDriver.phone,
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
         status: updatedDriver.status,
-        isOnline: isOnline !== undefined ? isOnline : true,
+        isOnline: updatedDriver.isOnline,
       },
     });
   } catch (error) {
@@ -267,11 +282,7 @@ export const updateDriverProfile = async (req: AuthRequest, res: Response) => {
 function safeJsonParse(value: any): any {
   if (!value) return {};
   if (typeof value === 'object') return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(value); } catch { return {}; }
 }
 
 // Helper to format order for driver app
@@ -280,7 +291,6 @@ function formatOrderForDriver(order: any) {
   const items = safeJsonParse(order.itemsJson);
   const fullAddress = [order.street, order.city, order.state, order.zip].filter(Boolean).join(', ');
 
-  // Calculate driver earnings (70% of total) - for backward compatibility with old orders
   const totalPrice = order.totalAmount || pricing.total || pricing.estimatedPrice || 0;
   const driverEarnings = order.driverEarnings || Math.round(totalPrice * 0.70 * 100) / 100;
 
@@ -294,7 +304,6 @@ function formatOrderForDriver(order: any) {
     scheduled_for: order.pickupDate,
     pickup_time_window: order.pickupTimeWindow,
     status: order.status,
-    // Driver sees only their earnings (70% of total)
     estimated_price: driverEarnings,
     final_price: driverEarnings,
     driver_earnings: driverEarnings,
@@ -307,78 +316,60 @@ function formatOrderForDriver(order: any) {
     created_at: order.createdAt,
     updated_at: order.updatedAt,
     assigned_driver_id: order.assignedDriverId,
-    // Financial status fields
     payment_status: order.paymentStatus,
     driver_payout_status: order.driverPayoutStatus,
   };
 }
 
-// Get Available Jobs (pending orders not assigned to anyone)
+// Get Available Jobs
 export const getAvailableJobs = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
-    
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
+
     const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
-    
-    // Check driver compliance status
+
+    // Check driver status
     const [driver] = await db
       .select()
       .from(drivers)
       .where(eq(drivers.id, numericId))
       .limit(1);
-    
-    if (!driver) {
-      return res.status(404).json({ error: 'Driver not found' });
-    }
-    
-    // Only approved and active drivers can see available orders
-    if (driver.driverStatus !== 'approved' || driver.isActive !== 1) {
-      return res.json({ 
-        jobs: [], 
+
+    if (!driver) return res.status(404).json({ error: 'Driver not found' });
+
+    // Only approved drivers can see available orders
+    if (driver.status !== 'approved' && driver.status !== 'available') {
+      return res.json({
+        jobs: [],
         orders: [],
-        message: 'Driver must be approved and active to receive orders',
-        driverStatus: driver.driverStatus,
-        isActive: driver.isActive
+        message: 'Driver must be approved to receive orders',
       });
     }
-    
+
     const availableJobs = await db.select()
       .from(orders)
       .where(
         and(
-          or(
-            eq(orders.status, 'pending'),
-            eq(orders.status, 'paid')
-          ),
+          or(eq(orders.status, 'pending'), eq(orders.status, 'paid')),
           isNull(orders.assignedDriverId)
         )
       )
       .orderBy(desc(orders.createdAt));
 
     const formattedOrders = availableJobs.map(formatOrderForDriver);
-
-    res.json({ 
-      jobs: formattedOrders, 
-      orders: formattedOrders 
-    });
+    res.json({ jobs: formattedOrders, orders: formattedOrders });
   } catch (error) {
     console.error('Get available jobs error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// Get My Jobs (assigned to this driver)
+// Get My Jobs
 export const getMyJobs = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
@@ -389,7 +380,6 @@ export const getMyJobs = async (req: AuthRequest, res: Response) => {
       .orderBy(desc(orders.createdAt));
 
     const formattedJobs = myJobs.map(formatOrderForDriver);
-
     res.json({ jobs: formattedJobs, orders: formattedJobs });
   } catch (error) {
     console.error('Get my jobs error:', error);
@@ -402,35 +392,20 @@ export const acceptJob = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericOrderId = parseInt(id, 10);
     const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [job] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, numericOrderId))
-      .limit(1);
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
+    const [job] = await db.select().from(orders).where(eq(orders.id, numericOrderId)).limit(1);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
     if ((job.status !== 'pending' && job.status !== 'paid') || job.assignedDriverId) {
       return res.status(400).json({ error: 'Job is no longer available' });
     }
 
     const [updatedJob] = await db
       .update(orders)
-      .set({
-        assignedDriverId: numericDriverId,
-        status: 'assigned',
-        updatedAt: new Date(),
-      })
+      .set({ assignedDriverId: numericDriverId, status: 'assigned', updatedAt: new Date() })
       .where(eq(orders.id, numericOrderId))
       .returning();
 
@@ -446,39 +421,21 @@ export const startJob = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericOrderId = parseInt(id, 10);
     const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [job] = await db
-      .select()
-      .from(orders)
-      .where(
-        and(
-          eq(orders.id, numericOrderId),
-          eq(orders.assignedDriverId, numericDriverId)
-        )
-      )
+    const [job] = await db.select().from(orders)
+      .where(and(eq(orders.id, numericOrderId), eq(orders.assignedDriverId, numericDriverId)))
       .limit(1);
 
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found or not assigned to you' });
-    }
-
-    if (job.status !== 'assigned') {
-      return res.status(400).json({ error: 'Job cannot be started in current status' });
-    }
+    if (!job) return res.status(404).json({ error: 'Job not found or not assigned to you' });
+    if (job.status !== 'assigned') return res.status(400).json({ error: 'Job cannot be started in current status' });
 
     const [updatedJob] = await db
       .update(orders)
-      .set({
-        status: 'in_progress',
-        updatedAt: new Date(),
-      })
+      .set({ status: 'in_progress', updatedAt: new Date() })
       .where(eq(orders.id, numericOrderId))
       .returning();
 
@@ -494,41 +451,22 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericOrderId = parseInt(id, 10);
     const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [job] = await db
-      .select()
-      .from(orders)
-      .where(
-        and(
-          eq(orders.id, numericOrderId),
-          eq(orders.assignedDriverId, numericDriverId)
-        )
-      )
+    const [job] = await db.select().from(orders)
+      .where(and(eq(orders.id, numericOrderId), eq(orders.assignedDriverId, numericDriverId)))
       .limit(1);
 
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found or not assigned to you' });
-    }
-
-    if (job.status !== 'in_progress') {
-      return res.status(400).json({ error: 'Job must be in progress to complete' });
-    }
+    if (!job) return res.status(404).json({ error: 'Job not found or not assigned to you' });
+    if (job.status !== 'in_progress') return res.status(400).json({ error: 'Job must be in progress to complete' });
 
     const now = new Date();
     const [updatedJob] = await db
       .update(orders)
-      .set({
-        status: 'completed',
-        completedAt: now,
-        updatedAt: now,
-      })
+      .set({ status: 'completed', completedAt: now, updatedAt: now })
       .where(eq(orders.id, numericOrderId))
       .returning();
 
@@ -539,10 +477,7 @@ export const completeJob = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
-// ============================================================================
-// SET ONLINE STATUS
-// ============================================================================
+// Set Online Status
 export const setOnlineStatus = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
@@ -550,42 +485,29 @@ export const setOnlineStatus = async (req: AuthRequest, res: Response) => {
 
     const numericDriverId = Number(driverId);
     const { online } = req.body;
-    const newStatus = online ? 'available' : 'offline';
 
     const [updated] = await db
       .update(drivers)
-      .set({
-        status: newStatus,
-        updatedAt: new Date(),
-      })
+      .set({ isOnline: !!online, updatedAt: new Date() })
       .where(eq(drivers.id, numericDriverId))
       .returning();
 
-    res.json({ success: true, online: !!online, status: newStatus, driver: updated });
+    res.json({ success: true, online: !!online, driver: updated });
   } catch (error) {
     console.error('Set online status error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// ============================================================================
-// GET ORDER HISTORY
-// ============================================================================
+// Get Order History
 export const getOrderHistory = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
     if (!driverId) return res.status(401).json({ error: 'Not authenticated' });
 
     const numericDriverId = Number(driverId);
-    const completedOrders = await db
-      .select()
-      .from(orders)
-      .where(
-        and(
-          eq(orders.assignedDriverId, numericDriverId),
-          eq(orders.status, 'completed')
-        )
-      )
+    const completedOrders = await db.select().from(orders)
+      .where(and(eq(orders.assignedDriverId, numericDriverId), eq(orders.status, 'completed')))
       .orderBy(desc(orders.updatedAt));
 
     const formatted = completedOrders.map(formatOrderForDriver);
@@ -596,30 +518,20 @@ export const getOrderHistory = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ============================================================================
-// GET EARNINGS
-// ============================================================================
+// Get Earnings
 export const getEarnings = async (req: AuthRequest, res: Response) => {
   try {
     const driverId = req.user?.id;
     if (!driverId) return res.status(401).json({ error: 'Not authenticated' });
 
     const numericDriverId = Number(driverId);
-    const completedOrders = await db
-      .select()
-      .from(orders)
-      .where(
-        and(
-          eq(orders.assignedDriverId, numericDriverId),
-          eq(orders.status, 'completed')
-        )
-      )
+    const completedOrders = await db.select().from(orders)
+      .where(and(eq(orders.assignedDriverId, numericDriverId), eq(orders.status, 'completed')))
       .orderBy(desc(orders.updatedAt));
 
     let totalEarnings = 0;
     const earningsHistory = completedOrders.map(order => {
       const pricing = safeJsonParse(order.pricingJson);
-      // Use driver_earnings field (70%), or calculate from total for old orders
       const totalPrice = order.totalAmount || pricing?.total || pricing?.amount || 0;
       const driverAmount = order.driverEarnings || Math.round(totalPrice * 0.70 * 100) / 100;
       totalEarnings += Number(driverAmount);
@@ -629,129 +541,72 @@ export const getEarnings = async (req: AuthRequest, res: Response) => {
         service_type: order.serviceType,
         amount: Number(driverAmount),
         completed_at: order.updatedAt,
-        payment_status: order.paymentStatus,
-        payout_status: order.driverPayoutStatus,
       };
     });
 
-    res.json({
-      total_earnings: totalEarnings,
-      completed_jobs: completedOrders.length,
-      history: earningsHistory,
-    });
+    res.json({ total_earnings: totalEarnings, completed_jobs: completedOrders.length, history: earningsHistory });
   } catch (error) {
     console.error('Get earnings error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-
-// ============================================================================
-// CANCEL ORDER (driver cancels an accepted order, returns to pending)
-// ============================================================================
+// Cancel Order
 export const cancelOrder = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericOrderId = parseInt(id, 10);
     const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [job] = await db
-      .select()
-      .from(orders)
-      .where(
-        and(
-          eq(orders.id, numericOrderId),
-          eq(orders.assignedDriverId, numericDriverId)
-        )
-      )
+    const [job] = await db.select().from(orders)
+      .where(and(eq(orders.id, numericOrderId), eq(orders.assignedDriverId, numericDriverId)))
       .limit(1);
 
-    if (!job) {
-      return res.status(404).json({ error: 'Order not found or not assigned to you' });
-    }
-
+    if (!job) return res.status(404).json({ error: 'Order not found or not assigned to you' });
     if (job.status !== 'assigned' && job.status !== 'in_progress') {
       return res.status(400).json({ error: 'Order cannot be cancelled in current status' });
     }
 
-    // Return order to pending status and clear driver assignment
     const [updatedJob] = await db
       .update(orders)
-      .set({
-        status: 'pending',
-        assignedDriverId: null,
-        updatedAt: new Date(),
-      })
+      .set({ status: 'pending', assignedDriverId: null, updatedAt: new Date() })
       .where(eq(orders.id, numericOrderId))
       .returning();
 
-    res.json({ 
-      success: true, 
-      message: 'Order cancelled successfully',
-      job: formatOrderForDriver(updatedJob), 
-      order: formatOrderForDriver(updatedJob) 
-    });
+    res.json({ success: true, message: 'Order cancelled successfully', job: formatOrderForDriver(updatedJob), order: formatOrderForDriver(updatedJob) });
   } catch (error) {
     console.error('Cancel order error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// ============================================================================
-// START TRIP (alias for startJob, used by native app with /start-trip path)
-// ============================================================================
+// Start Trip
 export const startTrip = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const driverId = req.user?.id;
-
-    if (!driverId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
 
     const numericOrderId = parseInt(id, 10);
     const numericDriverId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
 
-    const [job] = await db
-      .select()
-      .from(orders)
-      .where(
-        and(
-          eq(orders.id, numericOrderId),
-          eq(orders.assignedDriverId, numericDriverId)
-        )
-      )
+    const [job] = await db.select().from(orders)
+      .where(and(eq(orders.id, numericOrderId), eq(orders.assignedDriverId, numericDriverId)))
       .limit(1);
 
-    if (!job) {
-      return res.status(404).json({ error: 'Order not found or not assigned to you' });
-    }
-
-    if (job.status !== 'assigned') {
-      return res.status(400).json({ error: 'Order must be assigned to start trip' });
-    }
+    if (!job) return res.status(404).json({ error: 'Order not found or not assigned to you' });
+    if (job.status !== 'assigned') return res.status(400).json({ error: 'Order must be assigned to start trip' });
 
     const [updatedJob] = await db
       .update(orders)
-      .set({
-        status: 'in_progress',
-        updatedAt: new Date(),
-      })
+      .set({ status: 'in_progress', updatedAt: new Date() })
       .where(eq(orders.id, numericOrderId))
       .returning();
 
-    res.json({ 
-      success: true,
-      message: 'Trip started',
-      job: formatOrderForDriver(updatedJob), 
-      order: formatOrderForDriver(updatedJob) 
-    });
+    res.json({ success: true, message: 'Trip started', job: formatOrderForDriver(updatedJob), order: formatOrderForDriver(updatedJob) });
   } catch (error) {
     console.error('Start trip error:', error);
     res.status(500).json({ error: 'Internal server error' });
