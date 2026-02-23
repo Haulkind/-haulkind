@@ -197,7 +197,38 @@ export const jobsRouter = router({
       // Update job status to dispatching
       await updateJob(job.id, { status: "dispatching", paidAt: new Date() });
 
-      // TODO: Trigger dispatch system to find driver
+      // Trigger dispatch system to find driver
+      try {
+        // Get online approved drivers
+        const { getAllDrivers, createJobOffer } = await import("../db");
+        const drivers = await getAllDrivers({
+          status: "approved",
+          isOnline: true,
+        });
+
+        if (drivers.length > 0) {
+          // Create wave 1 offers (send to top 3 drivers)
+          const wave1Drivers = drivers.slice(0, 3);
+          const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+
+          for (const driver of wave1Drivers) {
+            await createJobOffer({
+              jobId: job.id,
+              driverId: driver.id,
+              wave: 1,
+              expiresAt,
+            });
+          }
+          console.log(`[Dispatch] Created ${wave1Drivers.length} job offers for job ${job.id}`);
+        } else {
+          // No drivers available
+          await updateJob(job.id, { status: "no_coverage" });
+          console.log(`[Dispatch] No drivers available for job ${job.id}`);
+        }
+      } catch (dispatchError) {
+        console.error('[Dispatch] Error creating job offers:', dispatchError);
+        // Don't fail the payment if dispatch fails
+      }
 
       return {
         success: true,
