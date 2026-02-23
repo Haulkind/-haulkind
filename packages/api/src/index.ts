@@ -8,6 +8,7 @@ import { db } from "./db/index.js";
 import { orders, drivers, users as usersTable, customers } from "./db/schema.js";
 import * as adminRoutes from "./admin-routes.js";
 import * as driverRoutes from "./driver-routes.js";
+import * as adminDriverRoutes from "./admin-driver-routes.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 const app = express();
@@ -746,10 +747,20 @@ app.get("/admin/auth/me", authenticateToken, adminRoutes.requireAdmin, adminRout
 // Admin Stats
 app.get("/admin/stats/overview", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getStatsOverview);
 
-// Admin Drivers
+// Admin Drivers (legacy)
 app.get("/admin/drivers", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getDrivers);
 app.get("/admin/drivers/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getDriver);
 app.put("/admin/drivers/:id/status", authenticateToken, adminRoutes.requireAdmin, adminRoutes.updateDriverStatus);
+
+// Admin Driver Management (compliance)
+app.get("/admin/drivers/list", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.listDrivers);
+app.get("/admin/drivers/:id/details", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.getDriverDetails);
+app.post("/admin/drivers/:id/approve", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.approveDriver);
+app.post("/admin/drivers/:id/reject", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.rejectDriver);
+app.post("/admin/drivers/:id/suspend", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.suspendDriver);
+app.post("/admin/drivers/:id/request-info", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.requestMoreInfo);
+app.post("/admin/drivers/:id/toggle-active", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.toggleDriverActive);
+app.get("/admin/audit-log", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.getAuditLog);
 
 // Admin Customers
 app.get("/admin/customers", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getCustomers);
@@ -759,6 +770,7 @@ app.get("/admin/customers/:id", authenticateToken, adminRoutes.requireAdmin, adm
 app.get("/admin/orders", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrders);
 app.get("/admin/orders/:id", authenticateToken, adminRoutes.requireAdmin, adminRoutes.getOrder);
 app.put("/admin/orders/:id/assign", authenticateToken, adminRoutes.requireAdmin, adminRoutes.assignOrder);
+app.post("/admin/orders/:id/assign-driver", authenticateToken, adminDriverRoutes.requireAdmin, adminDriverRoutes.assignOrderToDriver);
 
 // =====================================================
 // DRIVER ROUTES

@@ -39,9 +39,21 @@ export const driverLogin = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check if driver is approved, available, or active (all are valid statuses for login)
-    if (driver.status !== 'approved' && driver.status !== 'available' && driver.status !== 'active') {
-      return res.status(403).json({ error: 'Driver account not approved', status: driver.status });
+    // Check driver compliance status
+    if (driver.driverStatus === 'rejected') {
+      return res.status(403).json({ 
+        error: 'Driver account rejected', 
+        driverStatus: driver.driverStatus,
+        rejectionReason: driver.rejectionReason 
+      });
+    }
+    
+    if (driver.driverStatus === 'suspended') {
+      return res.status(403).json({ 
+        error: 'Driver account suspended', 
+        driverStatus: driver.driverStatus,
+        adminNotes: driver.adminNotes 
+      });
     }
 
     // Verify password - if no password_hash set, allow login with any password (for seeded drivers)
@@ -67,6 +79,9 @@ export const driverLogin = async (req: Request, res: Response) => {
         email: driver.email,
         phone: driver.phone,
         status: driver.status,
+        driverStatus: driver.driverStatus,
+        isActive: driver.isActive,
+        requestedFields: driver.requestedFields,
       },
     });
   } catch (error) {
@@ -110,6 +125,8 @@ export const driverSignup = async (req: Request, res: Response) => {
         phone: driverPhone,
         passwordHash: hashedPassword,
         status: 'pending',
+        driverStatus: 'pending_review',
+        isActive: 0,
       })
       .returning();
 
@@ -298,11 +315,40 @@ function formatOrderForDriver(order: any) {
   };
 }
 
-// Get Available Jobs/Orders (for drivers)
+// Get Available Jobs (pending orders not assigned to anyone)
 export const getAvailableJobs = async (req: AuthRequest, res: Response) => {
   try {
-    const availableJobs = await db
+    const driverId = req.user?.id;
+    
+    if (!driverId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const numericId = typeof driverId === 'string' ? parseInt(driverId, 10) : driverId;
+    
+    // Check driver compliance status
+    const [driver] = await db
       .select()
+      .from(drivers)
+      .where(eq(drivers.id, numericId))
+      .limit(1);
+    
+    if (!driver) {
+      return res.status(404).json({ error: 'Driver not found' });
+    }
+    
+    // Only approved and active drivers can see available orders
+    if (driver.driverStatus !== 'approved' || driver.isActive !== 1) {
+      return res.json({ 
+        jobs: [], 
+        orders: [],
+        message: 'Driver must be approved and active to receive orders',
+        driverStatus: driver.driverStatus,
+        isActive: driver.isActive
+      });
+    }
+    
+    const availableJobs = await db.select()
       .from(orders)
       .where(
         and(
