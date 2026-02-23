@@ -630,6 +630,11 @@ app.get("/driver/orders/my-orders", authenticateToken, driverRoutes.requireDrive
 app.post("/driver/orders/:id/accept", authenticateToken, driverRoutes.requireDriver, driverRoutes.acceptJob);
 app.post("/driver/orders/:id/start", authenticateToken, driverRoutes.requireDriver, driverRoutes.startJob);
 app.post("/driver/orders/:id/complete", authenticateToken, driverRoutes.requireDriver, driverRoutes.completeJob);
+app.post("/driver/orders/:id/cancel", authenticateToken, driverRoutes.requireDriver, driverRoutes.cancelOrder);
+app.post("/driver/orders/:id/start-trip", authenticateToken, driverRoutes.requireDriver, driverRoutes.startTrip);
+// Driver Jobs cancel and start-trip aliases
+app.post("/driver/jobs/:id/cancel", authenticateToken, driverRoutes.requireDriver, driverRoutes.cancelOrder);
+app.post("/driver/jobs/:id/start-trip", authenticateToken, driverRoutes.requireDriver, driverRoutes.startTrip);
 // Driver Status endpoints (for Expo app)
 app.post("/driver/status/online", authenticateToken, driverRoutes.requireDriver, driverRoutes.updateDriverProfile);
 app.post("/driver/status/offline", authenticateToken, driverRoutes.requireDriver, driverRoutes.updateDriverProfile);
