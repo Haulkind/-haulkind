@@ -489,13 +489,31 @@ export function registerAdminApiRoutes(app: Express) {
         return res.status(404).json({ error: 'Driver not found' });
       }
 
-      const result = await pool.query(
-        'UPDATE orders SET assigned_driver_id = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+      // Try jobs table first (primary), then orders table (legacy)
+      let result = await pool.query(
+        'UPDATE jobs SET assigned_driver_id = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
         [driver_id, 'assigned', req.params.id]
       );
 
       if (result.rows.length === 0) {
+        result = await pool.query(
+          'UPDATE orders SET assigned_driver_id = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+          [driver_id, 'assigned', req.params.id]
+        );
+      }
+
+      if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Also create job_assignments record
+      try {
+        await pool.query(
+          'INSERT INTO job_assignments (job_id, driver_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [req.params.id, driver_id]
+        );
+      } catch (e) {
+        // ignore if assignment already exists
       }
 
       res.json({ order: result.rows[0] });

@@ -550,6 +550,7 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // GET /driver/orders/available - Get available orders for driver
+  // Queries BOTH jobs table and orders table to include web-created orders
   app.get('/driver/orders/available', async (req, res) => {
     try {
       const decoded = verifyToken(req);
@@ -562,12 +563,40 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // Get orders that are pending assignment
-      const result = await pool.query(
-        `SELECT * FROM jobs WHERE status = 'pending' ORDER BY created_at DESC LIMIT 20`
+      // Get pending orders from jobs table (primary)
+      const jobsResult = await pool.query(
+        `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
+                pickup_address, pickup_lat, pickup_lng, description, estimated_price,
+                items_json, scheduled_for, created_at
+         FROM jobs WHERE status IN ('pending', 'dispatching') AND assigned_driver_id IS NULL
+         ORDER BY created_at DESC LIMIT 20`
       );
 
-      res.json({ orders: result.rows || [] });
+      // Also check orders table for any pending orders (legacy/web compat)
+      let ordersRows: any[] = [];
+      try {
+        const ordersResult = await pool.query(
+          `SELECT id::text, customer_name, phone as customer_phone, email as customer_email,
+                  service_type, status, street as pickup_address,
+                  lat::double precision as pickup_lat, lng::double precision as pickup_lng,
+                  '' as description, 0 as estimated_price,
+                  items_json::text, pickup_date as scheduled_for, created_at
+           FROM orders WHERE status IN ('pending', 'dispatching') AND assigned_driver_id IS NULL
+           ORDER BY created_at DESC LIMIT 20`
+        );
+        ordersRows = ordersResult.rows || [];
+      } catch (e) {
+        // orders table may not exist or have different schema
+        console.warn('[DriverAuth] Could not query orders table:', (e as any)?.message);
+      }
+
+      const allOrders = [...(jobsResult.rows || []), ...ordersRows];
+      // Sort by created_at descending
+      allOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      console.log('[DriverAuth] GET /driver/orders/available - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length + ' total:' + allOrders.length);
+
+      res.json({ orders: allOrders });
     } catch (err: any) {
       console.error('Get available orders error:', err);
       res.json({ orders: [] });
