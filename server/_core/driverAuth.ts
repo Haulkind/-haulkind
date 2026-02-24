@@ -579,7 +579,8 @@ export function registerDriverAuthRoutes(app: Express) {
           `SELECT id::text, customer_name, phone as customer_phone, email as customer_email,
                   service_type, status, street as pickup_address,
                   lat::double precision as pickup_lat, lng::double precision as pickup_lng,
-                  '' as description, 0 as estimated_price,
+                  '' as description,
+                  COALESCE((pricing_json::jsonb->>'total')::numeric, 0) as estimated_price,
                   items_json::text, pickup_date as scheduled_for, created_at
            FROM orders WHERE status IN ('pending', 'dispatching') AND assigned_driver_id IS NULL
            ORDER BY created_at DESC LIMIT 20`
