@@ -60,6 +60,7 @@ export default function OrdersPage() {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
+      dispatching: 'bg-amber-100 text-amber-800',
       assigned: 'bg-blue-100 text-blue-800',
       in_progress: 'bg-purple-100 text-purple-800',
       en_route: 'bg-indigo-100 text-indigo-800',
@@ -150,6 +151,7 @@ export default function OrdersPage() {
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
+              <option value="dispatching">Dispatching</option>
               <option value="assigned">Assigned</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>

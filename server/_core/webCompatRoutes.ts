@@ -124,7 +124,10 @@ export function registerWebCompatRoutes(app: Express) {
   });
 
   // ================================================================
-  // POST /jobs - Create a new order in the PostgreSQL orders table
+  // POST /jobs - Create a new job in the PostgreSQL jobs table
+  // IMPORTANT: Inserts into 'jobs' table (not 'orders') so that
+  // driver app (/driver/orders/available) and admin dashboard
+  // can both see the job immediately.
   // ================================================================
   app.post("/jobs", async (req: Request, res: Response) => {
     try {
@@ -170,50 +173,45 @@ export function registerWebCompatRoutes(app: Express) {
       }
 
       const itemsJson = JSON.stringify(addonList || []);
-      const pricingJson = JSON.stringify({
-        total: totalAmount,
-        volumeTier: volumeTier || "QUARTER",
-        serviceType: serviceType || "HAUL_AWAY",
-        notes: customerNotes || "",
-      });
 
-      const addressParts = (pickupAddress || "").split(",").map((s: string) => s.trim());
-      const street = addressParts[0] || pickupAddress || "";
-      const city = addressParts[1] || "";
-      const stateZip = (addressParts[2] || "").split(" ");
-      const state = stateZip[0] || "";
-      const zip = stateZip[1] || "00000";
-
+      // Insert into jobs table (single source of truth for driver + admin)
       const result = await pool.query(
-        "INSERT INTO orders (id, service_type, customer_name, phone, email, street, city, state, zip, lat, lng, pickup_date, pickup_time_window, items_json, pricing_json, status, created_at, updated_at) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, NOW(), NOW()) RETURNING *",
+        `INSERT INTO jobs (
+          customer_name, customer_phone, customer_email,
+          service_type, status, pickup_address,
+          pickup_lat, pickup_lng,
+          description, estimated_price, items_json, scheduled_for,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING *`,
         [
-          serviceType || "HAUL_AWAY",
           customerName || "Web Customer",
           customerPhone || "",
           customerEmail || "",
-          street,
-          city,
-          state,
-          zip || "00000",
+          serviceType || "HAUL_AWAY",
+          pickupAddress || "",
           pickupLat || 0,
           pickupLng || 0,
-          scheduledFor || new Date().toISOString().split("T")[0],
-          "flexible",
+          customerNotes || "",
+          totalAmount,
           itemsJson,
-          pricingJson,
-          "pending",
+          scheduledFor || null,
         ]
       );
 
-      const order = result.rows[0];
-      console.log("[WebCompat] POST /jobs - created order " + order.id + " total=$" + totalAmount);
+      const job = result.rows[0];
+      console.log("[WebCompat] POST /jobs - created job id=" + job.id + " status=" + job.status + " total=$" + totalAmount + " at=" + job.created_at);
+
+      // Verify it exists in DB immediately
+      const verify = await pool.query("SELECT id, status, created_at FROM jobs WHERE id = $1", [job.id]);
+      console.log("[WebCompat] POST /jobs - DB verify: " + (verify.rows.length > 0 ? "EXISTS" : "MISSING") + " id=" + job.id);
 
       res.status(201).json({
         success: true,
-        id: order.id,
-        status: order.status,
+        id: job.id,
+        status: job.status,
         total: totalAmount,
-        order,
+        order: job,
       });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
@@ -233,9 +231,10 @@ export function registerWebCompatRoutes(app: Express) {
         return res.status(500).json({ error: "Database not available", success: false });
       }
 
-      let result = await pool.query("SELECT * FROM orders WHERE id::text = $1", [id]);
+      // Check jobs table first (primary), then orders table (legacy)
+      let result = await pool.query("SELECT * FROM jobs WHERE id::text = $1", [id]);
       if (result.rows.length === 0) {
-        result = await pool.query("SELECT * FROM jobs WHERE id::text = $1", [id]);
+        result = await pool.query("SELECT * FROM orders WHERE id::text = $1", [id]);
       }
 
       if (result.rows.length === 0) {
@@ -280,11 +279,12 @@ export function registerWebCompatRoutes(app: Express) {
         return res.status(500).json({ error: "Database not available", success: false });
       }
 
-      let result = await pool.query("SELECT * FROM orders WHERE id::text = $1", [id]);
-      let tableName = "orders";
+      // Check jobs table first (primary), then orders table (legacy)
+      let result = await pool.query("SELECT * FROM jobs WHERE id::text = $1", [id]);
+      let tableName = "jobs";
       if (result.rows.length === 0) {
-        result = await pool.query("SELECT * FROM jobs WHERE id::text = $1", [id]);
-        tableName = "jobs";
+        result = await pool.query("SELECT * FROM orders WHERE id::text = $1", [id]);
+        tableName = "orders";
       }
 
       if (result.rows.length === 0) {
@@ -414,5 +414,45 @@ export function registerWebCompatRoutes(app: Express) {
     }
   });
 
-  console.log("[WebCompat] Registered compatibility routes: /quotes, /jobs, /jobs/:id, /jobs/:id/pay, /service-areas/lookup");
+  // ================================================================
+  // GET /debug/jobs - Debug endpoint to verify job data (TEMP)
+  // ================================================================
+  app.get("/debug/jobs", async (req: Request, res: Response) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: "Database not available" });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      const jobsResult = await pool.query(
+        "SELECT id, status, customer_name, service_type, estimated_price, created_at FROM jobs ORDER BY created_at DESC LIMIT $1",
+        [limit]
+      );
+
+      const ordersResult = await pool.query(
+        "SELECT id, status, customer_name, service_type, pricing_json, created_at FROM orders ORDER BY created_at DESC LIMIT $1",
+        [limit]
+      );
+
+      res.json({
+        api_base_url: "https://haulkind-production-285b.up.railway.app",
+        timestamp: new Date().toISOString(),
+        jobs_table: {
+          count: jobsResult.rows.length,
+          rows: jobsResult.rows,
+        },
+        orders_table: {
+          count: ordersResult.rows.length,
+          rows: ordersResult.rows,
+        },
+      });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Debug query failed", details: msg });
+    }
+  });
+
+  console.log("[WebCompat] Registered compatibility routes: /quotes, /jobs, /jobs/:id, /jobs/:id/pay, /service-areas/lookup, /debug/jobs");
 }

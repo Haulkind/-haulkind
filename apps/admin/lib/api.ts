@@ -1,5 +1,13 @@
-// Admin API client - uses official backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
+// Admin API client - MUST point to the official backend (285b)
+// IMPORTANT: Do NOT override this with NEXT_PUBLIC_API_URL env var pointing to a different backend.
+// The official backend is 285b which has the correct PostgreSQL database with all orders/jobs.
+const OFFICIAL_BACKEND = 'https://haulkind-production-285b.up.railway.app';
+const API_BASE_URL = OFFICIAL_BACKEND;
+
+// Runtime logging to help debug API URL issues
+if (typeof window !== 'undefined') {
+  console.log('[Admin API] Using backend:', API_BASE_URL);
+}
 
 export interface Driver {
   id: string; // UUID
