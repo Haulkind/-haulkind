@@ -62,7 +62,7 @@ export default function JobDetailScreen() {
   const loadJob = async () => {
     try {
       const jobData = await getActiveJob(token!)
-      if (jobData && jobData.id === Number(id)) {
+      if (jobData && String(jobData.id) === String(id)) {
         setJob(jobData)
         
         // Start location tracking if job is in progress
@@ -200,7 +200,7 @@ export default function JobDetailScreen() {
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Payout:</Text>
-          <Text style={[styles.infoValue, styles.payout]}>${job.payout.toFixed(2)}</Text>
+          <Text style={[styles.infoValue, styles.payout]}>${(job.payout || 0).toFixed(2)}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Address:</Text>

@@ -1,7 +1,11 @@
 import { io, Socket } from 'socket.io-client'
 import { Offer } from './api'
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
+// MUST point to the official backend (285b) — same as admin dashboard and web app
+const OFFICIAL_BACKEND = 'https://haulkind-production-285b.up.railway.app'
+const SOCKET_URL = OFFICIAL_BACKEND
+
+console.log('[Driver Socket] Using backend:', SOCKET_URL)
 
 class SocketClient {
   private socket: Socket | null = null
