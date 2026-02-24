@@ -15,6 +15,7 @@ import { registerAdminApiRoutes } from "./adminApi";
 import { initializeSocket } from "./socket";
 import { realtimeRouter } from "./realtime";
 import { migrateRouter } from "./migrate";
+import { registerWebCompatRoutes } from "./webCompatRoutes";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -88,6 +89,10 @@ async function startServer() {
   app.use(migrateRouter);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Web compatibility routes (POST /quotes, POST /jobs, GET /jobs/:id, etc.)
+  // These provide backward compatibility for the web app's Next.js API proxy routes
+  registerWebCompatRoutes(app);
 
   // ============================================
   // Customer Auth Routes (signup/login for mobile app)
