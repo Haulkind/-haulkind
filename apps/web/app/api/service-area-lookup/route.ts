@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const RAILWAY_BASE_URL = 'https://haulkind-production.up.railway.app';
+const RAILWAY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 const TIMEOUT_MS = 8000;
 
 // Approved states - all addresses in these states are automatically covered

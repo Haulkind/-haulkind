@@ -80,7 +80,7 @@ export default function DriverApplicationPage() {
     setError('')
 
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production.up.railway.app'
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'
       
       const response = await fetch(`${API_BASE_URL}/drivers/apply`, {
         method: 'POST',

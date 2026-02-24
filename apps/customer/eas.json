@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://haulkind-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://haulkind-production-285b.up.railway.app"
       }
     },
     "preview": {
@@ -16,13 +16,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://haulkind-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://haulkind-production-285b.up.railway.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://haulkind-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://haulkind-production-285b.up.railway.app"
       }
     }
   },
