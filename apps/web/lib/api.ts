@@ -54,7 +54,7 @@ export interface JobCreateRequest {
 }
 
 export interface JobResponse {
-  id: number
+  id: string
   status: string
   total: number
 }
@@ -118,7 +118,7 @@ export async function createJob(request: JobCreateRequest): Promise<JobResponse>
   return data
 }
 
-export async function payJob(jobId: number, paymentMethodId: string): Promise<{ success: boolean }> {
+export async function payJob(jobId: string, paymentMethodId: string): Promise<{ success: boolean }> {
   console.log('[API] payJob for job:', jobId)
   const response = await fetch(`/api/jobs/${jobId}/pay`, {
     method: 'POST',
@@ -138,7 +138,7 @@ export async function payJob(jobId: number, paymentMethodId: string): Promise<{ 
   return data
 }
 
-export async function getJobStatus(jobId: number): Promise<{ status: string; driver?: any }> {
+export async function getJobStatus(jobId: string): Promise<{ status: string; driver?: any }> {
   console.log('[API] getJobStatus for job:', jobId)
   const response = await fetch(`/api/jobs/${jobId}`)
   console.log('[API] getJobStatus status:', response.status)

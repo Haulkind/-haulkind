@@ -64,7 +64,8 @@ export default function TrackingPage() {
 
   const fetchStatus = async () => {
     try {
-      const data = await getJobStatus(Number(jobId))
+      if (!jobId) return
+      const data = await getJobStatus(jobId)
       setStatus(data.status)
       setDriver(data.driver)
       setLoading(false)

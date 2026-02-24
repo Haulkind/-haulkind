@@ -37,7 +37,7 @@ interface QuoteData {
   
   // Quote result
   quoteData: any | null
-  jobId: number | null
+  jobId: string | null
 }
 
 interface QuoteContextType {
