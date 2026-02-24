@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const API_BASE_URL = 'https://haulkind-production-285b.up.railway.app'
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'
 
 interface Customer {
   id: number

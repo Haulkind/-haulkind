@@ -15,6 +15,7 @@ import { registerAdminApiRoutes } from "./adminApi";
 import { initializeSocket } from "./socket";
 import { realtimeRouter } from "./realtime";
 import { migrateRouter } from "./migrate";
+import { registerWebCompatRoutes } from "./webCompatRoutes";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -52,13 +53,13 @@ async function startServer() {
       'https://admin.haulkind.com',
       'https://haulkind.com',
       'https://www.haulkind.com',
-      'https://haulkind-admin.vercel.app',
       'http://localhost:3000',
-      'http://localhost:3001'
+      'http://localhost:3001',
+      'http://localhost:3002'
     ];
     
-    // Check if origin matches allowed patterns
-    if (origin && (allowedOrigins.includes(origin) || /\.up\.railway\.app$/.test(origin) || /\.vercel\.app$/.test(origin))) {
+    // Check if origin matches allowed patterns (Railway subdomains only, no Vercel)
+    if (origin && (allowedOrigins.includes(origin) || /\.up\.railway\.app$/.test(origin))) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
@@ -88,6 +89,10 @@ async function startServer() {
   app.use(migrateRouter);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Web compatibility routes (POST /quotes, POST /jobs, GET /jobs/:id, etc.)
+  // These provide backward compatibility for the web app's Next.js API proxy routes
+  registerWebCompatRoutes(app);
 
   // ============================================
   // Customer Auth Routes (signup/login for mobile app)

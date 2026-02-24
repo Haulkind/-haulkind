@@ -1,5 +1,5 @@
-// API client for backend integration
-const API_BASE_URL = 'https://haulkind-production-285b.up.railway.app'
+// API client for backend integration - uses official backend
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'
 
 export interface LoginRequest {
   email: string

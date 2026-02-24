@@ -13,12 +13,12 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://gregarious-reflection-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://haulkind-production-285b.up.railway.app"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://gregarious-reflection-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://haulkind-production-285b.up.railway.app"
       }
     }
   },

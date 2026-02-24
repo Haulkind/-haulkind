@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // Step 2: Check service area
     steps.push({ step: 2, action: 'check_service_area', input: { lat, lng } });
     
-    const serviceAreaUrl = `https://haulkind-production.up.railway.app/service-areas/lookup?lat=${lat}&lng=${lng}`;
+    const serviceAreaUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'}/service-areas/lookup?lat=${lat}&lng=${lng}`;
     steps.push({ step: 2.1, url: serviceAreaUrl });
     
     const serviceAreaResponse = await fetch(serviceAreaUrl, {
