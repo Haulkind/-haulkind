@@ -7,10 +7,12 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
-import * as Location from 'expo-location'
+import Geolocation from 'react-native-geolocation-service'
 import { useAuth } from '../../lib/AuthContext'
 import { getActiveJob, updateJobStatus, uploadPhoto, streamLocation, type Job } from '../../lib/api'
 
@@ -37,18 +39,21 @@ export default function JobDetailScreen() {
 
     if (locationTracking && job) {
       // Stream location every 30 seconds
-      locationInterval = setInterval(async () => {
-        try {
-          const location = await Location.getCurrentPositionAsync({})
-          await streamLocation(
-            token!,
-            job.id,
-            location.coords.latitude,
-            location.coords.longitude
-          )
-        } catch (error) {
-          console.error('Failed to stream location:', error)
-        }
+      locationInterval = setInterval(() => {
+        Geolocation.getCurrentPosition(
+          (position) => {
+            streamLocation(
+              token!,
+              job.id,
+              position.coords.latitude,
+              position.coords.longitude
+            ).catch((err) => console.error('Failed to stream location:', err))
+          },
+          (error) => {
+            console.error('Failed to get location for streaming:', error.code, error.message)
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+        )
       }, 30000)
     }
 
@@ -67,8 +72,14 @@ export default function JobDetailScreen() {
         
         // Start location tracking if job is in progress
         if (['EN_ROUTE', 'ARRIVED', 'STARTED'].includes(jobData.status)) {
-          const { status } = await Location.requestForegroundPermissionsAsync()
-          if (status === 'granted') {
+          let hasPermission = true
+          if (Platform.OS === 'android') {
+            const granted = await PermissionsAndroid.request(
+              PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            )
+            hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED
+          }
+          if (hasPermission) {
             setLocationTracking(true)
           }
         }

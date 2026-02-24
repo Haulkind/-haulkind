@@ -8,9 +8,11 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import * as Location from 'expo-location'
+import Geolocation from 'react-native-geolocation-service'
 import { useAuth } from '../lib/AuthContext'
 import { goOnline, goOffline, getAvailableOrders, acceptOrder, rejectOrder, getActiveJob, getApiBaseUrl, type Job } from '../lib/api'
 
@@ -58,30 +60,61 @@ export default function HomeScreen() {
     checkActiveJob()
   }, [])
 
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'Haulkind Driver needs access to your location to find nearby jobs.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        )
+        return granted === PermissionsAndroid.RESULTS.GRANTED
+      } catch (err) {
+        console.warn('[Driver GPS] Permission error:', err)
+        return false
+      }
+    }
+    return true // iOS handles permissions via Info.plist
+  }
+
   const requestLocation = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      if (status !== 'granted') {
+      const hasPermission = await requestLocationPermission()
+      if (!hasPermission) {
         setLocationError('Location permission denied. Enable it in Settings.')
         console.warn('[Driver GPS] Permission denied')
         return
       }
 
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      })
-      const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude }
-      setLocation(coords)
-      setLocationError(null)
-      console.log('[Driver GPS] Current location:', coords.lat.toFixed(6), coords.lng.toFixed(6))
+      Geolocation.getCurrentPosition(
+        (position) => {
+          const coords = { lat: position.coords.latitude, lng: position.coords.longitude }
+          setLocation(coords)
+          setLocationError(null)
+          console.log('[Driver GPS] Current location:', coords.lat.toFixed(6), coords.lng.toFixed(6))
+        },
+        (error) => {
+          console.error('[Driver GPS] getCurrentPosition error:', error.code, error.message)
+          setLocationError('Failed to get GPS location: ' + error.message)
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+      )
 
       // Watch for location changes (real-time tracking)
-      Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, distanceInterval: 100 },
-        (newLoc) => {
-          const newCoords = { lat: newLoc.coords.latitude, lng: newLoc.coords.longitude }
+      Geolocation.watchPosition(
+        (position) => {
+          const newCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
           setLocation(newCoords)
-        }
+        },
+        (error) => {
+          console.error('[Driver GPS] watchPosition error:', error.code, error.message)
+        },
+        { enableHighAccuracy: true, distanceFilter: 100, interval: 10000, fastestInterval: 5000 },
       )
     } catch (err) {
       console.error('[Driver GPS] Error:', err)
