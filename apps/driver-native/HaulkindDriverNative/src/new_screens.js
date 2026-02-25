@@ -134,6 +134,28 @@ function isToday(dateStr) {
   return new Date(dateStr).toDateString() === new Date().toDateString();
 }
 
+function isFutureDate(dateStr) {
+  if (!dateStr) return false;
+  const orderDate = new Date(dateStr);
+  const now = new Date();
+  orderDate.setHours(0,0,0,0);
+  const todayStart = new Date(now);
+  todayStart.setHours(0,0,0,0);
+  return orderDate > todayStart;
+}
+
+function isThisWeek(dateStr) {
+  if (!dateStr) return true;
+  const orderDate = new Date(dateStr);
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0,0,0,0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  return orderDate >= startOfWeek && orderDate < endOfWeek;
+}
+
 function isNew(dateStr, hours = 4) {
   if (!dateStr) return true;
   return (new Date() - new Date(dateStr)) / 3600000 < hours;
@@ -1451,9 +1473,16 @@ export function MyOrdersScreen({ navigation }) {
   };
 
   const filteredOrders = orders.filter(o => {
-    if (tab === "active") return ["accepted", "assigned", "en_route", "arrived", "in_progress"].includes(o.status);
-    if (tab === "scheduled") return o.status === "scheduled";
-    return true;
+    if (tab === "active") {
+      // Active = today's orders (scheduled_for is today or no date)
+      return isToday(o.scheduled_for || o.created_at);
+    }
+    if (tab === "scheduled") {
+      // Scheduled = future orders (scheduled_for is after today)
+      return isFutureDate(o.scheduled_for);
+    }
+    // All = orders for this week
+    return isThisWeek(o.scheduled_for || o.created_at);
   });
 
   const getStatusColor = (status) => {
