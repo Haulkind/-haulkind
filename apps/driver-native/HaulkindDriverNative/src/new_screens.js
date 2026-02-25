@@ -9,6 +9,7 @@ import Sound from "react-native-sound";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import Geolocation from "@react-native-community/geolocation";
+import { useFocusEffect } from "@react-navigation/native";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
@@ -538,6 +539,13 @@ export function HomeScreen({ navigation }) {
     return () => { if (refreshRef.current) clearInterval(refreshRef.current); };
   }, [isOnline, driverLocation]);
 
+  // Refresh immediately when screen gains focus (catches rescheduled/cancelled orders)
+  useFocusEffect(
+    useCallback(() => {
+      if (isOnline) fetchOrders();
+    }, [isOnline, driverLocation])
+  );
+
   // Apply filter
   useEffect(() => {
     if (filter === "TODAY") {
@@ -550,6 +558,13 @@ export function HomeScreen({ navigation }) {
       setFilteredOrders([...orders]);
     }
   }, [orders, myTodayOrders, filter]);
+
+  // When switching to TODAY, refresh immediately (so rescheduled orders move right away)
+  useEffect(() => {
+    if (filter === "TODAY" && isOnline) {
+      fetchOrders();
+    }
+  }, [filter, isOnline]);
 
   // Accept timer
   useEffect(() => {
@@ -1454,7 +1469,16 @@ export function MyOrdersScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("active"); // active, scheduled, all
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => {
+    loadOrders();
+    const t = setInterval(loadOrders, REFRESH_INTERVAL);
+    return () => clearInterval(t);
+  }, []);
+
+  // Refresh when screen gains focus (so rescheduled orders move immediately)
+  useFocusEffect(
+    useCallback(() => { loadOrders(); }, [])
+  );
 
   const loadOrders = async () => {
     setLoading(true);
