@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, Order } from '../../lib/api';
+import { api, Order, Driver } from '../../lib/api';
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -15,7 +15,19 @@ export default function OrdersPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState(30);
 
-  const loadOrders = useCallback(async () => {
+  // Modal states
+  const [cancelModalOrder, setCancelModalOrder] = useState<Order | null>(null);
+  const [assignModalOrder, setAssignModalOrder] = useState<Order | null>(null);
+  const [rescheduleModalOrder, setRescheduleModalOrder] = useState<Order | null>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
+
+  const loadOrders= useCallback(async () => {
     try {
       const params: any = {};
       if (statusFilter) params.status = statusFilter;
@@ -57,7 +69,15 @@ export default function OrdersPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const getStatusBadge = (status: string) => {
+  // Clear success message after 3 seconds
+  useEffect(() => {
+    if (actionSuccess) {
+      const timer = setTimeout(() => setActionSuccess(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionSuccess]);
+
+  const getStatusBadge= (status: string) => {
     const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       dispatching: 'bg-amber-100 text-amber-800',
@@ -84,6 +104,112 @@ export default function OrdersPage() {
       return `$${pricingJson.total || 0}`;
     } catch {
       return 'N/A';
+    }
+  };
+
+  // ---- CANCEL ORDER ----
+  const handleCancelClick = (order: Order) => {
+    setActionError('');
+    setCancelModalOrder(order);
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelModalOrder) return;
+    setActionLoading(true);
+    setActionError('');
+    try {
+      await api.cancelOrder(cancelModalOrder.id);
+      setActionSuccess(`Order ${cancelModalOrder.id.substring(0, 8)} cancelled successfully`);
+      setCancelModalOrder(null);
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to cancel order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ---- ASSIGN DRIVER ----
+  const handleAssignClick = async (order: Order) => {
+    setActionError('');
+    setSelectedDriverId('');
+    setAssignModalOrder(order);
+    try {
+      const data = await api.getDrivers({ status: 'approved', limit: 100 });
+      setDrivers(data.drivers);
+    } catch (err: any) {
+      setActionError('Failed to load drivers');
+    }
+  };
+
+  const confirmAssign = async () => {
+    if (!assignModalOrder || !selectedDriverId) return;
+    setActionLoading(true);
+    setActionError('');
+    try {
+      await api.assignOrder(assignModalOrder.id, selectedDriverId);
+      const driverName = drivers.find(d => d.id === selectedDriverId)?.name || selectedDriverId;
+      setActionSuccess(`Order assigned to ${driverName}`);
+      setAssignModalOrder(null);
+      setSelectedDriverId('');
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to assign order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ---- RESCHEDULE ORDER ----
+  const handleRescheduleClick = (order: Order) => {
+    setActionError('');
+    const existingDate = order.pickup_date || '';
+    if (existingDate) {
+      try {
+        const d = new Date(existingDate);
+        if (!isNaN(d.getTime())) {
+          setRescheduleDate(d.toISOString().split('T')[0]);
+          const hours = d.getHours().toString().padStart(2, '0');
+          const mins = d.getMinutes().toString().padStart(2, '0');
+          if (hours !== '00' || mins !== '00') {
+            setRescheduleTime(`${hours}:${mins}`);
+          } else {
+            setRescheduleTime('');
+          }
+        } else {
+          setRescheduleDate('');
+          setRescheduleTime('');
+        }
+      } catch {
+        setRescheduleDate('');
+        setRescheduleTime('');
+      }
+    } else {
+      setRescheduleDate('');
+      setRescheduleTime('');
+    }
+    setRescheduleModalOrder(order);
+  };
+
+  const confirmReschedule = async () => {
+    if (!rescheduleModalOrder || !rescheduleDate) return;
+    setActionLoading(true);
+    setActionError('');
+    try {
+      const dateTimeStr = rescheduleTime
+        ? `${rescheduleDate}T${rescheduleTime}:00`
+        : `${rescheduleDate}T00:00:00`;
+      const timeWindow = rescheduleTime || undefined;
+      await api.rescheduleOrder(rescheduleModalOrder.id, dateTimeStr, timeWindow);
+      setActionSuccess(`Order rescheduled to ${rescheduleDate}${rescheduleTime ? ' at ' + rescheduleTime : ''}`);
+      setRescheduleModalOrder(null);
+      setRescheduleDate('');
+      setRescheduleTime('');
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to reschedule order');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -127,6 +253,12 @@ export default function OrdersPage() {
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+          {actionSuccess}
         </div>
       )}
 
@@ -187,12 +319,13 @@ export default function OrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">No orders found</td>
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">No orders found</td>
               </tr>
             ) : (
               orders.map((order) => (
@@ -216,12 +349,178 @@ export default function OrdersPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {order.status !== 'cancelled' && order.status !== 'completed' && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleAssignClick(order)}
+                          className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
+                          title="Assign to a driver"
+                        >
+                          Assign
+                        </button>
+                        <button
+                          onClick={() => handleRescheduleClick(order)}
+                          className="px-2 py-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded hover:bg-amber-100"
+                          title="Change date/time"
+                        >
+                          Reschedule
+                        </button>
+                        <button
+                          onClick={() => handleCancelClick(order)}
+                          className="px-2 py-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                          title="Cancel this order"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* CANCEL MODAL */}
+      {cancelModalOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Cancel Order</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to cancel order <strong>{cancelModalOrder.id.substring(0, 8)}...</strong> for <strong>{cancelModalOrder.customer_name}</strong>?
+            </p>
+            <p className="text-sm text-red-600 mb-4">
+              This will remove the order from all drivers immediately.
+            </p>
+            {actionError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                {actionError}
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setCancelModalOrder(null); setActionError(''); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={actionLoading}
+              >
+                No, Keep Order
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN DRIVER MODAL */}
+      {assignModalOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Assign Driver</h3>
+            <p className="text-gray-600 mb-4">
+              Assign order <strong>{assignModalOrder.id.substring(0, 8)}...</strong> ({assignModalOrder.customer_name}) to a driver.
+            </p>
+            {actionError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                {actionError}
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Driver</label>
+              {drivers.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading drivers...</p>
+              ) : (
+                <select
+                  value={selectedDriverId}
+                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select a driver --</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.name || `${driver.id.substring(0, 8)}...`} — {driver.phone || driver.email || 'No contact'}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setAssignModalOrder(null); setActionError(''); setSelectedDriverId(''); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAssign}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                disabled={actionLoading || !selectedDriverId}
+              >
+                {actionLoading ? 'Assigning...' : 'Assign Driver'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESCHEDULE MODAL */}
+      {rescheduleModalOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Reschedule Order</h3>
+            <p className="text-gray-600 mb-4">
+              Change the date and time for order <strong>{rescheduleModalOrder.id.substring(0, 8)}...</strong> ({rescheduleModalOrder.customer_name}).
+            </p>
+            {actionError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                {actionError}
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">New Date</label>
+              <input
+                type="date"
+                value={rescheduleDate}
+                onChange={(e) => setRescheduleDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">New Time (optional)</label>
+              <input
+                type="time"
+                value={rescheduleTime}
+                onChange={(e) => setRescheduleTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setRescheduleModalOrder(null); setActionError(''); setRescheduleDate(''); setRescheduleTime(''); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReschedule}
+                className="px-4 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                disabled={actionLoading || !rescheduleDate}
+              >
+                {actionLoading ? 'Rescheduling...' : 'Reschedule Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
