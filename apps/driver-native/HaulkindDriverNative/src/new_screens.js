@@ -391,8 +391,9 @@ export function HomeScreen({ navigation }) {
 
   const timerRef = useRef(null);
   const refreshRef = useRef(null);
+  const watchIdRef = useRef(null);
 
-  // Request location
+  // Request location + start real-time tracking
   useEffect(() => {
     async function requestLoc() {
       if (Platform.OS === "android") {
@@ -401,19 +402,32 @@ export function HomeScreen({ navigation }) {
             PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
             { title: "Location Permission", message: "Haulkind needs your location to show nearby orders.", buttonPositive: "Allow" }
           );
-          if (granted === PermissionsAndroid.RESULTS.GRANTED) getLoc();
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) startTracking();
           else setDriverLocation({ latitude: 39.9526, longitude: -75.1652 });
         } catch { setDriverLocation({ latitude: 39.9526, longitude: -75.1652 }); }
-      } else getLoc();
+      } else startTracking();
     }
-    function getLoc() {
+    function startTracking() {
+      // Get initial position fast
       Geolocation.getCurrentPosition(
         (pos) => setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
         () => setDriverLocation({ latitude: 39.9526, longitude: -75.1652 }),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
       );
+      // Watch position for real-time tracking (updates when driver moves 50+ meters)
+      watchIdRef.current = Geolocation.watchPosition(
+        (pos) => setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        (err) => console.log("Watch position error:", err),
+        { enableHighAccuracy: true, distanceFilter: 50, maximumAge: 5000, timeout: 15000 }
+      );
     }
     requestLoc();
+    return () => {
+      if (watchIdRef.current !== null) {
+        Geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
   }, []);
 
   // Load profile
