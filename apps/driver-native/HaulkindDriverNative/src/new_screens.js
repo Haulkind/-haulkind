@@ -400,6 +400,7 @@ export function SignupScreen({ navigation }) {
 export function HomeScreen({ navigation }) {
   const [isOnline, setIsOnline] = useState(false);
   const [orders, setOrders] = useState([]);
+  const [myTodayOrders, setMyTodayOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
@@ -463,25 +464,31 @@ export function HomeScreen({ navigation }) {
     })();
   }, []);
 
-  // Fetch orders
+  // Enrich orders with coords and distance
+  async function enrichOrders(rawOrders) {
+    return Promise.all(rawOrders.map(async (order) => {
+      let coords = null;
+      if (order.pickup_lat && order.pickup_lng) {
+        coords = { latitude: parseFloat(order.pickup_lat), longitude: parseFloat(order.pickup_lng) };
+      } else if (order.pickup_address) {
+        coords = await geocodeAddress(order.pickup_address);
+      }
+      let distance = null;
+      if (coords && driverLocation) {
+        distance = getDistanceMiles(driverLocation.latitude, driverLocation.longitude, coords.latitude, coords.longitude);
+      }
+      return { ...order, coords, distance, isNew: isNew(order.created_at) };
+    }));
+  }
+
+  // Fetch orders (available + my orders for Today)
   const fetchOrders = useCallback(async () => {
-    if (!isOnline) { setOrders([]); setFilteredOrders([]); setLoading(false); return; }
+    if (!isOnline) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); setLoading(false); return; }
     try {
+      // Fetch available orders (unassigned) for ALL and NEW tabs
       const data = await apiGet("/driver/orders/available");
       const rawOrders = data?.orders || [];
-      const enriched = await Promise.all(rawOrders.map(async (order) => {
-        let coords = null;
-        if (order.pickup_lat && order.pickup_lng) {
-          coords = { latitude: parseFloat(order.pickup_lat), longitude: parseFloat(order.pickup_lng) };
-        } else if (order.pickup_address) {
-          coords = await geocodeAddress(order.pickup_address);
-        }
-        let distance = null;
-        if (coords && driverLocation) {
-          distance = getDistanceMiles(driverLocation.latitude, driverLocation.longitude, coords.latitude, coords.longitude);
-        }
-        return { ...order, coords, distance, isNew: isNew(order.created_at) };
-      }));
+      const enriched = await enrichOrders(rawOrders);
 
       const withinRadius = enriched.filter((o) => o.distance === null || o.distance <= RADIUS_MILES);
       withinRadius.sort((a, b) => (a.distance || 999) - (b.distance || 999));
@@ -491,11 +498,9 @@ export function HomeScreen({ navigation }) {
       const brandNew = withinRadius.filter((o) => !previousOrderIds.has(o.id));
       if (brandNew.length > 0 && previousOrderIds.size > 0) {
         Vibration.vibrate([0, 300, 100, 300]);
-        // Play notification sound
         try {
           const sound = new Sound('notification_sound.mp3', Sound.MAIN_BUNDLE, (error) => {
             if (error) {
-              // Fallback: use system notification sound
               console.log('Using system sound');
             } else {
               sound.setVolume(1.0);
@@ -508,6 +513,21 @@ export function HomeScreen({ navigation }) {
       }
       setPreviousOrderIds(currentIds);
       setOrders(withinRadius);
+
+      // Fetch driver's own accepted/assigned orders for TODAY tab
+      try {
+        const myData = await apiGet("/driver/orders/my-orders");
+        const myRaw = myData?.orders || [];
+        const myEnriched = await enrichOrders(myRaw);
+        // Only keep today's orders for the TODAY tab
+        const todayOnly = myEnriched.filter((o) => isToday(o.scheduled_for || o.created_at));
+        todayOnly.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+        setMyTodayOrders(todayOnly);
+      } catch (e) {
+        console.log("My orders fetch error:", e);
+        setMyTodayOrders([]);
+      }
+
       setMapKey((k) => k + 1);
     } catch (e) { console.log("Fetch error:", e); } finally { setLoading(false); }
   }, [isOnline, driverLocation]);
@@ -520,11 +540,16 @@ export function HomeScreen({ navigation }) {
 
   // Apply filter
   useEffect(() => {
-    let f = [...orders];
-    if (filter === "TODAY") f = f.filter((o) => isToday(o.scheduled_for || o.created_at));
-    else if (filter === "NEW") f = f.filter((o) => o.isNew);
-    setFilteredOrders(f);
-  }, [orders, filter]);
+    if (filter === "TODAY") {
+      // Today = only driver's own accepted/assigned orders for today
+      setFilteredOrders([...myTodayOrders]);
+    } else if (filter === "NEW") {
+      setFilteredOrders(orders.filter((o) => o.isNew));
+    } else {
+      // ALL = all available (unassigned) orders
+      setFilteredOrders([...orders]);
+    }
+  }, [orders, myTodayOrders, filter]);
 
   // Accept timer
   useEffect(() => {
@@ -544,7 +569,7 @@ export function HomeScreen({ navigation }) {
       await apiPut("/driver/profile", { isOnline: newStatus });
       await AsyncStorage.setItem("driver_isOnline", newStatus ? "true" : "false");
     } catch (e) { console.log("Toggle error:", e); }
-    if (!newStatus) { setOrders([]); setFilteredOrders([]); }
+    if (!newStatus) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); }
   }
 
   async function acceptOrder(order) {
@@ -575,7 +600,8 @@ export function HomeScreen({ navigation }) {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
       if (msg.type === "orderClick") {
-        const order = orders.find((o) => o.id === msg.id);
+        // Search in both available orders and my today orders
+        const order = orders.find((o) => o.id === msg.id) || myTodayOrders.find((o) => o.id === msg.id);
         if (order) openOrderDetail(order);
       }
     } catch {}
