@@ -211,6 +211,19 @@ class ApiClient {
       body: JSON.stringify({ driver_id }),
     });
   }
+
+  async cancelOrder(id: string): Promise<{ order: Order }> {
+    return this.request(`/admin/orders/${id}/cancel`, {
+      method: 'PUT',
+    });
+  }
+
+  async rescheduleOrder(id: string, pickup_date: string, pickup_time_window?: string): Promise<{ order: Order }> {
+    return this.request(`/admin/orders/${id}/reschedule`, {
+      method: 'PUT',
+      body: JSON.stringify({ pickup_date, pickup_time_window }),
+    });
+  }
 }
 
 export const api = new ApiClient();

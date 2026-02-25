@@ -522,4 +522,89 @@ export function registerAdminApiRoutes(app: Express) {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // PUT /admin/orders/:id/cancel - Cancel an order
+  app.put('/admin/orders/:id/cancel', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Try jobs table first (primary), then orders table (legacy)
+      let result = await pool.query(
+        `UPDATE jobs SET status = 'cancelled', assigned_driver_id = NULL, updated_at = NOW() WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        result = await pool.query(
+          `UPDATE orders SET status = 'cancelled', assigned_driver_id = NULL, updated_at = NOW() WHERE id::text = $1 RETURNING *`,
+          [req.params.id]
+        );
+      }
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // Remove job_assignments for this order
+      try {
+        await pool.query('DELETE FROM job_assignments WHERE job_id = $1', [req.params.id]);
+      } catch (e) {
+        // ignore if table doesn't exist or no records
+      }
+
+      console.log(`[Admin] Order ${req.params.id} CANCELLED`);
+      res.json({ order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Cancel order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /admin/orders/:id/reschedule - Change date/time of an order
+  app.put('/admin/orders/:id/reschedule', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { pickup_date, pickup_time_window } = req.body;
+      if (!pickup_date) {
+        return res.status(400).json({ error: 'pickup_date is required' });
+      }
+
+      // Try jobs table first (primary) — uses scheduled_for field
+      let result = await pool.query(
+        `UPDATE jobs SET scheduled_for = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+        [pickup_date, req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        // Try orders table (legacy) — uses pickup_date and pickup_time_window fields
+        const updateFields = ['pickup_date = $1', 'updated_at = NOW()'];
+        const params: any[] = [pickup_date];
+        let paramIndex = 2;
+
+        if (pickup_time_window) {
+          updateFields.push(`pickup_time_window = $${paramIndex++}`);
+          params.push(pickup_time_window);
+        }
+
+        params.push(req.params.id);
+        result = await pool.query(
+          `UPDATE orders SET ${updateFields.join(', ')} WHERE id::text = $${paramIndex} RETURNING *`,
+          params
+        );
+      }
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      console.log(`[Admin] Order ${req.params.id} RESCHEDULED to ${pickup_date} ${pickup_time_window || ''}`);
+      res.json({ order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Reschedule order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 }
