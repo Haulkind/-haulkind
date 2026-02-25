@@ -925,6 +925,58 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
+  // GET /driver/orders/my-orders - Get orders assigned to this driver
+  app.get('/driver/orders/my-orders', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Get orders assigned to this driver (not completed/cancelled)
+      const jobsResult = await pool.query(
+        `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
+                pickup_address, pickup_lat, pickup_lng, description, estimated_price,
+                items_json, scheduled_for, created_at
+         FROM jobs
+         WHERE assigned_driver_id = $1
+           AND status NOT IN ('completed', 'cancelled')
+         ORDER BY scheduled_for ASC NULLS LAST, created_at DESC`,
+        [decoded.driverId]
+      );
+
+      // Also check orders table for legacy assignments
+      let ordersRows: any[] = [];
+      try {
+        const ordersResult = await pool.query(
+          `SELECT id::text, customer_name, phone as customer_phone, email as customer_email,
+                  service_type, status, street as pickup_address,
+                  lat::double precision as pickup_lat, lng::double precision as pickup_lng,
+                  '' as description,
+                  COALESCE((pricing_json::jsonb->>'total')::numeric, 0) as estimated_price,
+                  items_json::text, pickup_date as scheduled_for, created_at
+           FROM orders
+           WHERE assigned_driver_id = $1
+             AND status NOT IN ('completed', 'cancelled')
+           ORDER BY pickup_date ASC NULLS LAST, created_at DESC`,
+          [decoded.driverId]
+        );
+        ordersRows = ordersResult.rows || [];
+      } catch (e) {
+        console.warn('[DriverAuth] Could not query orders table for my-orders:', (e as any)?.message);
+      }
+
+      const allOrders = [...(jobsResult.rows || []), ...ordersRows];
+      console.log('[DriverAuth] GET /driver/orders/my-orders - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length);
+
+      res.json({ orders: allOrders });
+    } catch (err: any) {
+      console.error('My orders error:', err);
+      res.json({ orders: [] });
+    }
+  });
+
   // GET /driver/orders/:id - Get single order details
   app.get('/driver/orders/:id', async (req, res) => {
     try {
