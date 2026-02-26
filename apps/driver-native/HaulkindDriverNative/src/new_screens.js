@@ -602,6 +602,33 @@ export function HomeScreen({ navigation }) {
     setOrders((prev) => prev.filter((o) => o.id !== order.id));
   }
 
+  // Cancel an already-accepted order (from Today tab)
+  function cancelMyOrder(order) {
+    Alert.alert(
+      "Cancel Order",
+      "Are you sure you want to cancel this order? This action cannot be undone.",
+      [
+        { text: "Keep Order", style: "cancel" },
+        { text: "Cancel Order", style: "destructive", onPress: async () => {
+          try {
+            await apiPostAuth(`/driver/orders/${order.id}/cancel`);
+            Alert.alert("Cancelled", "Order has been cancelled.");
+            setShowDetail(false);
+            fetchOrders();
+          } catch (e) {
+            Alert.alert("Error", e.message || "Could not cancel order.");
+          }
+        }},
+      ]
+    );
+  }
+
+  // Continue working on an already-accepted order
+  function continueOrder(order) {
+    setShowDetail(false);
+    navigation.navigate("ActiveOrder", { order });
+  }
+
   async function logout() {
     await AsyncStorage.removeItem("driver_token");
     await AsyncStorage.removeItem("driver_isOnline");
@@ -669,6 +696,9 @@ export function HomeScreen({ navigation }) {
     const timerColor = acceptTimer <= 10 ? C.danger : acceptTimer <= 30 ? C.warning : C.success;
     const timerPct = (acceptTimer / ACCEPT_TIMER_SECONDS) * 100;
 
+    // Check if this order is already accepted/assigned (from myTodayOrders)
+    const isMyOrder = myTodayOrders.some((m) => m.id === o.id);
+
     return (
       <Modal visible={showDetail} animationType="slide" transparent={false}>
         <View style={styles.detailContainer}>
@@ -681,13 +711,22 @@ export function HomeScreen({ navigation }) {
             <View style={{ width: 40 }} />
           </View>
 
-          {/* Timer bar */}
-          <View style={styles.timerBarBg}>
-            <View style={[styles.timerBarFill, { width: `${timerPct}%`, backgroundColor: timerColor }]} />
-          </View>
-          <Text style={[styles.timerText, { color: timerColor }]}>
-            {acceptTimer > 0 ? `${acceptTimer}s remaining to accept` : "Time expired - order still available"}
-          </Text>
+          {/* Timer bar - only show for new/available orders, not already accepted */}
+          {!isMyOrder && (
+            <>
+              <View style={styles.timerBarBg}>
+                <View style={[styles.timerBarFill, { width: `${timerPct}%`, backgroundColor: timerColor }]} />
+              </View>
+              <Text style={[styles.timerText, { color: timerColor }]}>
+                {acceptTimer > 0 ? `${acceptTimer}s remaining to accept` : "Time expired - order still available"}
+              </Text>
+            </>
+          )}
+          {isMyOrder && (
+            <View style={{ backgroundColor: "#e0f2fe", paddingVertical: 8, alignItems: "center" }}>
+              <Text style={{ color: C.primary, fontWeight: "700", fontSize: 14 }}>Your accepted order</Text>
+            </View>
+          )}
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
             {/* Price card */}
@@ -746,12 +785,25 @@ export function HomeScreen({ navigation }) {
 
           {/* Bottom buttons */}
           <View style={styles.detailBottomBar}>
-            <TouchableOpacity style={styles.declineBtn} onPress={() => declineOrder(o)}>
-              <Text style={styles.declineBtnText}>Decline</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.acceptBtn, accepting && { opacity: 0.7 }]} onPress={() => acceptOrder(o)} disabled={accepting}>
-              {accepting ? <ActivityIndicator color="#fff" /> : <Text style={styles.acceptBtnText}>ACCEPT ORDER</Text>}
-            </TouchableOpacity>
+            {isMyOrder ? (
+              <>
+                <TouchableOpacity style={styles.declineBtn} onPress={() => cancelMyOrder(o)}>
+                  <Text style={styles.declineBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.acceptBtn} onPress={() => continueOrder(o)}>
+                  <Text style={styles.acceptBtnText}>CONTINUE ORDER</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.declineBtn} onPress={() => declineOrder(o)}>
+                  <Text style={styles.declineBtnText}>Decline</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.acceptBtn, accepting && { opacity: 0.7 }]} onPress={() => acceptOrder(o)} disabled={accepting}>
+                  {accepting ? <ActivityIndicator color="#fff" /> : <Text style={styles.acceptBtnText}>ACCEPT ORDER</Text>}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
