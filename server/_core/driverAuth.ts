@@ -39,7 +39,106 @@ function verifyToken(req: any): any {
   }
 }
 
+// ============================================================================
+// AUTO-CANCEL OVERDUE ORDERS CRON (runs every 5 minutes, acts at 9PM ET)
+// Orders not completed by 9PM are unassigned and rescheduled to tomorrow
+// ============================================================================
+let cronStarted = false;
+function startOverdueCron() {
+  if (cronStarted) return;
+  cronStarted = true;
+
+  // Check every 5 minutes
+  setInterval(async () => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return;
+
+      // Current time in US Eastern (ET)
+      const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      const hour = nowET.getHours();
+
+      // Only act between 9PM and midnight ET
+      if (hour < 21) return;
+
+      // Find overdue orders: assigned to a driver, not completed, scheduled_for <= today
+      const todayStr = nowET.toISOString().split('T')[0]; // YYYY-MM-DD
+      const tomorrowDate = new Date(nowET);
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+
+      const result = await pool.query(
+        `SELECT id, assigned_driver_id, scheduled_for FROM jobs
+         WHERE assigned_driver_id IS NOT NULL
+           AND status IN ('accepted', 'assigned', 'en_route', 'arrived', 'in_progress', 'scheduled')
+           AND (scheduled_for::date <= $1::date OR scheduled_for IS NULL)`,
+        [todayStr]
+      );
+
+      if (result.rows.length > 0) {
+        console.log(`[Cron] Found ${result.rows.length} overdue orders to unassign`);
+        for (const row of result.rows) {
+          await pool.query(
+            `UPDATE jobs SET status = 'pending', assigned_driver_id = NULL,
+                    scheduled_for = ($1::date + TIME '04:00:00'),
+                    updated_at = NOW()
+             WHERE id = $2`,
+            [tomorrowStr, row.id]
+          );
+          console.log(`[Cron] Unassigned order ${row.id}, rescheduled to ${tomorrowStr}`);
+        }
+      }
+    } catch (e) {
+      console.error('[Cron] Overdue check error:', e);
+    }
+  }, 5 * 60 * 1000); // every 5 minutes
+
+  console.log('[Cron] Overdue order auto-cancel started (checks every 5min, acts at 9PM ET)');
+}
+
 export function registerDriverAuthRoutes(app: Express) {
+
+  // Start the overdue cron job
+  startOverdueCron();
+
+  // POST /admin/orders/process-overdue - Manual trigger for overdue check (admin only)
+  app.post('/admin/orders/process-overdue', async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const tomorrowDate = new Date(now);
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+
+      const result = await pool.query(
+        `SELECT id, assigned_driver_id, scheduled_for, status FROM jobs
+         WHERE assigned_driver_id IS NOT NULL
+           AND status IN ('accepted', 'assigned', 'en_route', 'arrived', 'in_progress', 'scheduled')
+           AND (scheduled_for::date < $1::date OR scheduled_for IS NULL)`,
+        [todayStr]
+      );
+
+      const processed = [];
+      for (const row of result.rows) {
+        await pool.query(
+          `UPDATE jobs SET status = 'pending', assigned_driver_id = NULL,
+                  scheduled_for = ($1::date + TIME '04:00:00'),
+                  updated_at = NOW()
+           WHERE id = $2`,
+          [tomorrowStr, row.id]
+        );
+        processed.push({ id: row.id, old_status: row.status, new_scheduled: tomorrowStr });
+      }
+
+      res.json({ success: true, processed: processed.length, orders: processed });
+    } catch (err: any) {
+      console.error('Process overdue error:', err);
+      res.status(500).json({ error: 'Failed to process overdue orders' });
+    }
+  });
 
   // ============================================================================
   // DATABASE SETUP - Ensure tables exist
@@ -697,7 +796,7 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
-  // GET /driver/orders/history - Get order history
+  // GET /driver/orders/history - Get order history (ONLY completed orders)
   app.get('/driver/orders/history', async (req, res) => {
     try {
       const decoded = verifyToken(req);
@@ -714,8 +813,8 @@ export function registerDriverAuthRoutes(app: Express) {
         const result = await pool.query(
           `SELECT j.* FROM jobs j 
            JOIN job_assignments ja ON j.id = ja.job_id 
-           WHERE ja.driver_id = $1 
-           ORDER BY j.created_at DESC LIMIT 50`,
+           WHERE ja.driver_id = $1 AND j.status = 'completed'
+           ORDER BY j.updated_at DESC LIMIT 50`,
           [decoded.driverId]
         );
         res.json({ orders: result.rows || [] });
