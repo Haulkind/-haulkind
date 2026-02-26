@@ -1751,9 +1751,11 @@ export function OrderHistoryScreen({ navigation }) {
         data = await apiGet("/driver/orders/history");
       }
       const allOrders = data?.orders || [];
+      // Only show completed orders in history
+      const completedOnly = allOrders.filter(o => o.status === 'completed');
       // Sort by date descending (newest first)
-      allOrders.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
-      setOrders(allOrders);
+      completedOnly.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+      setOrders(completedOnly);
       // Calculate total earnings
       const total = allOrders
         .filter(o => o.status === "completed")
