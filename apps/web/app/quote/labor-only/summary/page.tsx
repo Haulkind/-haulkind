@@ -54,6 +54,10 @@ export default function LaborOnlySummaryPage() {
         estimatedHours: data.estimatedHours,
         customerNotes: data.customerNotes,
         photoUrls: data.photoUrls,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        customerEmail: data.customerEmail,
+        timeWindow: data.timeWindow,
       })
 
       updateData({ jobId: job.id })

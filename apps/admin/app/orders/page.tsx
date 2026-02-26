@@ -318,6 +318,7 @@ export default function OrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -325,7 +326,7 @@ export default function OrdersPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">No orders found</td>
+                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">No orders found</td>
               </tr>
             ) : (
               orders.map((order) => (
@@ -346,6 +347,18 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(order.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatPrice(order.pricing_json)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {order.pickup_date ? new Date(order.pickup_date).toLocaleDateString() : 'N/A'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {order.pickup_time_window === 'ALL_DAY' ? 'All Day (8AM-8PM)' :
+                       order.pickup_time_window === 'MORNING' ? 'Morning (8AM-12PM)' :
+                       order.pickup_time_window === 'AFTERNOON' ? 'Afternoon (12PM-4PM)' :
+                       order.pickup_time_window === 'EVENING' ? 'Evening (4PM-8PM)' :
+                       order.pickup_time_window || ''}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>

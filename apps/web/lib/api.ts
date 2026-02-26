@@ -51,6 +51,7 @@ export interface JobCreateRequest {
   customerName?: string
   customerPhone?: string
   customerEmail?: string
+  timeWindow?: string
 }
 
 export interface JobResponse {

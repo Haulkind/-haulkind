@@ -130,6 +130,17 @@ function formatTime(dateStr) {
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+// Convert pickup_time_window to human-readable label
+function formatTimeWindow(order) {
+  const tw = order?.pickup_time_window;
+  if (tw === "ALL_DAY") return "All Day (8AM - 8PM)";
+  if (tw === "MORNING") return "Morning (8AM - 12PM)";
+  if (tw === "AFTERNOON") return "Afternoon (12PM - 4PM)";
+  if (tw === "EVENING") return "Evening (4PM - 8PM)";
+  // Fallback to raw time if no time_window stored
+  return formatTime(order?.scheduled_for);
+}
+
 function isToday(dateStr) {
   if (!dateStr) return true;
   return new Date(dateStr).toDateString() === new Date().toDateString();
@@ -672,7 +683,7 @@ export function HomeScreen({ navigation }) {
           <Text style={styles.cardIcon}>📅</Text>
           <Text style={styles.cardMeta}>{formatDate(o.scheduled_for || o.created_at)}</Text>
           <Text style={styles.cardIcon}>  🕐</Text>
-          <Text style={styles.cardMeta}>{formatTime(o.scheduled_for)}</Text>
+          <Text style={styles.cardMeta}>{formatTimeWindow(o)}</Text>
         </View>
         <View style={styles.cardDateRow}>
           <Text style={styles.cardIcon}>📍</Text>
@@ -758,7 +769,7 @@ export function HomeScreen({ navigation }) {
 
             <View style={styles.detailSection}>
               <Text style={styles.detailSectionTitle}>SCHEDULE</Text>
-              <Text style={styles.detailSectionValue}>{formatDate(o.scheduled_for || o.created_at)} • {formatTime(o.scheduled_for)}</Text>
+              <Text style={styles.detailSectionValue}>{formatDate(o.scheduled_for || o.created_at)} • {formatTimeWindow(o)}</Text>
             </View>
 
             <View style={styles.detailSection}>
@@ -1654,7 +1665,7 @@ export function MyOrdersScreen({ navigation }) {
                 <Text style={{ fontSize: 22, fontWeight: "bold", color: C.success }}>${parseFloat(o.estimated_price || o.final_price || 0).toFixed(0)}</Text>
               </View>
               <Text style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>📍 {o.pickup_address || "Address pending"}</Text>
-              <Text style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>📅 {formatDate(o.scheduled_for || o.created_at)} • {formatTime(o.scheduled_for)}</Text>
+              <Text style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>📅 {formatDate(o.scheduled_for || o.created_at)} • {formatTimeWindow(o)}</Text>
               {o.customer_name && <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>👤 {o.customer_name}</Text>}
               <View style={{ flexDirection: "row", marginTop: 12, gap: 8 }}>
                 <TouchableOpacity

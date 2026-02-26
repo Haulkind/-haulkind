@@ -144,6 +144,7 @@ export function registerWebCompatRoutes(app: Express) {
         customerEmail,
         customerNotes,
         total: quotedTotal,
+        timeWindow,
       } = req.body;
 
       if (!pickupAddress && !customerName) {
@@ -181,8 +182,9 @@ export function registerWebCompatRoutes(app: Express) {
           service_type, status, pickup_address,
           pickup_lat, pickup_lng,
           description, estimated_price, items_json, scheduled_for,
+          pickup_time_window,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
         RETURNING *`,
         [
           customerName || "Web Customer",
@@ -196,6 +198,7 @@ export function registerWebCompatRoutes(app: Express) {
           totalAmount,
           itemsJson,
           scheduledFor || null,
+          timeWindow || null,
         ]
       );
 
