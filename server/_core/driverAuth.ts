@@ -200,6 +200,14 @@ export function registerDriverAuthRoutes(app: Express) {
         `);
         console.log('[DriverAuth] Jobs table ensured');
 
+        // Ensure pickup_time_window column exists on jobs table
+        try {
+          await pool.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS pickup_time_window TEXT`);
+          console.log('[DriverAuth] pickup_time_window column ensured');
+        } catch (e) {
+          console.warn('[DriverAuth] Could not add pickup_time_window column:', (e as any)?.message);
+        }
+
         // Create job_assignments table if not exists
         await pool.query(`
           CREATE TABLE IF NOT EXISTS job_assignments (
@@ -220,7 +228,7 @@ export function registerDriverAuthRoutes(app: Express) {
             customer_email as email, pickup_address as street,
             '' as city, '' as state, '' as zip,
             pickup_lat as lat, pickup_lng as lng,
-            scheduled_for as pickup_date, '' as pickup_time_window,
+            scheduled_for as pickup_date, pickup_time_window,
             items_json, estimated_price as pricing_json,
             status, assigned_driver_id,
             created_at, updated_at
@@ -666,7 +674,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const jobsResult = await pool.query(
         `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                 pickup_address, pickup_lat, pickup_lng, description, estimated_price,
-                items_json, scheduled_for, created_at
+                items_json, scheduled_for, pickup_time_window, created_at
          FROM jobs WHERE status IN ('pending', 'dispatching') AND assigned_driver_id IS NULL
          ORDER BY created_at DESC LIMIT 20`
       );
@@ -1037,7 +1045,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const jobsResult = await pool.query(
         `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                 pickup_address, pickup_lat, pickup_lng, description, estimated_price,
-                items_json, scheduled_for, created_at
+                items_json, scheduled_for, pickup_time_window, created_at
          FROM jobs
          WHERE assigned_driver_id = $1
            AND status NOT IN ('completed', 'cancelled')

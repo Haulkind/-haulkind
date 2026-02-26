@@ -102,6 +102,7 @@ export default function HaulAwaySummaryPage() {
         customerName: data.customerName,
         customerPhone: data.customerPhone,
         customerEmail: data.customerEmail,
+        timeWindow: data.timeWindow,
       })
 
       updateData({ jobId: job.id })
