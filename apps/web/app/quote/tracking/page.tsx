@@ -176,6 +176,31 @@ export default function TrackingPage() {
               </div>
             )}
           </div>
+
+          {/* PWA Install Prompt */}
+          <div className="mt-8 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                <span className="text-white text-xl font-bold">H</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 mb-1">Track orders on the go</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Install the Haulkind app on your phone for real-time tracking, push notifications, and easy rebooking.
+                </p>
+                <div className="flex gap-2">
+                  <a
+                    href={`/track?orderId=${jobId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Open Tracking App
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
