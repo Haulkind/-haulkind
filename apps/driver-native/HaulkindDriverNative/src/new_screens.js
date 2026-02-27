@@ -16,7 +16,7 @@ import { menuEmitter } from "./menuEmitter";
 import { launchCamera } from "react-native-image-picker";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const RADIUS_MILES = 70;
+const RADIUS_MILES = 500;
 const REFRESH_INTERVAL = 15000;
 const ACCEPT_TIMER_SECONDS = 60;
 
@@ -592,7 +592,7 @@ export function HomeScreen({ navigation }) {
     const newStatus = !isOnline;
     setIsOnline(newStatus);
     try {
-      await apiPut("/driver/profile", { isOnline: newStatus });
+      await apiPostAuth("/driver/online", { online: newStatus });
       await AsyncStorage.setItem("driver_isOnline", newStatus ? "true" : "false");
     } catch (e) { console.log("Toggle error:", e); }
     if (!newStatus) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); }
