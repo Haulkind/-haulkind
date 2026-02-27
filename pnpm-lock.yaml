@@ -7,11 +7,6 @@ settings:
 overrides:
   tailwindcss>nanoid: 3.3.7
 
-patchedDependencies:
-  wouter@3.7.1:
-    hash: 4utoqymkqegp7ldbtu4ndzqvum
-    path: patches/wouter@3.7.1.patch
-
 importers:
 
   .:
@@ -222,7 +217,7 @@ importers:
         version: 1.1.2(@types/react-dom@19.2.1(@types/react@19.2.1))(@types/react@19.2.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       wouter:
         specifier: ^3.3.5
-        version: 3.7.1(patch_hash=4utoqymkqegp7ldbtu4ndzqvum)(react@19.2.1)
+        version: 3.7.1(react@19.2.1)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -356,7 +351,7 @@ importers:
         version: 18.0.10(expo@52.0.48(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@expo/metro-runtime@4.0.1(react-native@0.76.5(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@types/react@18.3.27)(react@18.3.1)))(react-native@0.76.5(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@types/react@18.3.27)(react@18.3.1))(react@18.3.1))
       expo-router:
         specifier: ~4.0.0
-        version: 4.0.22(2vkgehefqytgkltvoegr3dm4ie)
+        version: 4.0.22(584d631f97cabdcbd0e797b1fb6f07fb)
       metro:
         specifier: 0.76.9
         version: 0.76.9
@@ -445,7 +440,7 @@ importers:
         version: 18.0.10(expo@52.0.48(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@expo/metro-runtime@4.0.1(react-native@0.76.5(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@types/react@18.3.27)(react@18.3.1)))(react-native@0.76.5(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@types/react@18.3.27)(react@18.3.1))(react@18.3.1))
       expo-router:
         specifier: ~4.0.0
-        version: 4.0.22(2vkgehefqytgkltvoegr3dm4ie)
+        version: 4.0.22(584d631f97cabdcbd0e797b1fb6f07fb)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -14006,7 +14001,7 @@ snapshots:
     dependencies:
       invariant: 2.2.4
 
-  expo-router@4.0.22(2vkgehefqytgkltvoegr3dm4ie):
+  expo-router@4.0.22(584d631f97cabdcbd0e797b1fb6f07fb):
     dependencies:
       '@expo/metro-runtime': 4.0.1(react-native@0.76.5(@babel/core@7.28.4)(@babel/preset-env@7.28.6(@babel/core@7.28.4))(@types/react@18.3.27)(react@18.3.1))
       '@expo/server': 0.5.3
@@ -17833,7 +17828,7 @@ snapshots:
 
   wonka@6.3.5: {}
 
-  wouter@3.7.1(patch_hash=4utoqymkqegp7ldbtu4ndzqvum)(react@19.2.1):
+  wouter@3.7.1(react@19.2.1):
     dependencies:
       mitt: 3.0.1
       react: 19.2.1
