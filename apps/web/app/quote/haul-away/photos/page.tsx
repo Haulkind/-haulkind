@@ -4,6 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function HaulAwayPhotosPage() {
   const router = useRouter()
   const { data, updateData } = useQuote()
@@ -16,10 +25,17 @@ export default function HaulAwayPhotosPage() {
 
     setUploading(true)
     
-    // For demo: simulate upload
-    // In production: upload to S3 via backend API
-    const newPhotoUrls = Array.from(files).map((file) => URL.createObjectURL(file))
-    setPhotos(prev => [...prev, ...newPhotoUrls])
+    // Convert files to base64 data URIs for storage in the database
+    const newDataUris: string[] = []
+    for (const file of Array.from(files)) {
+      try {
+        const dataUri = await fileToBase64(file)
+        newDataUris.push(dataUri)
+      } catch (err) {
+        console.error('Failed to read file:', err)
+      }
+    }
+    setPhotos(prev => [...prev, ...newDataUris])
     setUploading(false)
   }
 

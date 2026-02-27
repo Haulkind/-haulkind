@@ -16,7 +16,7 @@ import { menuEmitter } from "./menuEmitter";
 import { launchCamera } from "react-native-image-picker";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const RADIUS_MILES = 500;
+const RADIUS_MILES = 80;
 const REFRESH_INTERVAL = 15000;
 const ACCEPT_TIMER_SECONDS = 60;
 
@@ -758,6 +758,23 @@ export function HomeScreen({ navigation }) {
                 <Text style={styles.detailSectionValue}>{o.description}</Text>
               </View>
             ) : null}
+
+            {/* Customer Photos */}
+            {o.photo_urls ? (() => {
+              let photoArr = [];
+              try { photoArr = typeof o.photo_urls === "string" ? JSON.parse(o.photo_urls) : o.photo_urls; } catch (e) {}
+              if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
+              return (
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>CUSTOMER PHOTOS ({photoArr.length})</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                    {photoArr.map((url, idx) => (
+                      <Image key={idx} source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                    ))}
+                  </ScrollView>
+                </View>
+              );
+            })() : null}
 
             <View style={styles.detailSection}>
               <Text style={styles.detailSectionTitle}>PICKUP LOCATION</Text>

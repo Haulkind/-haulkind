@@ -146,6 +146,7 @@ export function registerWebCompatRoutes(app: Express) {
         customerNotes,
         total: quotedTotal,
         timeWindow,
+        photoUrls,
       } = req.body;
 
       if (!pickupAddress && !customerName) {
@@ -176,6 +177,10 @@ export function registerWebCompatRoutes(app: Express) {
 
       const itemsJson = JSON.stringify(addonList || []);
 
+      const photoUrlsJson = photoUrls && Array.isArray(photoUrls) && photoUrls.length > 0
+        ? JSON.stringify(photoUrls)
+        : null;
+
       // Insert into jobs table (single source of truth for driver + admin)
       const result = await pool.query(
         `INSERT INTO jobs (
@@ -183,9 +188,9 @@ export function registerWebCompatRoutes(app: Express) {
           service_type, status, pickup_address,
           pickup_lat, pickup_lng,
           description, estimated_price, items_json, scheduled_for,
-          pickup_time_window,
+          pickup_time_window, photo_urls,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
         RETURNING *`,
         [
           customerName || "Web Customer",
@@ -200,6 +205,7 @@ export function registerWebCompatRoutes(app: Express) {
           itemsJson,
           scheduledFor || null,
           timeWindow || null,
+          photoUrlsJson,
         ]
       );
 
@@ -426,6 +432,40 @@ export function registerWebCompatRoutes(app: Express) {
       const msg = error instanceof Error ? error.message : "Unknown error";
       console.error("[WebCompat] GET /service-areas/lookup error:", msg);
       res.status(500).json({ error: "Service area lookup failed", details: msg, covered: false });
+    }
+  });
+
+  // ================================================================
+  // POST /upload-photos - Upload photos as base64, return URLs
+  // Stores photos as data URIs in memory (for MVP). In production,
+  // upload to S3/Cloudinary and return real URLs.
+  // ================================================================
+  app.post("/upload-photos", async (req: Request, res: Response) => {
+    try {
+      const { photos } = req.body; // array of { data: base64string, name: string, type: string }
+      if (!photos || !Array.isArray(photos) || photos.length === 0) {
+        return res.status(400).json({ error: "No photos provided", success: false });
+      }
+
+      // For MVP: store as data URIs directly (works for small images)
+      // In production: upload to S3/Cloudinary and return real URLs
+      const photoUrls: string[] = [];
+      for (const photo of photos) {
+        if (photo.data && photo.type) {
+          // Already a data URI or base64 string
+          const dataUri = photo.data.startsWith("data:")
+            ? photo.data
+            : "data:" + photo.type + ";base64," + photo.data;
+          photoUrls.push(dataUri);
+        }
+      }
+
+      console.log("[WebCompat] POST /upload-photos - " + photoUrls.length + " photos processed");
+      res.json({ success: true, photoUrls });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      console.error("[WebCompat] POST /upload-photos error:", msg);
+      res.status(500).json({ error: "Failed to upload photos", details: msg, success: false });
     }
   });
 
