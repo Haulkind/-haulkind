@@ -16,6 +16,7 @@ import { initializeSocket } from "./socket";
 import { realtimeRouter } from "./realtime";
 import { migrateRouter } from "./migrate";
 import { registerWebCompatRoutes } from "./webCompatRoutes";
+import { registerCustomerApiRoutes } from "./customerApi";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -55,7 +56,8 @@ async function startServer() {
       'https://www.haulkind.com',
       'http://localhost:3000',
       'http://localhost:3001',
-      'http://localhost:3002'
+      'http://localhost:3002',
+      'http://localhost:3003'
     ];
     
     // Check if origin matches allowed patterns (Railway subdomains only, no Vercel)
@@ -93,6 +95,9 @@ async function startServer() {
   // Web compatibility routes (POST /quotes, POST /jobs, GET /jobs/:id, etc.)
   // These provide backward compatibility for the web app's Next.js API proxy routes
   registerWebCompatRoutes(app);
+
+  // Customer PWA API routes (register, login, orders, push, tracking)
+  registerCustomerApiRoutes(app);
 
   // ============================================
   // Customer Auth Routes (signup/login for mobile app)

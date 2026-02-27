@@ -14,6 +14,7 @@
  */
 
 import { Express, Request, Response } from "express";
+import crypto from "crypto";
 
 // Approved states for service area coverage
 const APPROVED_STATES = ["NJ", "MA", "PA", "NY", "CT"];
@@ -205,6 +206,16 @@ export function registerWebCompatRoutes(app: Express) {
       const job = result.rows[0];
       console.log("[WebCompat] POST /jobs - created job id=" + job.id + " status=" + job.status + " total=$" + totalAmount + " at=" + job.created_at);
 
+      // Generate tracking token for anonymous order tracking via PWA
+      let trackingToken = "";
+      try {
+        trackingToken = crypto.randomBytes(32).toString("hex");
+        await pool.query("UPDATE jobs SET tracking_token = $1 WHERE id = $2", [trackingToken, job.id]);
+        console.log("[WebCompat] POST /jobs - tracking token generated for job " + job.id);
+      } catch (tokenErr) {
+        console.warn("[WebCompat] Could not generate tracking token:", tokenErr);
+      }
+
       // Verify it exists in DB immediately
       const verify = await pool.query("SELECT id, status, created_at FROM jobs WHERE id = $1", [job.id]);
       console.log("[WebCompat] POST /jobs - DB verify: " + (verify.rows.length > 0 ? "EXISTS" : "MISSING") + " id=" + job.id);
@@ -214,6 +225,7 @@ export function registerWebCompatRoutes(app: Express) {
         id: job.id,
         status: job.status,
         total: totalAmount,
+        trackingToken,
         order: job,
       });
     } catch (error: unknown) {
