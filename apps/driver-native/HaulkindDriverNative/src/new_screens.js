@@ -500,7 +500,8 @@ export function HomeScreen({ navigation }) {
   const [showDetail, setShowDetail] = useState(false);
   const [acceptTimer, setAcceptTimer] = useState(ACCEPT_TIMER_SECONDS);
   const [accepting, setAccepting] = useState(false);
-  const [previousOrderIds, setPreviousOrderIds] = useState(new Set());
+  const previousOrderIdsRef = useRef(new Set());
+  const hasCompletedFirstFetchRef = useRef(false);
   const [mapKey, setMapKey] = useState(0);
 
   const timerRef = useRef(null);
@@ -589,36 +590,45 @@ export function HomeScreen({ navigation }) {
 
       // Vibrate, play sound, and show notification for new orders
       const currentIds = new Set(withinRadius.map((o) => o.id));
-      const brandNew = withinRadius.filter((o) => !previousOrderIds.has(o.id));
-      if (brandNew.length > 0 && previousOrderIds.size > 0) {
+      const brandNew = withinRadius.filter((o) => !previousOrderIdsRef.current.has(o.id));
+      if (brandNew.length > 0 && hasCompletedFirstFetchRef.current) {
+        console.log('[NOTIF] New orders detected:', brandNew.length, 'IDs:', brandNew.map(o => o.id));
         // Check user vibration preference
         const vibEnabled = await AsyncStorage.getItem('notif_vibration');
         if (vibEnabled !== 'false') {
-          Vibration.vibrate([0, 300, 100, 300]);
+          Vibration.vibrate([0, 500, 200, 500]);
         }
         // Check user sound preference
         const sndEnabled = await AsyncStorage.getItem('notif_sound');
         if (sndEnabled !== 'false') {
           try {
-            const sound = new Sound('notification_sound', Sound.MAIN_BUNDLE, (error) => {
+            // Android: use null basePath for res/raw files (not Sound.MAIN_BUNDLE)
+            const sound = new Sound('notification_sound', null, (error) => {
               if (error) {
-                // Fallback: try .wav extension
-                const sound2 = new Sound('notification_sound.wav', Sound.MAIN_BUNDLE, (err2) => {
+                console.log('[NOTIF] Sound load error, trying .wav:', error);
+                const sound2 = new Sound('notification_sound.wav', null, (err2) => {
                   if (!err2) { sound2.setVolume(1.0); sound2.play(() => sound2.release()); }
+                  else console.log('[NOTIF] Sound .wav also failed:', err2);
                 });
               } else {
                 sound.setVolume(1.0);
-                sound.play(() => sound.release());
+                sound.play((success) => {
+                  console.log('[NOTIF] Sound played:', success);
+                  sound.release();
+                });
               }
             });
           } catch (e) {
-            console.log('Sound error:', e);
+            console.log('[NOTIF] Sound error:', e);
           }
         }
         // Show system notification (works on lock screen)
         showNewOrderNotification(brandNew.length, brandNew[0]);
+      } else if (!hasCompletedFirstFetchRef.current) {
+        console.log('[NOTIF] First fetch, populating', currentIds.size, 'order IDs');
       }
-      setPreviousOrderIds(currentIds);
+      hasCompletedFirstFetchRef.current = true;
+      previousOrderIdsRef.current = currentIds;
       setOrders(withinRadius);
 
       // Fetch driver's own accepted/assigned orders for TODAY tab
