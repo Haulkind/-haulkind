@@ -2,6 +2,37 @@ import type { Express } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// Driver commission rate: drivers receive 70% of the order value
+const DRIVER_COMMISSION_RATE = 0.70;
+
+// Apply driver commission to order price fields (driver sees 70%, Haulkind keeps 30%)
+function applyDriverCommission(order: any): any {
+  if (!order) return order;
+  const copy = { ...order };
+  if (copy.estimated_price != null) {
+    copy.estimated_price = (parseFloat(copy.estimated_price) * DRIVER_COMMISSION_RATE).toFixed(2);
+  }
+  if (copy.final_price != null) {
+    copy.final_price = (parseFloat(copy.final_price) * DRIVER_COMMISSION_RATE).toFixed(2);
+  }
+  // Also apply to pricing_json if present
+  if (copy.pricing_json) {
+    try {
+      const pricing = typeof copy.pricing_json === 'string' ? JSON.parse(copy.pricing_json) : { ...copy.pricing_json };
+      if (pricing.total != null) pricing.total = (parseFloat(pricing.total) * DRIVER_COMMISSION_RATE).toFixed(2);
+      if (pricing.estimatedTotal != null) pricing.estimatedTotal = (parseFloat(pricing.estimatedTotal) * DRIVER_COMMISSION_RATE).toFixed(2);
+      copy.pricing_json = typeof order.pricing_json === 'string' ? JSON.stringify(pricing) : pricing;
+    } catch (e) {
+      // ignore parse errors
+    }
+  }
+  return copy;
+}
+
+function applyDriverCommissionToList(orders: any[]): any[] {
+  return orders.map(applyDriverCommission);
+}
+
 // Use raw pg connection since DATABASE_URL is PostgreSQL
 let pgPool: any = null;
 async function getPgPool() {
@@ -704,7 +735,7 @@ export function registerDriverAuthRoutes(app: Express) {
 
       console.log('[DriverAuth] GET /driver/orders/available - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length + ' total:' + allOrders.length);
 
-      res.json({ orders: allOrders });
+      res.json({ orders: applyDriverCommissionToList(allOrders) });
     } catch (err: any) {
       console.error('Get available orders error:', err);
       res.json({ orders: [] });
@@ -825,7 +856,7 @@ export function registerDriverAuthRoutes(app: Express) {
            ORDER BY j.updated_at DESC LIMIT 50`,
           [decoded.driverId]
         );
-        res.json({ orders: result.rows || [] });
+        res.json({ orders: applyDriverCommissionToList(result.rows || []) });
       } catch (e) {
         res.json({ orders: [] });
       }
@@ -1077,7 +1108,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const allOrders = [...(jobsResult.rows || []), ...ordersRows];
       console.log('[DriverAuth] GET /driver/orders/my-orders - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length);
 
-      res.json({ orders: allOrders });
+      res.json({ orders: applyDriverCommissionToList(allOrders) });
     } catch (err: any) {
       console.error('My orders error:', err);
       res.json({ orders: [] });
@@ -1093,7 +1124,7 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!pool) return res.status(500).json({ error: 'Database not available' });
       const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
       if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
-      res.json({ order: result.rows[0] });
+      res.json({ order: applyDriverCommission(result.rows[0]) });
     } catch (err: any) {
       console.error('Get order error:', err);
       res.status(500).json({ error: 'Failed to get order' });
