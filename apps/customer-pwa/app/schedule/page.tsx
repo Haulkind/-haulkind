@@ -8,11 +8,11 @@ import { getCustomer, isLoggedIn } from '@/lib/auth'
 type Step = 'service' | 'address' | 'schedule' | 'details' | 'summary' | 'confirm'
 
 const VOLUME_TIERS = [
-  { id: 'EIGHTH', label: '1/8 Truck Load', desc: 'Small items, a few bags' },
-  { id: 'QUARTER', label: '1/4 Truck Load', desc: 'A couch or small room' },
-  { id: 'HALF', label: '1/2 Truck Load', desc: 'A bedroom or small office' },
-  { id: 'THREE_QUARTER', label: '3/4 Truck Load', desc: 'Multiple rooms' },
-  { id: 'FULL', label: 'Full Truck Load', desc: 'Full house cleanout' },
+  { id: 'EIGHTH', label: '1/8 Truck Load', desc: 'Small items, a few bags', price: 109 },
+  { id: 'QUARTER', label: '1/4 Truck Load', desc: 'A couch or small room', price: 169 },
+  { id: 'HALF', label: '1/2 Truck Load', desc: 'A bedroom or small office', price: 279 },
+  { id: 'THREE_QUARTER', label: '3/4 Truck Load', desc: 'Multiple rooms', price: 389 },
+  { id: 'FULL', label: 'Full Truck Load', desc: 'Full house cleanout', price: 529 },
 ]
 
 const TIME_WINDOWS = [
@@ -32,7 +32,10 @@ export default function SchedulePage() {
 
   // Form data
   const [serviceType, setServiceType] = useState<'HAUL_AWAY' | 'LABOR_ONLY'>('HAUL_AWAY')
-  const [address, setAddress] = useState('')
+  const [street, setStreet] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zipCode, setZipCode] = useState('')
   const [lat, setLat] = useState(0)
   const [lng, setLng] = useState(0)
   const [serviceAreaId, setServiceAreaId] = useState(0)
@@ -51,19 +54,25 @@ export default function SchedulePage() {
   const [jobId, setJobId] = useState('')
   const [trackingToken, setTrackingToken] = useState('')
 
+  // Build full address string from parts
+  const fullAddress = [street, city, state, zipCode].filter(Boolean).join(', ')
+
   const handleAddressLookup = async () => {
-    if (!address.trim()) { setError('Please enter an address'); return }
+    if (!street.trim()) { setError('Please enter a street address'); return }
+    if (!city.trim()) { setError('Please enter a city'); return }
+    if (!state.trim()) { setError('Please enter a state'); return }
+    if (!zipCode.trim()) { setError('Please enter a zip code'); return }
     setLoading(true)
     setError('')
     try {
       // Use browser geocoding via Nominatim
       const resp = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fullAddress)}&format=json&limit=1`,
         { headers: { 'User-Agent': 'Haulkind/1.0' } }
       )
       const results = await resp.json()
       if (!results || results.length === 0) {
-        setError('Address not found. Please enter a valid address.')
+        setError('Address not found. Please check street, city, state, and zip code.')
         return
       }
       const loc = results[0]
@@ -121,7 +130,7 @@ export default function SchedulePage() {
         serviceAreaId,
         pickupLat: lat,
         pickupLng: lng,
-        pickupAddress: address,
+        pickupAddress: fullAddress,
         scheduledFor,
         volumeTier: serviceType === 'HAUL_AWAY' ? volumeTier : undefined,
         helperCount: serviceType === 'LABOR_ONLY' ? helperCount : undefined,
@@ -212,14 +221,48 @@ export default function SchedulePage() {
         {step === 'address' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
               <input
                 type="text"
-                value={address}
-                onChange={e => setAddress(e.target.value)}
+                value={street}
+                onChange={e => setStreet(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                placeholder="123 Main St, City, State"
+                placeholder="123 Main St"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+              <input
+                type="text"
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                placeholder="Philadelphia"
+              />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                <input
+                  type="text"
+                  value={state}
+                  onChange={e => setState(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  placeholder="PA"
+                  maxLength={2}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                <input
+                  type="text"
+                  value={zipCode}
+                  onChange={e => setZipCode(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  placeholder="19103"
+                  maxLength={5}
+                />
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setStep('service')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
@@ -299,8 +342,13 @@ export default function SchedulePage() {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="font-medium text-sm">{v.label}</div>
-                      <div className="text-xs text-gray-500">{v.desc}</div>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium text-sm">{v.label}</div>
+                          <div className="text-xs text-gray-500">{v.desc}</div>
+                        </div>
+                        <div className="text-lg font-bold text-primary-600">${v.price}</div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -310,38 +358,59 @@ export default function SchedulePage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Number of Helpers</label>
                   <div className="flex gap-2">
-                    {[1, 2, 3, 4].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setHelperCount(n)}
-                        className={`flex-1 py-3 rounded-lg border-2 font-medium transition ${
-                          helperCount === n
-                            ? 'border-primary-600 bg-primary-50 text-primary-600'
-                            : 'border-gray-200 text-gray-600'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
+                    {[1, 2, 3, 4].map(n => {
+                      const rate = n === 1 ? 79 : 129
+                      return (
+                        <button
+                          key={n}
+                          onClick={() => setHelperCount(n)}
+                          className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
+                            helperCount === n
+                              ? 'border-primary-600 bg-primary-50 text-primary-600'
+                              : 'border-gray-200 text-gray-600'
+                          }`}
+                        >
+                          <div className="text-base">{n}</div>
+                          <div className="text-xs text-gray-500">${rate}/hr</div>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Hours</label>
                   <div className="flex gap-2">
-                    {[2, 3, 4, 5, 6].map(h => (
-                      <button
-                        key={h}
-                        onClick={() => setEstimatedHours(h)}
-                        className={`flex-1 py-3 rounded-lg border-2 font-medium transition ${
-                          estimatedHours === h
-                            ? 'border-primary-600 bg-primary-50 text-primary-600'
-                            : 'border-gray-200 text-gray-600'
-                        }`}
-                      >
-                        {h}h
-                      </button>
-                    ))}
+                    {[2, 3, 4, 5, 6].map(h => {
+                      const rate = helperCount === 1 ? 79 : 129
+                      const total = h * rate
+                      return (
+                        <button
+                          key={h}
+                          onClick={() => setEstimatedHours(h)}
+                          className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
+                            estimatedHours === h
+                              ? 'border-primary-600 bg-primary-50 text-primary-600'
+                              : 'border-gray-200 text-gray-600'
+                          }`}
+                        >
+                          <div className="text-base">{h}h</div>
+                          <div className="text-xs text-gray-500">${total}</div>
+                        </button>
+                      )
+                    })}
                   </div>
+                </div>
+                {/* Estimated total for labor */}
+                <div className="bg-primary-50 rounded-lg p-3 border border-primary-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700">Estimated Total</span>
+                    <span className="text-xl font-bold text-primary-600">
+                      ${(estimatedHours * (helperCount === 1 ? 79 : 129))}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {helperCount} helper{helperCount > 1 ? 's' : ''} x {estimatedHours} hours x ${helperCount === 1 ? 79 : 129}/hour
+                  </p>
                 </div>
               </>
             )}
@@ -382,7 +451,7 @@ export default function SchedulePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Address</span>
-                  <span className="font-medium text-right max-w-48 truncate">{address}</span>
+                  <span className="font-medium text-right max-w-48 truncate">{fullAddress}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Date</span>
