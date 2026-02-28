@@ -61,7 +61,15 @@ export default function AuthPage() {
   const handleTrack = (e: React.FormEvent) => {
     e.preventDefault()
     if (!trackCode.trim()) return
-    router.push(`/track?token=${encodeURIComponent(trackCode.trim())}`)
+    // Strip leading # (users copy "#uuid" from the site)
+    const cleaned = trackCode.trim().replace(/^#/, '')
+    // If it looks like a UUID, use orderId param; otherwise use token param
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(cleaned)
+    if (isUuid) {
+      router.push(`/track?orderId=${encodeURIComponent(cleaned)}`)
+    } else {
+      router.push(`/track?token=${encodeURIComponent(cleaned)}`)
+    }
   }
 
   return (

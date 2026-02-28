@@ -429,7 +429,11 @@ export function registerCustomerApiRoutes(app: Express) {
   // ================================================================
   app.post("/customer/orders/track", async (req: Request, res: Response) => {
     try {
-      const { token, orderId } = req.body;
+      let { token, orderId } = req.body;
+
+      // Strip leading # if present (users copy "#uuid" from the site)
+      if (token && typeof token === 'string') token = token.replace(/^#/, '');
+      if (orderId && typeof orderId === 'string') orderId = orderId.replace(/^#/, '');
 
       if (!token && !orderId) {
         return res
