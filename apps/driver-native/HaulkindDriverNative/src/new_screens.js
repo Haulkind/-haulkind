@@ -5,7 +5,6 @@ import {
   Dimensions, FlatList, Modal, Vibration, Switch, PermissionsAndroid,
   Linking, PanResponder, Image,
 } from "react-native";
-import Sound from "react-native-sound";
 import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
@@ -28,15 +27,21 @@ let notifChannelId = null;
 
 async function ensureNotificationChannel() {
   if (notifChannelId) return notifChannelId;
+  // Delete old cached channels (Android caches channel settings — old channels keep broken sound)
+  try {
+    await notifee.deleteChannel('haulkind_orders');
+    await notifee.deleteChannel('haulkind_orders_v2');
+  } catch (_) {}
+  // Create fresh channel with default system sound (guaranteed to work)
   notifChannelId = await notifee.createChannel({
-    id: 'haulkind_orders',
+    id: 'haulkind_orders_v3',
     name: 'New Orders',
     description: 'Notifications for new available orders',
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: 'notification_sound',
+    sound: 'default',
     vibration: true,
-    vibrationPattern: [0, 300, 100, 300],
+    vibrationPattern: [0, 500, 200, 500],
     lights: true,
     badge: true,
   });
@@ -73,7 +78,7 @@ async function showNewOrderNotification(orderCount, firstOrder) {
     const channelId = await ensureNotificationChannel();
     const price = parseFloat(firstOrder?.estimated_price || firstOrder?.final_price || 0).toFixed(0);
     const address = firstOrder?.pickup_address || 'Nearby';
-    const title = orderCount === 1 ? 'New Order Available!' : `${orderCount} New Orders Available!`;
+    const title = orderCount === 1 ? '🚛 New Order Available!' : `🚛 ${orderCount} New Orders Available!`;
     const body = orderCount === 1
       ? `$${price} — ${address}`
       : `$${price} and ${orderCount - 1} more order${orderCount > 2 ? 's' : ''}`;
@@ -85,17 +90,18 @@ async function showNewOrderNotification(orderCount, firstOrder) {
         channelId,
         importance: AndroidImportance.HIGH,
         visibility: AndroidVisibility.PUBLIC,
-        sound: 'notification_sound',
+        sound: 'default',
         pressAction: { id: 'default' },
         smallIcon: 'ic_launcher',
-        vibrationPattern: [0, 300, 100, 300],
+        vibrationPattern: [0, 500, 200, 500],
         lights: ["#1a56db", 300, 600],
         timestamp: Date.now(),
         showTimestamp: true,
       },
     });
+    console.log('[NOTIF] Notification displayed successfully:', title);
   } catch (e) {
-    console.log('Notification display error:', e);
+    console.log('[NOTIF] Notification display error:', e);
   }
 }
 
@@ -588,42 +594,26 @@ export function HomeScreen({ navigation }) {
       const withinRadius = enriched.filter((o) => o.distance === null || o.distance <= RADIUS_MILES);
       withinRadius.sort((a, b) => (a.distance || 999) - (b.distance || 999));
 
-      // Vibrate, play sound, and show notification for new orders
+      // Vibrate and show notification for new orders
       const currentIds = new Set(withinRadius.map((o) => o.id));
       const brandNew = withinRadius.filter((o) => !previousOrderIdsRef.current.has(o.id));
       if (brandNew.length > 0 && hasCompletedFirstFetchRef.current) {
         console.log('[NOTIF] New orders detected:', brandNew.length, 'IDs:', brandNew.map(o => o.id));
-        // Check user vibration preference
+        // Vibrate explicitly (backup — notifee channel also vibrates)
         const vibEnabled = await AsyncStorage.getItem('notif_vibration');
         if (vibEnabled !== 'false') {
           Vibration.vibrate([0, 500, 200, 500]);
         }
-        // Check user sound preference
-        const sndEnabled = await AsyncStorage.getItem('notif_sound');
-        if (sndEnabled !== 'false') {
-          try {
-            // Android: use null basePath for res/raw files (not Sound.MAIN_BUNDLE)
-            const sound = new Sound('notification_sound', null, (error) => {
-              if (error) {
-                console.log('[NOTIF] Sound load error, trying .wav:', error);
-                const sound2 = new Sound('notification_sound.wav', null, (err2) => {
-                  if (!err2) { sound2.setVolume(1.0); sound2.play(() => sound2.release()); }
-                  else console.log('[NOTIF] Sound .wav also failed:', err2);
-                });
-              } else {
-                sound.setVolume(1.0);
-                sound.play((success) => {
-                  console.log('[NOTIF] Sound played:', success);
-                  sound.release();
-                });
-              }
-            });
-          } catch (e) {
-            console.log('[NOTIF] Sound error:', e);
-          }
-        }
-        // Show system notification (works on lock screen)
+        // Show system notification with sound (notifee handles sound via channel)
         showNewOrderNotification(brandNew.length, brandNew[0]);
+        // In-app visual alert so driver always knows even if system notifications fail
+        const price = parseFloat(brandNew[0]?.estimated_price || brandNew[0]?.final_price || 0).toFixed(0);
+        Alert.alert(
+          'New Order!',
+          `$${price} — ${brandNew[0]?.pickup_address || 'New order available'}`,
+          [{ text: 'OK' }],
+          { cancelable: true }
+        );
       } else if (!hasCompletedFirstFetchRef.current) {
         console.log('[NOTIF] First fetch, populating', currentIds.size, 'order IDs');
       }
@@ -2246,6 +2236,27 @@ export function NotificationsScreen({ navigation }) {
             </View>
             <Switch value={vibrationEnabled} onValueChange={toggleVibration} trackColor={{ true: C.primary }} />
           </View>
+        </View>
+
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 12 }}>Test Notification</Text>
+          <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 12 }}>
+            Tap below to send a test notification with sound and vibration.
+          </Text>
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                Vibration.vibrate([0, 500, 200, 500]);
+                await showNewOrderNotification(1, { estimated_price: '199', pickup_address: '123 Test Street, Philadelphia' });
+                Alert.alert('Test Sent!', 'Check your notification bar for the test notification. You should have heard a sound and felt vibration.');
+              } catch (e) {
+                Alert.alert('Error', 'Failed to send test notification: ' + e.message);
+              }
+            }}
+            style={{ backgroundColor: C.primary, borderRadius: 10, paddingVertical: 14, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Send Test Notification</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16 }}>
