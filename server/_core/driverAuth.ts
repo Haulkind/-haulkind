@@ -1031,10 +1031,18 @@ export function registerDriverAuthRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
       const { photo_base64 } = req.body;
-      // Store photo reference (in production, upload to S3)
+      // Store completion photo in DB and update status
+      // Append to existing photos (JSON array of base64 strings)
       await pool.query(
-        "UPDATE jobs SET status = 'photo_taken', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId]
+        `UPDATE jobs SET 
+          status = 'photo_taken', 
+          completion_photos = CASE 
+            WHEN completion_photos IS NULL OR completion_photos = '' THEN $3
+            ELSE completion_photos || '|||' || $3
+          END,
+          updated_at = NOW() 
+        WHERE id = $1 AND assigned_driver_id = $2`,
+        [req.params.id, decoded.driverId, photo_base64 || '']
       );
       res.json({ success: true, message: 'Photo uploaded' });
     } catch (err: any) {
@@ -1051,10 +1059,10 @@ export function registerDriverAuthRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
       const { signature_base64 } = req.body;
-      // Store signature (in production, upload to S3)
+      // Store signature data in DB and update status
       await pool.query(
-        "UPDATE jobs SET status = 'signed', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId]
+        "UPDATE jobs SET status = 'signed', signature_data = $3, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+        [req.params.id, decoded.driverId, signature_base64 || '']
       );
       res.json({ success: true, message: 'Signature captured' });
     } catch (err: any) {

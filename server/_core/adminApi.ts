@@ -384,7 +384,8 @@ export function registerAdminApiRoutes(app: Express) {
                street, city, state, zip, lat::double precision, lng::double precision,
                pickup_date::text, pickup_time_window::text,
                items_json::text, pricing_json::text, status,
-               assigned_driver_id::text, created_at, updated_at
+               assigned_driver_id::text, created_at, updated_at,
+               NULL as completion_photos, NULL as signature_data, NULL as photo_urls
         FROM orders
         UNION ALL
         SELECT id::text, service_type, customer_name, customer_phone as phone, customer_email as email,
@@ -392,7 +393,8 @@ export function registerAdminApiRoutes(app: Express) {
                pickup_lat::double precision as lat, pickup_lng::double precision as lng,
                scheduled_for::text as pickup_date, '' as pickup_time_window,
                COALESCE(items_json::text, '[]') as items_json, json_build_object('total', COALESCE(estimated_price, '0'))::text as pricing_json,
-               status, assigned_driver_id::text, created_at, updated_at
+               status, assigned_driver_id::text, created_at, updated_at,
+               completion_photos, signature_data, photo_urls
         FROM jobs
       `;
       

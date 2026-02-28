@@ -56,6 +56,9 @@ export interface Order {
   assigned_driver_id: string | null;
   created_at: string;
   updated_at: string;
+  completion_photos: string | null;
+  signature_data: string | null;
+  photo_urls: string | null;
 }
 
 export interface Stats {

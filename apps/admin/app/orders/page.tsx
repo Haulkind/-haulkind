@@ -26,6 +26,8 @@ export default function OrdersPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+  const [mediaModalOrder, setMediaModalOrder] = useState<Order | null>(null);
+  const [mediaTab, setMediaTab] = useState<'photos' | 'signature'>('photos');
 
   const loadOrders= useCallback(async () => {
     try {
@@ -388,6 +390,31 @@ export default function OrdersPage() {
                         </button>
                       </div>
                     )}
+                    {order.status === 'completed' && (
+                      <div className="flex gap-1">
+                        {(order.completion_photos || order.photo_urls) && (
+                          <button
+                            onClick={() => { setMediaModalOrder(order); setMediaTab('photos'); }}
+                            className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100"
+                            title="View completion photos"
+                          >
+                            Photos
+                          </button>
+                        )}
+                        {order.signature_data && (
+                          <button
+                            onClick={() => { setMediaModalOrder(order); setMediaTab('signature'); }}
+                            className="px-2 py-1 text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded hover:bg-violet-100"
+                            title="View customer signature"
+                          >
+                            Signature
+                          </button>
+                        )}
+                        {!order.completion_photos && !order.photo_urls && !order.signature_data && (
+                          <span className="text-xs text-gray-400">No media</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -478,6 +505,128 @@ export default function OrdersPage() {
                 disabled={actionLoading || !selectedDriverId}
               >
                 {actionLoading ? 'Assigning...' : 'Assign Driver'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHOTOS / SIGNATURE MODAL */}
+      {mediaModalOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                Order {mediaModalOrder.id.substring(0, 8)}... — {mediaModalOrder.customer_name}
+              </h3>
+              <button
+                onClick={() => setMediaModalOrder(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4 border-b border-gray-200">
+              <button
+                onClick={() => setMediaTab('photos')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  mediaTab === 'photos'
+                    ? 'border-emerald-500 text-emerald-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Completion Photos
+              </button>
+              <button
+                onClick={() => setMediaTab('signature')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  mediaTab === 'signature'
+                    ? 'border-violet-500 text-violet-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Customer Signature
+              </button>
+            </div>
+
+            {/* Photos Tab */}
+            {mediaTab === 'photos' && (
+              <div>
+                {(() => {
+                  const photos: string[] = [];
+                  // Parse completion_photos (delimiter-separated base64 strings)
+                  if (mediaModalOrder.completion_photos) {
+                    mediaModalOrder.completion_photos.split('|||').forEach((p: string) => {
+                      if (p.trim()) photos.push(p.trim());
+                    });
+                  }
+                  // Parse photo_urls (JSON array or delimiter-separated)
+                  if (mediaModalOrder.photo_urls) {
+                    try {
+                      const parsed = JSON.parse(mediaModalOrder.photo_urls);
+                      if (Array.isArray(parsed)) {
+                        parsed.forEach((url: string) => { if (url) photos.push(url); });
+                      }
+                    } catch {
+                      // Not JSON, try delimiter
+                      mediaModalOrder.photo_urls.split('|||').forEach((p: string) => {
+                        if (p.trim()) photos.push(p.trim());
+                      });
+                    }
+                  }
+                  if (photos.length === 0) {
+                    return <p className="text-gray-500 text-sm">No completion photos available for this order.</p>;
+                  }
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {photos.map((photo, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <img
+                            src={photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`)}
+                            alt={`Completion photo ${idx + 1}`}
+                            className="w-full h-auto object-contain max-h-80"
+                          />
+                          <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500">
+                            Photo {idx + 1} of {photos.length}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Signature Tab */}
+            {mediaTab === 'signature' && (
+              <div>
+                {mediaModalOrder.signature_data ? (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-white p-4 flex items-center justify-center">
+                      <img
+                        src={mediaModalOrder.signature_data.startsWith('data:') ? mediaModalOrder.signature_data : `data:image/png;base64,${mediaModalOrder.signature_data}`}
+                        alt="Customer signature"
+                        className="max-w-full h-auto max-h-60"
+                      />
+                    </div>
+                    <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500">
+                      Customer signature for order {mediaModalOrder.id.substring(0, 8)}...
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No customer signature available for this order.</p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setMediaModalOrder(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Close
               </button>
             </div>
           </div>
