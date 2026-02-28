@@ -6,6 +6,7 @@ import {
   Linking, PanResponder, Image,
 } from "react-native";
 import Sound from "react-native-sound";
+import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import Geolocation from "@react-native-community/geolocation";
@@ -19,6 +20,84 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const RADIUS_MILES = 80;
 const REFRESH_INTERVAL = 15000;
 const ACCEPT_TIMER_SECONDS = 60;
+
+// ============================================================================
+// NOTIFICATION HELPERS
+// ============================================================================
+let notifChannelId = null;
+
+async function ensureNotificationChannel() {
+  if (notifChannelId) return notifChannelId;
+  notifChannelId = await notifee.createChannel({
+    id: 'haulkind_orders',
+    name: 'New Orders',
+    description: 'Notifications for new available orders',
+    importance: AndroidImportance.HIGH,
+    visibility: AndroidVisibility.PUBLIC,
+    sound: 'notification_sound',
+    vibration: true,
+    vibrationPattern: [0, 300, 100, 300],
+    lights: true,
+    badge: true,
+  });
+  return notifChannelId;
+}
+
+async function requestNotificationPermission() {
+  try {
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        {
+          title: 'Notification Permission',
+          message: 'Haulkind needs notification permission to alert you about new orders.',
+          buttonPositive: 'Allow',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    // For Android < 13, notifications are enabled by default
+    return true;
+  } catch (e) {
+    console.log('Notification permission error:', e);
+    return false;
+  }
+}
+
+async function showNewOrderNotification(orderCount, firstOrder) {
+  try {
+    // Check user preferences
+    const notifEnabled = await AsyncStorage.getItem('notif_enabled');
+    if (notifEnabled === 'false') return;
+
+    const channelId = await ensureNotificationChannel();
+    const price = parseFloat(firstOrder?.estimated_price || firstOrder?.final_price || 0).toFixed(0);
+    const address = firstOrder?.pickup_address || 'Nearby';
+    const title = orderCount === 1 ? 'New Order Available!' : `${orderCount} New Orders Available!`;
+    const body = orderCount === 1
+      ? `$${price} — ${address}`
+      : `$${price} and ${orderCount - 1} more order${orderCount > 2 ? 's' : ''}`;
+
+    await notifee.displayNotification({
+      title,
+      body,
+      android: {
+        channelId,
+        importance: AndroidImportance.HIGH,
+        visibility: AndroidVisibility.PUBLIC,
+        sound: 'notification_sound',
+        pressAction: { id: 'default' },
+        smallIcon: 'ic_launcher',
+        vibrationPattern: [0, 300, 100, 300],
+        lights: ["#1a56db", 300, 600],
+        timestamp: Date.now(),
+        showTimestamp: true,
+      },
+    });
+  } catch (e) {
+    console.log('Notification display error:', e);
+  }
+}
 
 // ============================================================================
 // COLORS
@@ -465,7 +544,7 @@ export function HomeScreen({ navigation }) {
     };
   }, []);
 
-  // Load profile
+  // Load profile + request notification permission
   useEffect(() => {
     (async () => {
       try {
@@ -473,6 +552,9 @@ export function HomeScreen({ navigation }) {
         const driver = data?.driver || data;
         setIsOnline(!!driver?.isOnline);
       } catch (e) { console.log("Profile error:", e); }
+      // Request notification permission and create channel
+      await requestNotificationPermission();
+      await ensureNotificationChannel();
     })();
   }, []);
 
@@ -505,23 +587,36 @@ export function HomeScreen({ navigation }) {
       const withinRadius = enriched.filter((o) => o.distance === null || o.distance <= RADIUS_MILES);
       withinRadius.sort((a, b) => (a.distance || 999) - (b.distance || 999));
 
-      // Vibrate and play sound for new orders
+      // Vibrate, play sound, and show notification for new orders
       const currentIds = new Set(withinRadius.map((o) => o.id));
       const brandNew = withinRadius.filter((o) => !previousOrderIds.has(o.id));
       if (brandNew.length > 0 && previousOrderIds.size > 0) {
-        Vibration.vibrate([0, 300, 100, 300]);
-        try {
-          const sound = new Sound('notification_sound.mp3', Sound.MAIN_BUNDLE, (error) => {
-            if (error) {
-              console.log('Using system sound');
-            } else {
-              sound.setVolume(1.0);
-              sound.play(() => sound.release());
-            }
-          });
-        } catch (e) {
-          console.log('Sound error:', e);
+        // Check user vibration preference
+        const vibEnabled = await AsyncStorage.getItem('notif_vibration');
+        if (vibEnabled !== 'false') {
+          Vibration.vibrate([0, 300, 100, 300]);
         }
+        // Check user sound preference
+        const sndEnabled = await AsyncStorage.getItem('notif_sound');
+        if (sndEnabled !== 'false') {
+          try {
+            const sound = new Sound('notification_sound', Sound.MAIN_BUNDLE, (error) => {
+              if (error) {
+                // Fallback: try .wav extension
+                const sound2 = new Sound('notification_sound.wav', Sound.MAIN_BUNDLE, (err2) => {
+                  if (!err2) { sound2.setVolume(1.0); sound2.play(() => sound2.release()); }
+                });
+              } else {
+                sound.setVolume(1.0);
+                sound.play(() => sound.release());
+              }
+            });
+          } catch (e) {
+            console.log('Sound error:', e);
+          }
+        }
+        // Show system notification (works on lock screen)
+        showNewOrderNotification(brandNew.length, brandNew[0]);
       }
       setPreviousOrderIds(currentIds);
       setOrders(withinRadius);
@@ -2034,6 +2129,66 @@ export function NotificationsScreen({ navigation }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
+  const [permissionGranted, setPermissionGranted] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  // Load persisted settings on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const notifVal = await AsyncStorage.getItem('notif_enabled');
+        const soundVal = await AsyncStorage.getItem('notif_sound');
+        const vibVal = await AsyncStorage.getItem('notif_vibration');
+        if (notifVal !== null) setNotificationsEnabled(notifVal !== 'false');
+        if (soundVal !== null) setSoundEnabled(soundVal !== 'false');
+        if (vibVal !== null) setVibrationEnabled(vibVal !== 'false');
+        // Check if permission is granted
+        if (Platform.OS === 'android' && Platform.Version >= 33) {
+          const result = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+          setPermissionGranted(result);
+        }
+      } catch (e) { console.log('Load notif settings error:', e); }
+      setLoading(false);
+    })();
+  }, []);
+
+  // Persist and apply notification toggle
+  const toggleNotifications = async (val) => {
+    setNotificationsEnabled(val);
+    await AsyncStorage.setItem('notif_enabled', val ? 'true' : 'false');
+    if (val && !permissionGranted) {
+      const granted = await requestNotificationPermission();
+      setPermissionGranted(granted);
+      if (!granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please enable notifications in your device Settings to receive order alerts.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
+    }
+  };
+
+  const toggleSound = async (val) => {
+    setSoundEnabled(val);
+    await AsyncStorage.setItem('notif_sound', val ? 'true' : 'false');
+  };
+
+  const toggleVibration = async (val) => {
+    setVibrationEnabled(val);
+    await AsyncStorage.setItem('notif_vibration', val ? 'true' : 'false');
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -2045,6 +2200,16 @@ export function NotificationsScreen({ navigation }) {
         <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Notifications</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {!permissionGranted && (
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            style={{ backgroundColor: '#fef3c7', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#f59e0b' }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: "700", color: '#92400e', marginBottom: 4 }}>Notifications Blocked</Text>
+            <Text style={{ fontSize: 12, color: '#92400e' }}>Tap here to open Settings and enable notifications for Haulkind Driver.</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 16 }}>Notification Settings</Text>
           
@@ -2053,7 +2218,7 @@ export function NotificationsScreen({ navigation }) {
               <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>Push Notifications</Text>
               <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>Receive notifications for new orders</Text>
             </View>
-            <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} />
+            <Switch value={notificationsEnabled} onValueChange={toggleNotifications} trackColor={{ true: C.primary }} />
           </View>
 
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
@@ -2061,7 +2226,7 @@ export function NotificationsScreen({ navigation }) {
               <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>Sound</Text>
               <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>Play sound when new order arrives</Text>
             </View>
-            <Switch value={soundEnabled} onValueChange={setSoundEnabled} />
+            <Switch value={soundEnabled} onValueChange={toggleSound} trackColor={{ true: C.primary }} />
           </View>
 
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12 }}>
@@ -2069,26 +2234,18 @@ export function NotificationsScreen({ navigation }) {
               <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>Vibration</Text>
               <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>Vibrate when new order arrives</Text>
             </View>
-            <Switch value={vibrationEnabled} onValueChange={setVibrationEnabled} />
+            <Switch value={vibrationEnabled} onValueChange={toggleVibration} trackColor={{ true: C.primary }} />
           </View>
         </View>
 
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 12 }}>Notification Types</Text>
-          {[
-            { label: "New Orders", desc: "Get notified when new orders are available" },
-            { label: "Order Updates", desc: "Get notified about order status changes" },
-            { label: "Messages", desc: "Get notified about new messages from customers" },
-            { label: "Earnings", desc: "Get notified about payment updates" },
-          ].map((item, i) => (
-            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: C.grayLight }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>{item.label}</Text>
-                <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{item.desc}</Text>
-              </View>
-              <Switch value={true} />
-            </View>
-          ))}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 12 }}>How It Works</Text>
+          <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 8 }}>
+            When a new order becomes available near you, you will receive a notification with the order details and price even if your screen is locked.
+          </Text>
+          <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20 }}>
+            Make sure to keep the app running and your Online status active to receive new order notifications.
+          </Text>
         </View>
       </ScrollView>
     </View>
