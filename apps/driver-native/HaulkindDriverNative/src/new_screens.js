@@ -500,7 +500,7 @@ export function HomeScreen({ navigation }) {
   const [showDetail, setShowDetail] = useState(false);
   const [acceptTimer, setAcceptTimer] = useState(ACCEPT_TIMER_SECONDS);
   const [accepting, setAccepting] = useState(false);
-  const [previousOrderIds, setPreviousOrderIds] = useState(new Set());
+  const previousOrderIdsRef = useRef(new Set());
   const [mapKey, setMapKey] = useState(0);
 
   const timerRef = useRef(null);
@@ -589,8 +589,8 @@ export function HomeScreen({ navigation }) {
 
       // Vibrate, play sound, and show notification for new orders
       const currentIds = new Set(withinRadius.map((o) => o.id));
-      const brandNew = withinRadius.filter((o) => !previousOrderIds.has(o.id));
-      if (brandNew.length > 0 && previousOrderIds.size > 0) {
+      const brandNew = withinRadius.filter((o) => !previousOrderIdsRef.current.has(o.id));
+      if (brandNew.length > 0 && previousOrderIdsRef.current.size > 0) {
         // Check user vibration preference
         const vibEnabled = await AsyncStorage.getItem('notif_vibration');
         if (vibEnabled !== 'false') {
@@ -618,7 +618,7 @@ export function HomeScreen({ navigation }) {
         // Show system notification (works on lock screen)
         showNewOrderNotification(brandNew.length, brandNew[0]);
       }
-      setPreviousOrderIds(currentIds);
+      previousOrderIdsRef.current = currentIds;
       setOrders(withinRadius);
 
       // Fetch driver's own accepted/assigned orders for TODAY tab
