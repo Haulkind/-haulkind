@@ -35,8 +35,11 @@ function TrackContent() {
   const doTrack = async (token?: string, orderId?: string) => {
     setLoading(true)
     setError('')
+    // Strip leading # from both token and orderId (users copy "#uuid" from the site)
+    const cleanToken = token?.replace(/^#/, '')
+    const cleanOrderId = orderId?.replace(/^#/, '')
     try {
-      const data = await trackOrder({ token, orderId })
+      const data = await trackOrder({ token: cleanToken, orderId: cleanOrderId })
       if (data.error) {
         setError(data.error)
         setOrder(null)
@@ -53,7 +56,7 @@ function TrackContent() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!trackInput.trim()) return
-    // Strip leading # if present (e.g. "#44843f52-...")
+    // Strip leading # if present (e.g. "#44843f52-...") — also handled in doTrack as safety net
     const cleaned = trackInput.trim().replace(/^#/, '')
     // If it looks like a UUID, search by orderId; otherwise by token
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(cleaned)
