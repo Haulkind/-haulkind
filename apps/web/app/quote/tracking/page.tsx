@@ -190,7 +190,7 @@ export default function TrackingPage() {
                 </p>
                 <div className="flex gap-2">
                   <a
-                    href={`/track?orderId=${jobId}`}
+                    href={`https://app.haulkind.com/track?orderId=${jobId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
