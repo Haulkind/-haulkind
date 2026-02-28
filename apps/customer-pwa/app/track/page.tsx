@@ -53,12 +53,14 @@ function TrackContent() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!trackInput.trim()) return
+    // Strip leading # if present (e.g. "#44843f52-...")
+    const cleaned = trackInput.trim().replace(/^#/, '')
     // If it looks like a UUID, search by orderId; otherwise by token
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(trackInput.trim())
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(cleaned)
     if (isUuid) {
-      doTrack(undefined, trackInput.trim())
+      doTrack(undefined, cleaned)
     } else {
-      doTrack(trackInput.trim(), undefined)
+      doTrack(cleaned, undefined)
     }
   }
 

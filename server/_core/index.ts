@@ -52,6 +52,7 @@ async function startServer() {
     const allowedOrigins = [
       'https://exciting-bravery-production.up.railway.app',
       'https://admin.haulkind.com',
+      'https://app.haulkind.com',
       'https://haulkind.com',
       'https://www.haulkind.com',
       'http://localhost:3000',
