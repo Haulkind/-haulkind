@@ -1287,14 +1287,14 @@ export function ActiveOrderScreen({ route, navigation }) {
     Linking.openURL(url).catch(() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`));
   };
 
-  const apiCallStep = async (endpoint) => {
+  const apiCallStep = async (endpoint, bodyData = {}) => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("driver_token");
       const resp = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({}),
+        body: JSON.stringify(bodyData),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Failed");
@@ -1319,12 +1319,15 @@ export function ActiveOrderScreen({ route, navigation }) {
       const ok = await apiCallStep(`/driver/orders/${orderId}/start-work`);
       if (ok) setCurrentStep(3);
     } else if (step.key === "in_progress") {
-      // Take photo
+      // Take photo and send base64 to backend
       try {
-        const result = await launchCamera({ mediaType: "photo", quality: 0.7, maxWidth: 1024, maxHeight: 1024 });
+        const result = await launchCamera({ mediaType: "photo", quality: 0.7, maxWidth: 1024, maxHeight: 1024, includeBase64: true });
         if (result.assets && result.assets[0]) {
           setPhotoUri(result.assets[0].uri);
-          const ok = await apiCallStep(`/driver/orders/${orderId}/upload-photo`);
+          const photoBase64 = result.assets[0].base64 || "";
+          const ok = await apiCallStep(`/driver/orders/${orderId}/upload-photo`, {
+            photo_base64: photoBase64 ? `data:image/jpeg;base64,${photoBase64}` : ""
+          });
           if (ok) setCurrentStep(4);
         }
       } catch (e) {
@@ -1345,7 +1348,22 @@ export function ActiveOrderScreen({ route, navigation }) {
 
   const handleSignatureDone = async () => {
     setShowSignature(false);
-    const ok = await apiCallStep(`/driver/orders/${orderId}/signature`);
+    // Build SVG from signature paths and send as data URI
+    const allPaths = [...signaturePaths];
+    let svgPaths = "";
+    allPaths.forEach((path) => {
+      if (path.length < 2) return;
+      let d = `M ${path[0].x} ${path[0].y}`;
+      for (let i = 1; i < path.length; i++) {
+        d += ` L ${path[i].x} ${path[i].y}`;
+      }
+      svgPaths += `<path d="${d}" stroke="black" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    });
+    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect width="400" height="200" fill="white"/>${svgPaths}</svg>`;
+    const signatureBase64 = `data:image/svg+xml;base64,${btoa(svgData)}`;
+    const ok = await apiCallStep(`/driver/orders/${orderId}/signature`, {
+      signature_base64: signatureBase64
+    });
     if (ok) setCurrentStep(5);
   };
 

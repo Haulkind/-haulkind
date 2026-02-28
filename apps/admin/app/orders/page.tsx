@@ -28,6 +28,8 @@ export default function OrdersPage() {
   const [actionSuccess, setActionSuccess] = useState('');
   const [mediaModalOrder, setMediaModalOrder] = useState<Order | null>(null);
   const [mediaTab, setMediaTab] = useState<'photos' | 'signature'>('photos');
+  const [mediaData, setMediaData] = useState<{ completion_photos: string | null; signature_data: string | null; photo_urls: string | null } | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
 
   const loadOrders= useCallback(async () => {
     try {
@@ -392,25 +394,25 @@ export default function OrdersPage() {
                     )}
                     {order.status === 'completed' && (
                       <div className="flex gap-1">
-                        {(order.completion_photos || order.photo_urls) && (
+                        {(order.has_completion_photos || order.has_photo_urls) && (
                           <button
-                            onClick={() => { setMediaModalOrder(order); setMediaTab('photos'); }}
+                            onClick={async () => { setMediaModalOrder(order); setMediaTab('photos'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
                             className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100"
                             title="View completion photos"
                           >
                             Photos
                           </button>
                         )}
-                        {order.signature_data && (
+                        {order.has_signature && (
                           <button
-                            onClick={() => { setMediaModalOrder(order); setMediaTab('signature'); }}
+                            onClick={async () => { setMediaModalOrder(order); setMediaTab('signature'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
                             className="px-2 py-1 text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded hover:bg-violet-100"
                             title="View customer signature"
                           >
                             Signature
                           </button>
                         )}
-                        {!order.completion_photos && !order.photo_urls && !order.signature_data && (
+                        {!order.has_completion_photos && !order.has_photo_urls && !order.has_signature && (
                           <span className="text-xs text-gray-400">No media</span>
                         )}
                       </div>
@@ -554,24 +556,23 @@ export default function OrdersPage() {
             {/* Photos Tab */}
             {mediaTab === 'photos' && (
               <div>
-                {(() => {
+                {mediaLoading ? (
+                  <p className="text-gray-500 text-sm">Loading photos...</p>
+                ) : (() => {
                   const photos: string[] = [];
-                  // Parse completion_photos (delimiter-separated base64 strings)
-                  if (mediaModalOrder.completion_photos) {
-                    mediaModalOrder.completion_photos.split('|||').forEach((p: string) => {
+                  if (mediaData?.completion_photos) {
+                    mediaData.completion_photos.split('|||').forEach((p: string) => {
                       if (p.trim()) photos.push(p.trim());
                     });
                   }
-                  // Parse photo_urls (JSON array or delimiter-separated)
-                  if (mediaModalOrder.photo_urls) {
+                  if (mediaData?.photo_urls) {
                     try {
-                      const parsed = JSON.parse(mediaModalOrder.photo_urls);
+                      const parsed = JSON.parse(mediaData.photo_urls);
                       if (Array.isArray(parsed)) {
                         parsed.forEach((url: string) => { if (url) photos.push(url); });
                       }
                     } catch {
-                      // Not JSON, try delimiter
-                      mediaModalOrder.photo_urls.split('|||').forEach((p: string) => {
+                      mediaData.photo_urls.split('|||').forEach((p: string) => {
                         if (p.trim()) photos.push(p.trim());
                       });
                     }
@@ -602,11 +603,13 @@ export default function OrdersPage() {
             {/* Signature Tab */}
             {mediaTab === 'signature' && (
               <div>
-                {mediaModalOrder.signature_data ? (
+                {mediaLoading ? (
+                  <p className="text-gray-500 text-sm">Loading signature...</p>
+                ) : mediaData?.signature_data ? (
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="bg-white p-4 flex items-center justify-center">
                       <img
-                        src={mediaModalOrder.signature_data.startsWith('data:') ? mediaModalOrder.signature_data : `data:image/png;base64,${mediaModalOrder.signature_data}`}
+                        src={mediaData.signature_data.startsWith('data:') ? mediaData.signature_data : `data:image/png;base64,${mediaData.signature_data}`}
                         alt="Customer signature"
                         className="max-w-full h-auto max-h-60"
                       />
