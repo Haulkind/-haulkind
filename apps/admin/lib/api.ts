@@ -56,6 +56,14 @@ export interface Order {
   assigned_driver_id: string | null;
   created_at: string;
   updated_at: string;
+  // Boolean flags from list query (lightweight)
+  has_completion_photos: boolean | null;
+  has_signature: boolean | null;
+  has_photo_urls: boolean | null;
+  // Full data from detail query (on-demand)
+  completion_photos?: string | null;
+  signature_data?: string | null;
+  photo_urls?: string | null;
 }
 
 export interface Stats {
@@ -216,6 +224,10 @@ class ApiClient {
     return this.request(`/admin/orders/${id}/cancel`, {
       method: 'PUT',
     });
+  }
+
+  async getOrderMedia(id: string): Promise<{ completion_photos: string | null; signature_data: string | null; photo_urls: string | null }> {
+    return this.request(`/admin/orders/${id}/media`);
   }
 
   async rescheduleOrder(id: string, pickup_date: string, pickup_time_window?: string): Promise<{ order: Order }> {

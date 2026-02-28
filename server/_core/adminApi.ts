@@ -384,7 +384,8 @@ export function registerAdminApiRoutes(app: Express) {
                street, city, state, zip, lat::double precision, lng::double precision,
                pickup_date::text, pickup_time_window::text,
                items_json::text, pricing_json::text, status,
-               assigned_driver_id::text, created_at, updated_at
+               assigned_driver_id::text, created_at, updated_at,
+               CAST(NULL AS boolean) as has_completion_photos, CAST(NULL AS boolean) as has_signature, CAST(NULL AS boolean) as has_photo_urls
         FROM orders
         UNION ALL
         SELECT id::text, service_type, customer_name, customer_phone as phone, customer_email as email,
@@ -392,7 +393,10 @@ export function registerAdminApiRoutes(app: Express) {
                pickup_lat::double precision as lat, pickup_lng::double precision as lng,
                scheduled_for::text as pickup_date, '' as pickup_time_window,
                COALESCE(items_json::text, '[]') as items_json, json_build_object('total', COALESCE(estimated_price, '0'))::text as pricing_json,
-               status, assigned_driver_id::text, created_at, updated_at
+               status, assigned_driver_id::text, created_at, updated_at,
+               (completion_photos IS NOT NULL AND completion_photos != '') as has_completion_photos,
+               (signature_data IS NOT NULL AND signature_data != '') as has_signature,
+               (photo_urls IS NOT NULL AND photo_urls != '') as has_photo_urls
         FROM jobs
       `;
       
@@ -469,6 +473,29 @@ export function registerAdminApiRoutes(app: Express) {
       res.json({ order: result.rows[0] });
     } catch (err: any) {
       console.error('Get order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /admin/orders/:id/media - Fetch completion photos and signature on-demand
+  app.get('/admin/orders/:id/media', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Only jobs table has media columns
+      const result = await pool.query(
+        'SELECT completion_photos, signature_data, photo_urls FROM jobs WHERE id = $1',
+        [req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.json({ completion_photos: null, signature_data: null, photo_urls: null });
+      }
+
+      res.json(result.rows[0]);
+    } catch (err: any) {
+      console.error('Get order media error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
