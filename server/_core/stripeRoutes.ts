@@ -53,7 +53,7 @@ async function getPgPool() {
 // STRIPE CLIENT (lazy init)
 // ============================================================================
 let stripeClient: any = null;
-function getStripe() {
+async function getStripe() {
   if (stripeClient) return stripeClient;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) {
@@ -61,7 +61,8 @@ function getStripe() {
     return null;
   }
   try {
-    const Stripe = require("stripe");
+    const stripeMod = await import("stripe");
+    const Stripe = stripeMod.default || stripeMod;
     stripeClient = new Stripe(key, { apiVersion: "2024-12-18.acacia" });
     console.log("[Stripe] Client initialized");
     return stripeClient;
@@ -229,7 +230,7 @@ export function registerStripeRoutes(app: Express) {
       const decoded = verifyDriverToken(req);
       if (!decoded) return res.status(401).json({ error: "Unauthorized" });
 
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const pool = await getPgPool();
@@ -298,7 +299,7 @@ export function registerStripeRoutes(app: Express) {
       const decoded = verifyDriverToken(req);
       if (!decoded) return res.status(401).json({ error: "Unauthorized" });
 
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const pool = await getPgPool();
@@ -346,7 +347,7 @@ export function registerStripeRoutes(app: Express) {
       const decoded = verifyDriverToken(req);
       if (!decoded) return res.status(401).json({ error: "Unauthorized" });
 
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const pool = await getPgPool();
@@ -411,7 +412,7 @@ export function registerStripeRoutes(app: Express) {
   // ==========================================================================
   app.post("/api/checkout/create", async (req: Request, res: Response) => {
     try {
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const pool = await getPgPool();
@@ -506,7 +507,7 @@ export function registerStripeRoutes(app: Express) {
   // ==========================================================================
   app.post("/api/stripe/webhook", async (req: Request, res: Response) => {
     try {
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const sig = req.headers["stripe-signature"];
@@ -718,7 +719,7 @@ export function registerStripeRoutes(app: Express) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const pool = await getPgPool();
@@ -877,7 +878,7 @@ export function registerStripeRoutes(app: Express) {
       const decoded = verifyAdminToken(req);
       if (!decoded) return res.status(401).json({ error: "Unauthorized (admin only)" });
 
-      const stripe = getStripe();
+      const stripe = await getStripe();
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
 
       const pool = await getPgPool();
@@ -1183,7 +1184,7 @@ export function registerStripeRoutes(app: Express) {
         console.log("[Stripe] Running weekly payout cron...");
 
         // Self-invoke the payout endpoint logic
-        const stripe = getStripe();
+        const stripe = await getStripe();
         if (!stripe) return;
 
         // Reuse payout logic inline
