@@ -45,7 +45,7 @@ export default function OfferCard({ offer, onAccept, onDecline }: OfferCardProps
         <Text style={styles.jobType}>
           {job.serviceType === 'HAUL_AWAY' ? '🚚 Junk Removal' : '💪 Labor Only'}
         </Text>
-        <Text style={styles.payout}>${job.payout.toFixed(2)}</Text>
+        <Text style={styles.payout}>${(job.payout || 0).toFixed(2)}</Text>
       </View>
 
       {/* Details */}
@@ -56,7 +56,7 @@ export default function OfferCard({ offer, onAccept, onDecline }: OfferCardProps
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>🚗 Distance</Text>
-          <Text style={styles.detailValue}>{job.distance.toFixed(1)} mi</Text>
+          <Text style={styles.detailValue}>{(job.distance || 0).toFixed(1)} mi</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>⏱️ ETA</Text>

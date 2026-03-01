@@ -33,19 +33,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow Haulkind Driver to use your location to track jobs."
-        }
-      ],
       [
         "expo-image-picker",
         {
           "photosPermission": "Allow Haulkind Driver to access your photos to upload job images."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {

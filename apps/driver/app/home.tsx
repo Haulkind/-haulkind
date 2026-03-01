@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   Alert,
   FlatList,
   RefreshControl,
+  ActivityIndicator,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import Geolocation from 'react-native-geolocation-service'
 import { useAuth } from '../lib/AuthContext'
-import { goOnline, goOffline, getActiveJob, acceptOffer, declineOffer, type Offer } from '../lib/api'
-import { socketClient } from '../lib/socket'
-import OfferCard from '../components/OfferCard'
+import { goOnline, goOffline, getAvailableOrders, acceptOrder, rejectOrder, getActiveJob, getApiBaseUrl, type Job } from '../lib/api'
+
+const POLL_INTERVAL = 10000 // Poll every 10 seconds
 
 export default function HomeScreen() {
   const router = useRouter()
@@ -20,109 +24,241 @@ export default function HomeScreen() {
   const [isOnline, setIsOnline] = useState(false)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [offers, setOffers] = useState<Offer[]>([])
-  const [activeJob, setActiveJob] = useState<any>(null)
+  const [availableOrders, setAvailableOrders] = useState<Job[]>([])
+  const [activeJob, setActiveJob] = useState<Job | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Request GPS permission and get real device location
+  useEffect(() => {
+    requestLocation()
+  }, [])
+
+  // Poll for available orders when online
+  useEffect(() => {
+    if (isOnline && token) {
+      fetchAvailableOrders()
+      pollRef.current = setInterval(fetchAvailableOrders, POLL_INTERVAL)
+    } else {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [isOnline, token])
+
+  // Check for active job on mount
   useEffect(() => {
     checkActiveJob()
   }, [])
 
-  useEffect(() => {
-    if (isOnline && token) {
-      socketClient.connect(token)
-      socketClient.onOffer(handleNewOffer)
-      socketClient.onOfferExpired(handleOfferExpired)
-
-      return () => {
-        socketClient.offOffer()
-        socketClient.offOfferExpired()
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'Haulkind Driver needs access to your location to find nearby jobs.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        )
+        return granted === PermissionsAndroid.RESULTS.GRANTED
+      } catch (err) {
+        console.warn('[Driver GPS] Permission error:', err)
+        return false
       }
-    } else {
-      socketClient.disconnect()
     }
-  }, [isOnline, token])
+    return true // iOS handles permissions via Info.plist
+  }
+
+  const requestLocation = async () => {
+    try {
+      const hasPermission = await requestLocationPermission()
+      if (!hasPermission) {
+        setLocationError('Location permission denied. Enable it in Settings.')
+        console.warn('[Driver GPS] Permission denied')
+        return
+      }
+
+      Geolocation.getCurrentPosition(
+        (position) => {
+          const coords = { lat: position.coords.latitude, lng: position.coords.longitude }
+          setLocation(coords)
+          setLocationError(null)
+          console.log('[Driver GPS] Current location:', coords.lat.toFixed(6), coords.lng.toFixed(6))
+        },
+        (error) => {
+          console.error('[Driver GPS] getCurrentPosition error:', error.code, error.message)
+          setLocationError('Failed to get GPS location: ' + error.message)
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+      )
+
+      // Watch for location changes (real-time tracking)
+      Geolocation.watchPosition(
+        (position) => {
+          const newCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
+          setLocation(newCoords)
+        },
+        (error) => {
+          console.error('[Driver GPS] watchPosition error:', error.code, error.message)
+        },
+        { enableHighAccuracy: true, distanceFilter: 100, interval: 10000, fastestInterval: 5000 },
+      )
+    } catch (err) {
+      console.error('[Driver GPS] Error:', err)
+      setLocationError('Failed to get GPS location')
+    }
+  }
+
+  const fetchAvailableOrders = async () => {
+    if (!token) return
+    try {
+      const orders = await getAvailableOrders(token)
+      setAvailableOrders(orders)
+      setError(null)
+    } catch (err: any) {
+      console.error('[Driver Home] Fetch orders error:', err)
+      setError('Failed to load orders: ' + (err.message || 'Network error'))
+    }
+  }
 
   const checkActiveJob = async () => {
+    if (!token) return
     try {
-      const job = await getActiveJob(token!)
+      const job = await getActiveJob(token)
       if (job) {
         setActiveJob(job)
       }
-    } catch (error) {
-      console.error('Failed to check active job:', error)
+    } catch (err) {
+      console.error('[Driver Home] Check active job error:', err)
     }
-  }
-
-  const handleNewOffer = (offer: Offer) => {
-    setOffers(prev => [...prev, offer])
-  }
-
-  const handleOfferExpired = (jobId: number) => {
-    setOffers(prev => prev.filter(offer => offer.jobId !== jobId))
   }
 
   const toggleOnlineStatus = async () => {
     setLoading(true)
+    setError(null)
     try {
       if (isOnline) {
         await goOffline(token!)
         setIsOnline(false)
-        setOffers([])
+        setAvailableOrders([])
       } else {
         await goOnline(token!)
         setIsOnline(true)
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update status')
+    } catch (err: any) {
+      console.error('[Driver Home] Toggle status error:', err)
+      setError(err.message || 'Failed to update status')
+      Alert.alert('Error', err.message || 'Failed to update status. Check your connection.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAcceptOffer = async (jobId: number) => {
+  const handleAcceptOrder = async (orderId: string) => {
     try {
-      await acceptOffer(token!, jobId)
-      setOffers(prev => prev.filter(offer => offer.jobId !== jobId))
+      await acceptOrder(token!, orderId)
+      setAvailableOrders(prev => prev.filter(o => o.id !== orderId))
       await checkActiveJob()
-      Alert.alert('Success', 'Job accepted! Check the job screen for details.')
-    } catch (error) {
-      Alert.alert('Error', 'Failed to accept offer')
+      Alert.alert('Success', 'Order accepted!')
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to accept order')
     }
   }
 
-  const handleDeclineOffer = async (jobId: number) => {
+  const handleRejectOrder = async (orderId: string) => {
     try {
-      await declineOffer(token!, jobId)
-      setOffers(prev => prev.filter(offer => offer.jobId !== jobId))
-    } catch (error) {
-      Alert.alert('Error', 'Failed to decline offer')
+      await rejectOrder(token!, orderId)
+      setAvailableOrders(prev => prev.filter(o => o.id !== orderId))
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to reject order')
     }
   }
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await checkActiveJob()
+    await Promise.all([fetchAvailableOrders(), checkActiveJob(), requestLocation()])
     setRefreshing(false)
-  }, [])
+  }, [token])
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            if (isOnline) {
-              await goOffline(token!)
-            }
-            await logout()
-            router.replace('/auth/login')
-          },
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          if (isOnline) {
+            try { await goOffline(token!) } catch (_e) { /* ignore */ }
+          }
+          await logout()
+          router.replace('/auth/login')
         },
-      ]
+      },
+    ])
+  }
+
+  const renderOrderCard = ({ item }: { item: Job }) => {
+    const price = item.payout || 0
+    return (
+      <View style={styles.orderCard}>
+        <View style={styles.orderHeader}>
+          <Text style={styles.orderType}>
+            {item.serviceType === 'LABOR_ONLY' ? 'Labor Only' : 'Junk Removal'}
+          </Text>
+          <Text style={styles.orderPrice}>${price.toFixed(2)}</Text>
+        </View>
+
+        <View style={styles.orderDetails}>
+          {item.customerName ? (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Customer</Text>
+              <Text style={styles.detailValue}>{item.customerName}</Text>
+            </View>
+          ) : null}
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Pickup</Text>
+            <Text style={styles.detailValue} numberOfLines={2}>{item.pickupAddress || 'Address not provided'}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Status</Text>
+            <Text style={styles.detailValue}>{item.status}</Text>
+          </View>
+          {item.scheduledFor ? (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Scheduled</Text>
+              <Text style={styles.detailValue}>{item.scheduledFor}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.orderActions}>
+          <TouchableOpacity
+            style={styles.rejectButton}
+            onPress={() => handleRejectOrder(item.id)}
+          >
+            <Text style={styles.rejectButtonText}>Skip</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.acceptButton}
+            onPress={() => handleAcceptOrder(item.id)}
+          >
+            <Text style={styles.acceptButtonText}>Accept ${price.toFixed(2)}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     )
   }
 
@@ -133,13 +269,37 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.greeting}>Hello, {driver?.name || 'Driver'}!</Text>
           <Text style={styles.status}>
-            {isOnline ? '🟢 Online' : '⚫ Offline'}
+            {isOnline ? 'Online' : 'Offline'}
           </Text>
+          {location ? (
+            <Text style={styles.gpsText}>
+              GPS: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+            </Text>
+          ) : locationError ? (
+            <Text style={styles.gpsError}>{locationError}</Text>
+          ) : (
+            <Text style={styles.gpsText}>Getting GPS...</Text>
+          )}
         </View>
         <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
+
+      {/* API URL indicator */}
+      <View style={styles.apiIndicator}>
+        <Text style={styles.apiText}>API: {getApiBaseUrl()}</Text>
+      </View>
+
+      {/* Error banner */}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={fetchAvailableOrders}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {/* Online/Offline Toggle */}
       <TouchableOpacity
@@ -147,62 +307,66 @@ export default function HomeScreen() {
         onPress={toggleOnlineStatus}
         disabled={loading}
       >
-        <Text style={styles.toggleButtonText}>
-          {loading ? 'Updating...' : isOnline ? 'Go Offline' : 'Go Online'}
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.toggleButtonText}>
+            {isOnline ? 'Go Offline' : 'Go Online'}
+          </Text>
+        )}
       </TouchableOpacity>
 
       {/* Active Job */}
-      {activeJob && (
+      {activeJob ? (
         <TouchableOpacity
           style={styles.activeJobCard}
-          onPress={() => router.push(`/job/${activeJob.id}`)}
+          onPress={() => router.push(('/job/' + activeJob.id) as any)}
         >
           <Text style={styles.activeJobTitle}>Active Job</Text>
           <Text style={styles.activeJobAddress}>{activeJob.pickupAddress}</Text>
           <Text style={styles.activeJobStatus}>Status: {activeJob.status}</Text>
-          <Text style={styles.activeJobLink}>Tap to view details →</Text>
+          <Text style={styles.activeJobPayout}>Payout: ${activeJob.payout.toFixed(2)}</Text>
+          <Text style={styles.activeJobLink}>Tap to view details</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
 
-      {/* Offers */}
-      {isOnline && (
-        <View style={styles.offersContainer}>
-          <Text style={styles.offersTitle}>
-            {offers.length > 0 ? `${offers.length} New Offer${offers.length > 1 ? 's' : ''}` : 'Waiting for offers...'}
+      {/* Available Orders (REST polling) */}
+      {isOnline ? (
+        <View style={styles.ordersContainer}>
+          <Text style={styles.ordersTitle}>
+            {availableOrders.length > 0
+              ? availableOrders.length + ' Available Order' + (availableOrders.length > 1 ? 's' : '')
+              : 'Waiting for orders...'}
           </Text>
           <FlatList
-            data={offers}
-            keyExtractor={(item) => item.jobId.toString()}
-            renderItem={({ item }) => (
-              <OfferCard
-                offer={item}
-                onAccept={() => handleAcceptOffer(item.jobId)}
-                onDecline={() => handleDeclineOffer(item.jobId)}
-              />
-            )}
+            data={availableOrders}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderOrderCard}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>
-                  {isOnline ? '👀 Looking for jobs nearby...' : '⚫ Go online to receive job offers'}
+                  Looking for jobs nearby...
+                </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Orders refresh every 10 seconds
                 </Text>
               </View>
             }
           />
         </View>
-      )}
+      ) : null}
 
-      {!isOnline && !activeJob && (
+      {!isOnline && !activeJob ? (
         <View style={styles.offlineState}>
-          <Text style={styles.offlineStateTitle}>You're Offline</Text>
+          <Text style={styles.offlineStateTitle}>You are Offline</Text>
           <Text style={styles.offlineStateText}>
             Go online to start receiving job offers from customers in your area.
           </Text>
         </View>
-      )}
+      ) : null}
     </View>
   )
 }
@@ -232,10 +396,52 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  gpsText: {
+    fontSize: 11,
+    color: '#16a34a',
+    marginTop: 2,
+  },
+  gpsError: {
+    fontSize: 11,
+    color: '#dc2626',
+    marginTop: 2,
+  },
   logoutText: {
     fontSize: 16,
     color: '#ef4444',
     fontWeight: '600',
+  },
+  apiIndicator: {
+    backgroundColor: '#f0fdf4',
+    paddingVertical: 4,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#dcfce7',
+  },
+  apiText: {
+    fontSize: 10,
+    color: '#16a34a',
+  },
+  errorBanner: {
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#fecaca',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#dc2626',
+    flex: 1,
+  },
+  retryText: {
+    fontSize: 13,
+    color: '#2563eb',
+    fontWeight: '600',
+    marginLeft: 12,
   },
   toggleButton: {
     margin: 24,
@@ -275,6 +481,12 @@ const styles = StyleSheet.create({
   activeJobStatus: {
     fontSize: 14,
     color: '#78350f',
+    marginBottom: 4,
+  },
+  activeJobPayout: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#16a34a',
     marginBottom: 8,
   },
   activeJobLink: {
@@ -282,16 +494,94 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
     fontWeight: 'bold',
   },
-  offersContainer: {
+  ordersContainer: {
     flex: 1,
     padding: 24,
     paddingTop: 0,
   },
-  offersTitle: {
+  ordersTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111',
     marginBottom: 16,
+  },
+  orderCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#2563eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  orderType: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  orderPrice: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#16a34a',
+  },
+  orderDetails: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111',
+    flex: 2,
+    textAlign: 'right',
+  },
+  orderActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rejectButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#dc2626',
+    alignItems: 'center',
+  },
+  rejectButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#dc2626',
+  },
+  acceptButton: {
+    flex: 2,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+  },
+  acceptButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   emptyState: {
     padding: 40,
@@ -301,6 +591,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
   },
   offlineState: {
     flex: 1,
