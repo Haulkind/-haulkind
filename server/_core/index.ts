@@ -17,6 +17,7 @@ import { realtimeRouter } from "./realtime";
 import { migrateRouter } from "./migrate";
 import { registerWebCompatRoutes } from "./webCompatRoutes";
 import { registerCustomerApiRoutes } from "./customerApi";
+import { registerStripeRoutes } from "./stripeRoutes";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
@@ -79,6 +80,16 @@ async function startServer() {
     next();
   });
   
+  // Stripe webhook needs raw body for signature verification — must be before json parser
+  app.use('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '5mb' }), (req: any, _res: any, next: any) => {
+    req.rawBody = req.body;
+    // Parse body for route handler
+    if (Buffer.isBuffer(req.body)) {
+      try { req.body = JSON.parse(req.body.toString()); } catch (e) { /* leave as-is */ }
+    }
+    next();
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -238,6 +249,14 @@ async function startServer() {
   registerAdminApiRoutes(app);
   // ============================================
   // End Admin Routes
+  // ============================================
+
+  // ============================================
+  // Stripe Connect & Payment Routes
+  // ============================================
+  registerStripeRoutes(app);
+  // ============================================
+  // End Stripe Routes
   // ============================================
 
   // tRPC API

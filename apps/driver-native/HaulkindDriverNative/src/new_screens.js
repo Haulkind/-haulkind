@@ -2039,9 +2039,74 @@ export function OrderHistoryScreen({ navigation }) {
 }
 
 // ============================================================================
-// EARNINGS SCREEN
+// EARNINGS SCREEN — Real earnings from backend + Stripe Connect onboarding
 // ============================================================================
 export function EarningsScreen({ navigation }) {
+  const [loading, setLoading] = useState(true);
+  const [earnings, setEarnings] = useState(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+
+  useEffect(() => { loadEarnings(); }, []);
+
+  const loadEarnings = async () => {
+    try {
+      const data = await apiGet("/api/driver/earnings-summary");
+      setEarnings(data);
+    } catch (e) {
+      console.warn("Failed to load earnings:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetupStripe = async () => {
+    setStripeLoading(true);
+    try {
+      // Step 1: Create Stripe account if not exists
+      let accountData;
+      try {
+        accountData = await apiPostAuth("/api/stripe/connect/create-driver-account", {});
+      } catch (e) {
+        // Account may already exist
+      }
+
+      // Step 2: Get onboarding link
+      const linkData = await apiPostAuth("/api/stripe/connect/create-account-link", {
+        return_url: "https://haulkind.com/driver/stripe-return",
+        refresh_url: "https://haulkind.com/driver/stripe-refresh",
+      });
+
+      if (linkData?.url) {
+        const { Linking } = require("react-native");
+        await Linking.openURL(linkData.url);
+      } else {
+        Alert.alert("Error", "Could not generate Stripe onboarding link");
+      }
+    } catch (e) {
+      Alert.alert("Error", e.message || "Failed to setup Stripe account");
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    setStripeLoading(true);
+    try {
+      await apiGet("/api/stripe/connect/status");
+      await loadEarnings();
+      Alert.alert("Updated", "Stripe status refreshed");
+    } catch (e) {
+      Alert.alert("Error", e.message || "Failed to refresh status");
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const formatCents = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
+
+  const stripeStatus = earnings?.stripeStatus || "not_started";
+  const payoutsEnabled = earnings?.payoutsEnabled || false;
+
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
@@ -2049,25 +2114,154 @@ export function EarningsScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ fontSize: 16, color: C.primary, fontWeight: "600" }}>{"< Back"}</Text>
         </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Earnings</Text>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Earnings & Payouts</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 20, alignItems: "center", marginBottom: 16 }}>
-          <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600" }}>TOTAL EARNINGS</Text>
-          <Text style={{ fontSize: 36, fontWeight: "bold", color: C.success, marginTop: 8 }}>$0.00</Text>
-          <Text style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>This Month</Text>
-        </View>
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1, backgroundColor: C.successLight, borderRadius: 12, padding: 16, alignItems: "center" }}>
-            <Text style={{ fontSize: 20, fontWeight: "bold", color: C.success }}>0</Text>
-            <Text style={{ fontSize: 12, color: C.success, marginTop: 4 }}>Jobs Done</Text>
+        {loading ? (
+          <View style={{ padding: 40, alignItems: "center" }}>
+            <ActivityIndicator size="large" color={C.primary} />
           </View>
-          <View style={{ flex: 1, backgroundColor: C.primaryLight, borderRadius: 12, padding: 16, alignItems: "center" }}>
-            <Text style={{ fontSize: 20, fontWeight: "bold", color: C.primary }}>$0</Text>
-            <Text style={{ fontSize: 12, color: C.primary, marginTop: 4 }}>Today</Text>
-          </View>
-        </View>
-        <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", marginTop: 20 }}>Earnings details will appear as you complete orders.</Text>
+        ) : (
+          <>
+            {/* Stripe Connect Status Card */}
+            <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: payoutsEnabled ? C.success : C.warning }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 8 }}>Get Paid via Stripe</Text>
+              {stripeStatus === "not_started" ? (
+                <>
+                  <Text style={{ fontSize: 13, color: C.textSecondary, marginBottom: 12, lineHeight: 20 }}>
+                    Set up your Stripe account to receive weekly payouts for completed jobs. You'll need to verify your identity and bank info.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleSetupStripe}
+                    disabled={stripeLoading}
+                    style={{ backgroundColor: C.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", opacity: stripeLoading ? 0.6 : 1 }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+                      {stripeLoading ? "Loading..." : "Setup Stripe Account"}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : stripeStatus === "pending" ? (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.warning, marginRight: 8 }} />
+                    <Text style={{ fontSize: 14, color: C.warning, fontWeight: "600" }}>Onboarding In Progress</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, color: C.textSecondary, marginBottom: 12, lineHeight: 20 }}>
+                    Complete your Stripe verification to start receiving payouts.
+                  </Text>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={handleSetupStripe}
+                      disabled={stripeLoading}
+                      style={{ flex: 1, backgroundColor: C.primary, borderRadius: 10, paddingVertical: 12, alignItems: "center", opacity: stripeLoading ? 0.6 : 1 }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>Continue Setup</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleRefreshStatus}
+                      disabled={stripeLoading}
+                      style={{ flex: 1, backgroundColor: C.grayLight, borderRadius: 10, paddingVertical: 12, alignItems: "center" }}
+                    >
+                      <Text style={{ color: C.dark, fontSize: 14, fontWeight: "600" }}>Refresh Status</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : stripeStatus === "complete" && payoutsEnabled ? (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.success, marginRight: 8 }} />
+                    <Text style={{ fontSize: 14, color: C.success, fontWeight: "600" }}>Payouts Active</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20 }}>
+                    Your Stripe account is verified. Payouts are processed every Tuesday.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.danger, marginRight: 8 }} />
+                    <Text style={{ fontSize: 14, color: C.danger, fontWeight: "600" }}>Action Required</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, color: C.textSecondary, marginBottom: 12, lineHeight: 20 }}>
+                    Your Stripe account has restrictions. Please complete the required steps.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleSetupStripe}
+                    disabled={stripeLoading}
+                    style={{ backgroundColor: C.danger, borderRadius: 10, paddingVertical: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>Fix Account Issues</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
+            {/* Earnings Summary */}
+            <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 20, alignItems: "center", marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600" }}>TOTAL EARNINGS</Text>
+              <Text style={{ fontSize: 36, fontWeight: "bold", color: C.success, marginTop: 8 }}>
+                {formatCents(earnings?.totalCents)}
+              </Text>
+              <Text style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>
+                {earnings?.totalJobs || 0} completed jobs
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
+              <View style={{ flex: 1, backgroundColor: C.successLight, borderRadius: 12, padding: 16, alignItems: "center" }}>
+                <Text style={{ fontSize: 20, fontWeight: "bold", color: C.success }}>
+                  {formatCents(earnings?.weekCents)}
+                </Text>
+                <Text style={{ fontSize: 12, color: C.success, marginTop: 4 }}>This Week</Text>
+                <Text style={{ fontSize: 11, color: C.success, marginTop: 2 }}>
+                  {earnings?.weekJobs || 0} jobs
+                </Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: C.primaryLight, borderRadius: 12, padding: 16, alignItems: "center" }}>
+                <Text style={{ fontSize: 20, fontWeight: "bold", color: C.primary }}>
+                  {formatCents(earnings?.todayCents)}
+                </Text>
+                <Text style={{ fontSize: 12, color: C.primary, marginTop: 4 }}>Today</Text>
+                <Text style={{ fontSize: 11, color: C.primary, marginTop: 2 }}>
+                  {earnings?.todayJobs || 0} jobs
+                </Text>
+              </View>
+            </View>
+
+            {/* Pending Payout */}
+            {(earnings?.pendingPayoutCents > 0) && (
+              <View style={{ backgroundColor: "#fef3c7", borderRadius: 12, padding: 16, marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#92400e" }}>Pending Payout</Text>
+                  <Text style={{ fontSize: 11, color: "#92400e", marginTop: 2 }}>
+                    {earnings?.pendingPayoutJobs || 0} jobs waiting for next Tuesday
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: "bold", color: "#92400e" }}>
+                  {formatCents(earnings?.pendingPayoutCents)}
+                </Text>
+              </View>
+            )}
+
+            {/* Info */}
+            <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 8 }}>How Payouts Work</Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 4 }}>
+                1. Complete jobs and get paid by customers via Stripe
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 4 }}>
+                2. You earn 70% of each job total (Haulkind keeps 30%)
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 4 }}>
+                3. Payouts are sent every Tuesday to your bank account
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20 }}>
+                4. As an independent contractor, you handle your own taxes
+              </Text>
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

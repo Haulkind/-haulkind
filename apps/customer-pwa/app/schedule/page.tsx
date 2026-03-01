@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { getQuote, createJob, payJob, lookupServiceArea } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { getQuote, createJob, payJob, createCheckoutSession, lookupServiceArea } from '@/lib/api'
 import { getCustomer, isLoggedIn } from '@/lib/auth'
 
 type Step = 'service' | 'address' | 'schedule' | 'details' | 'summary' | 'confirm'
@@ -24,11 +24,26 @@ const TIME_WINDOWS = [
 
 export default function SchedulePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const customer = isLoggedIn() ? getCustomer() : null
 
   const [step, setStep] = useState<Step>('service')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Handle Stripe Checkout return
+  useEffect(() => {
+    const payment = searchParams.get('payment')
+    const orderId = searchParams.get('orderId')
+    if (payment === 'success' && orderId) {
+      setJobId(orderId)
+      setStep('confirm')
+    } else if (payment === 'cancelled' && orderId) {
+      setJobId(orderId)
+      setError('Payment was cancelled. You can try again or track your order.')
+      setStep('confirm')
+    }
+  }, [searchParams])
 
   // Form data
   const [serviceType, setServiceType] = useState<'HAUL_AWAY' | 'LABOR_ONLY'>('HAUL_AWAY')
@@ -146,7 +161,24 @@ export default function SchedulePage() {
       setJobId(data.id)
       setTrackingToken(data.trackingToken || '')
 
-      // Auto-pay (mock payment)
+      // Try Stripe Checkout first; fall back to mock payment if Stripe not configured
+      try {
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
+        const checkout = await createCheckoutSession(
+          data.id,
+          `${origin}/schedule?payment=success&orderId=${data.id}`,
+          `${origin}/schedule?payment=cancelled&orderId=${data.id}`
+        )
+        if (checkout?.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = checkout.url
+          return
+        }
+      } catch {
+        // Stripe not configured — fall back to mock payment
+      }
+
+      // Fallback: mark as paid via mock endpoint
       try { await payJob(data.id) } catch { /* non-fatal */ }
 
       setStep('confirm')
