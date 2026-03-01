@@ -309,31 +309,31 @@ export function registerAdminApiRoutes(app: Express) {
 
       const { search, limit = 50, offset = 0 } = req.query;
       
-      // Join customers with users to get full info
+      // Try customer_accounts first (PWA customers), then fallback to customers+users join
+      // Also count orders from jobs table (primary) by matching email
       let query = `
-        SELECT c.id, c.user_id, u.name, u.email, u.phone,
-               COUNT(o.id) as total_orders
-        FROM customers c
-        LEFT JOIN users u ON c.user_id = u.id
-        LEFT JOIN orders o ON o.email = u.email
+        SELECT ca.id, ca.id as user_id, ca.name, ca.email, ca.phone,
+               COUNT(j.id) as total_orders
+        FROM customer_accounts ca
+        LEFT JOIN jobs j ON j.customer_email = ca.email
         WHERE 1=1
       `;
       const params: any[] = [];
       let paramIndex = 1;
 
       if (search) {
-        query += ` AND (u.name ILIKE $${paramIndex++} OR u.email ILIKE $${paramIndex++})`;
+        query += ` AND (ca.name ILIKE $${paramIndex++} OR ca.email ILIKE $${paramIndex++})`;
         const searchPattern = `%${search}%`;
         params.push(searchPattern, searchPattern);
       }
 
-      query += ` GROUP BY c.id, c.user_id, u.name, u.email, u.phone ORDER BY c.id DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+      query += ` GROUP BY ca.id, ca.name, ca.email, ca.phone ORDER BY ca.id DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
       params.push(limit, offset);
 
       const result = await pool.query(query, params);
       
       // Get total count
-      const countResult = await pool.query('SELECT COUNT(*) as count FROM customers');
+      const countResult = await pool.query('SELECT COUNT(*) as count FROM customer_accounts');
       const total = parseInt(countResult.rows[0]?.count || 0);
 
       res.json({ customers: result.rows, total, limit: parseInt(limit as string), offset: parseInt(offset as string) });
