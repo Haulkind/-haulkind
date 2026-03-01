@@ -1,2 +1,5 @@
 [phases.install]
 cmds = ["pnpm i --no-frozen-lockfile"]
+
+[phases.build]
+cmds = ["npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"]
