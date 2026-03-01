@@ -606,14 +606,6 @@ export function HomeScreen({ navigation }) {
         }
         // Show system notification with sound (notifee handles sound via channel)
         showNewOrderNotification(brandNew.length, brandNew[0]);
-        // In-app visual alert so driver always knows even if system notifications fail
-        const price = parseFloat(brandNew[0]?.estimated_price || brandNew[0]?.final_price || 0).toFixed(0);
-        Alert.alert(
-          'New Order!',
-          `$${price} — ${brandNew[0]?.pickup_address || 'New order available'}`,
-          [{ text: 'OK' }],
-          { cancelable: true }
-        );
       } else if (!hasCompletedFirstFetchRef.current) {
         console.log('[NOTIF] First fetch, populating', currentIds.size, 'order IDs');
       }
