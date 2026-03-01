@@ -236,6 +236,28 @@ class ApiClient {
       body: JSON.stringify({ pickup_date, pickup_time_window }),
     });
   }
+
+  // Payouts
+  async getPayouts(params?: { status?: string; limit?: number; offset?: number }): Promise<{ payouts: any[]; total: number }> {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/payouts${query ? `?${query}` : ''}`);
+  }
+
+  async getPayoutDetail(id: string): Promise<{ payout: any; items: any[]; jobs: any[] }> {
+    return this.request(`/admin/payouts/${id}`);
+  }
+
+  async runWeeklyPayout(): Promise<any> {
+    return this.request('/api/payouts/run-weekly', { method: 'POST' });
+  }
+
+  async retryPayoutItem(itemId: string): Promise<any> {
+    return this.request(`/api/payouts/retry-item/${itemId}`, { method: 'POST' });
+  }
+
+  async getDriversStripeStatus(): Promise<{ drivers: any[]; summary: any }> {
+    return this.request('/admin/drivers/stripe-status');
+  }
 }
 
 export const api = new ApiClient();

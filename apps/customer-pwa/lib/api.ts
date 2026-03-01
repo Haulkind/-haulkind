@@ -119,6 +119,16 @@ export async function payJob(jobId: string) {
   return res.json();
 }
 
+// Stripe Checkout — creates a Stripe Checkout Session and returns the URL
+export async function createCheckoutSession(jobId: string, successUrl: string, cancelUrl: string) {
+  const res = await fetch(`${API_URL}/api/checkout/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobId, successUrl, cancelUrl }),
+  });
+  return res.json();
+}
+
 export async function lookupServiceArea(lat: number, lng: number) {
   const res = await fetch(`${API_URL}/service-areas/lookup?lat=${lat}&lng=${lng}`);
   return res.json();
