@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getQuote, createJob, payJob, createCheckoutSession, lookupServiceArea } from '@/lib/api'
 import { getCustomer, isLoggedIn } from '@/lib/auth'
@@ -23,6 +23,14 @@ const TIME_WINDOWS = [
 ]
 
 export default function SchedulePage() {
+  return (
+    <Suspense fallback={<div className="bg-gray-50 min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>}>
+      <SchedulePageInner />
+    </Suspense>
+  )
+}
+
+function SchedulePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const customer = isLoggedIn() ? getCustomer() : null
