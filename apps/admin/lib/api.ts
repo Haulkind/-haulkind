@@ -256,7 +256,7 @@ class ApiClient {
   }
 
   async getDriversStripeStatus(): Promise<{ drivers: any[]; summary: any }> {
-    return this.request('/admin/drivers/stripe-status');
+    return this.request('/admin/stripe/drivers-status');
   }
 }
 
