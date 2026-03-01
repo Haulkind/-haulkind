@@ -739,7 +739,7 @@ export function registerStripeRoutes(app: Express) {
         `SELECT j.id, j.assigned_driver_id, j.driver_earnings_cents, j.price_total_cents,
                 d.stripe_account_id, d.payouts_enabled, d.name as driver_name
          FROM jobs j
-         JOIN drivers d ON d.id = j.assigned_driver_id
+         JOIN drivers d ON d.id::text = j.assigned_driver_id
          WHERE j.payout_status = 'eligible'
            AND j.status = 'completed'
            AND d.payouts_enabled = true
@@ -890,7 +890,7 @@ export function registerStripeRoutes(app: Express) {
       const itemResult = await pool.query(
         `SELECT pi.*, d.stripe_account_id, d.payouts_enabled, d.name as driver_name
          FROM payout_items pi
-         JOIN drivers d ON d.id = pi.driver_id
+         JOIN drivers d ON d.id::text = pi.driver_id
          WHERE pi.id = $1 AND pi.status = 'failed'`,
         [itemId]
       );
@@ -1094,7 +1094,7 @@ export function registerStripeRoutes(app: Express) {
       const itemsResult = await pool.query(
         `SELECT pi.*, d.name as driver_name, d.email as driver_email, d.stripe_account_id
          FROM payout_items pi
-         JOIN drivers d ON d.id = pi.driver_id
+         JOIN drivers d ON d.id::text = pi.driver_id
          WHERE pi.payout_id = $1
          ORDER BY pi.created_at`,
         [payoutId]
@@ -1131,6 +1131,15 @@ export function registerStripeRoutes(app: Express) {
 
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: "Database not available" });
+
+      // Check if stripe columns exist first
+      const colCheck = await pool.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'drivers' AND column_name = 'stripe_account_id'`
+      );
+      if (colCheck.rows.length === 0) {
+        return res.json({ success: true, drivers: [], summary: { total: 0, complete: 0, pending: 0, restricted: 0, notStarted: 0 } });
+      }
 
       const result = await pool.query(
         `SELECT id, name, email, stripe_account_id, stripe_onboarding_status, payouts_enabled
@@ -1192,7 +1201,7 @@ export function registerStripeRoutes(app: Express) {
           `SELECT j.id, j.assigned_driver_id, j.driver_earnings_cents,
                   d.stripe_account_id, d.payouts_enabled, d.name as driver_name
            FROM jobs j
-           JOIN drivers d ON d.id = j.assigned_driver_id
+           JOIN drivers d ON d.id::text = j.assigned_driver_id
            WHERE j.payout_status = 'eligible'
              AND j.status = 'completed'
              AND d.payouts_enabled = true
