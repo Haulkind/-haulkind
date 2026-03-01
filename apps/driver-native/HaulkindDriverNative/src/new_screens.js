@@ -685,11 +685,28 @@ export function HomeScreen({ navigation }) {
 
   async function toggleOnline() {
     const newStatus = !isOnline;
-    setIsOnline(newStatus);
     try {
       await apiPostAuth("/driver/online", { online: newStatus });
+      setIsOnline(newStatus);
       await AsyncStorage.setItem("driver_isOnline", newStatus ? "true" : "false");
-    } catch (e) { console.log("Toggle error:", e); }
+    } catch (e) {
+      const msg = e.message || "";
+      if (msg.includes("not yet approved") || msg.includes("pending")) {
+        Alert.alert(
+          "Account Under Review",
+          "Your account is not yet approved. Please upload all required documents and wait for admin approval before going online.",
+          [
+            { text: "Upload Documents", onPress: () => navigation.navigate("Documents") },
+            { text: "OK", style: "cancel" },
+          ]
+        );
+      } else if (msg.includes("suspended")) {
+        Alert.alert("Account Suspended", "Your account has been suspended. Please contact support.");
+      } else {
+        Alert.alert("Error", msg || "Could not change status.");
+      }
+      return;
+    }
     if (!newStatus) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); }
   }
 
@@ -1161,9 +1178,14 @@ export function PendingScreen({ navigation }) {
     setChecking(true);
     try {
       const data = await apiGet("/driver/profile");
-      if (data.driver?.status === "approved" || data.driver?.status === "active") {
+      const d = data.driver || data;
+      const ds = d.driverStatus || d.driver_status || d.status;
+      if (ds === "approved" || ds === "active") {
+        await AsyncStorage.setItem("driver_data", JSON.stringify({ ...d, status: "approved" }));
         Alert.alert("Approved!", "Your account has been approved. Welcome!");
         navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+      } else if (ds === "rejected") {
+        Alert.alert("Rejected", d.rejectionReason || d.rejection_reason || "Your documents were rejected. Please re-upload and try again.");
       } else {
         Alert.alert("Still Pending", "Your account is still under review. Please check back later.");
       }
@@ -1185,15 +1207,21 @@ export function PendingScreen({ navigation }) {
           <Text style={{ fontSize: 36 }}>...</Text>
         </View>
         <Text style={{ fontSize: 24, fontWeight: "700", color: C.dark, marginBottom: 8, textAlign: "center" }}>Account Under Review</Text>
-        <Text style={{ fontSize: 15, color: C.gray, textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
+        <Text style={{ fontSize: 15, color: C.gray, textAlign: "center", lineHeight: 22, marginBottom: 24 }}>
           We are verifying your documents and information. You will be notified when your account is approved. This usually takes 24-48 hours.
         </Text>
         <TouchableOpacity
-          style={{ backgroundColor: C.primary, borderRadius: 12, padding: 16, alignItems: "center", width: "100%", opacity: checking ? 0.7 : 1 }}
+          style={{ backgroundColor: C.primary, borderRadius: 12, padding: 16, alignItems: "center", width: "100%", marginBottom: 12 }}
+          onPress={() => navigation.navigate("Documents")}
+        >
+          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Upload Documents</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, alignItems: "center", width: "100%", borderWidth: 1, borderColor: C.primary, opacity: checking ? 0.7 : 1 }}
           onPress={checkStatus}
           disabled={checking}
         >
-          {checking ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Check Status</Text>}
+          {checking ? <ActivityIndicator color={C.primary} /> : <Text style={{ color: C.primary, fontSize: 16, fontWeight: "700" }}>Check Status</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={{ marginTop: 20 }} onPress={handleLogout}>
           <Text style={{ color: C.danger, fontWeight: "600" }}>Sign Out</Text>
@@ -2071,6 +2099,7 @@ export function SettingsScreen({ navigation }) {
         {[
           { label: "My Orders", screen: "MyOrders" },
           { label: "My Profile", screen: "Profile" },
+          { label: "My Documents", screen: "Documents" },
           { label: "Order History", screen: "OrderHistory" },
           { label: "Earnings", screen: "Earnings" },
           { label: "Notifications", screen: "Notifications" },
@@ -2091,9 +2120,68 @@ export function SettingsScreen({ navigation }) {
 }
 
 // ============================================================================
-// DOCUMENTS SCREEN
+// DOCUMENTS SCREEN — Real upload with camera
 // ============================================================================
 export function DocumentsScreen({ navigation }) {
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(null); // which doc is uploading
+  const [docs, setDocs] = useState({ selfieUrl: null, licenseUrl: null, vehicleRegistrationUrl: null, insuranceUrl: null });
+  const [driverStatus, setDriverStatus] = useState("pending_review");
+
+  const DOC_TYPES = [
+    { key: "selfieUrl", apiKey: "selfieUrl", label: "Selfie Photo", icon: "S" },
+    { key: "licenseUrl", apiKey: "licenseUrl", label: "Driver's License", icon: "L" },
+    { key: "vehicleRegistrationUrl", apiKey: "vehicleRegistrationUrl", label: "Vehicle Registration", icon: "V" },
+    { key: "insuranceUrl", apiKey: "insuranceUrl", label: "Insurance", icon: "I" },
+  ];
+
+  useEffect(() => { loadProfile(); }, []);
+
+  const loadProfile = async () => {
+    try {
+      const data = await apiGet("/driver/profile");
+      const d = data?.driver || data;
+      setDocs({
+        selfieUrl: d.selfieUrl || d.selfie_url || null,
+        licenseUrl: d.licenseUrl || d.license_url || null,
+        vehicleRegistrationUrl: d.vehicleRegistrationUrl || d.vehicle_registration_url || null,
+        insuranceUrl: d.insuranceUrl || d.insurance_url || null,
+      });
+      setDriverStatus(d.driverStatus || d.driver_status || "pending_review");
+    } catch (e) { console.log("Load docs error:", e); }
+    setLoading(false);
+  };
+
+  const pickAndUpload = async (docType) => {
+    try {
+      const result = await launchCamera({ mediaType: "photo", quality: 0.6, maxWidth: 1200, maxHeight: 1200, includeBase64: true });
+      if (result.didCancel || !result.assets || result.assets.length === 0) return;
+      const asset = result.assets[0];
+      if (!asset.base64) { Alert.alert("Error", "Could not read photo data. Please try again."); return; }
+
+      setUploading(docType.key);
+      const body = {};
+      body[docType.apiKey] = `data:${asset.type || "image/jpeg"};base64,${asset.base64}`;
+      await apiPostAuth("/driver/documents", body);
+      Alert.alert("Uploaded!", `${docType.label} uploaded successfully.`);
+      await loadProfile();
+    } catch (e) {
+      Alert.alert("Upload Failed", e.message || "Could not upload document.");
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const allUploaded = docs.selfieUrl && docs.licenseUrl && docs.vehicleRegistrationUrl && docs.insuranceUrl;
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} translucent={false} />
@@ -2103,19 +2191,68 @@ export function DocumentsScreen({ navigation }) {
         </TouchableOpacity>
         <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>My Documents</Text>
       </View>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 12 }}>Uploaded Documents</Text>
-          {["Driver's License", "Vehicle Insurance", "Vehicle Registration"].map((doc, i) => (
-            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
-              <Text style={{ fontSize: 14, color: C.dark }}>{doc}</Text>
-              <View style={{ backgroundColor: C.successLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: C.success }}>Uploaded</Text>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* Status banner */}
+        {driverStatus === "approved" ? (
+          <View style={{ backgroundColor: "#dcfce7", borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#16a34a" }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#15803d" }}>Account Approved</Text>
+            <Text style={{ fontSize: 12, color: "#15803d", marginTop: 4 }}>Your documents have been verified. You can go online and accept orders.</Text>
+          </View>
+        ) : driverStatus === "rejected" ? (
+          <View style={{ backgroundColor: "#fee2e2", borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#dc2626" }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#991b1b" }}>Documents Rejected</Text>
+            <Text style={{ fontSize: 12, color: "#991b1b", marginTop: 4 }}>Please re-upload your documents and wait for admin review.</Text>
+          </View>
+        ) : (
+          <View style={{ backgroundColor: "#fef3c7", borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#f59e0b" }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#92400e" }}>Account Under Review</Text>
+            <Text style={{ fontSize: 12, color: "#92400e", marginTop: 4 }}>
+              {allUploaded ? "All documents uploaded. Waiting for admin approval (24-48 hours)." : "Upload all required documents below to start the approval process."}
+            </Text>
+          </View>
+        )}
+
+        {/* Document cards */}
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: C.dark, marginBottom: 16 }}>Required Documents</Text>
+          {DOC_TYPES.map((docType, i) => {
+            const isUploaded = !!docs[docType.key];
+            const isCurrentUploading = uploading === docType.key;
+            return (
+              <View key={docType.key} style={{ borderBottomWidth: i < DOC_TYPES.length - 1 ? 1 : 0, borderBottomColor: C.grayLight, paddingVertical: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isUploaded ? "#dcfce7" : C.grayLight, justifyContent: "center", alignItems: "center", marginRight: 12 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: isUploaded ? "#16a34a" : C.gray }}>{isUploaded ? "\u2713" : docType.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "600", color: C.dark }}>{docType.label}</Text>
+                      <Text style={{ fontSize: 12, color: isUploaded ? "#16a34a" : C.gray, marginTop: 2 }}>{isUploaded ? "Uploaded" : "Not uploaded"}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => pickAndUpload(docType)}
+                    disabled={isCurrentUploading}
+                    style={{ backgroundColor: isUploaded ? C.grayLight : C.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, opacity: isCurrentUploading ? 0.6 : 1 }}
+                  >
+                    {isCurrentUploading ? (
+                      <ActivityIndicator size="small" color={isUploaded ? C.primary : "#fff"} />
+                    ) : (
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: isUploaded ? C.primary : "#fff" }}>{isUploaded ? "Re-upload" : "Upload"}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                {isUploaded && docs[docType.key] && (
+                  <Image source={{ uri: docs[docType.key] }} style={{ width: "100%", height: 160, borderRadius: 8, marginTop: 10 }} resizeMode="cover" />
+                )}
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
-        <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", marginTop: 8 }}>Contact support to update your documents</Text>
+
+        <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", lineHeight: 20 }}>
+          All documents are required before you can go online.{"\n"}Admin will review within 24-48 hours after upload.
+        </Text>
       </ScrollView>
     </View>
   );

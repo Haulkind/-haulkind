@@ -624,6 +624,8 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'No document URLs provided' });
       }
 
+      // Also set driver_status to pending_review so admin knows to review
+      updates.push(`driver_status = COALESCE(NULLIF(driver_status, 'approved'), 'pending_review')`);
       updates.push(`updated_at = NOW()`);
       values.push(decoded.driverId);
 
@@ -632,7 +634,15 @@ export function registerDriverAuthRoutes(app: Express) {
         values
       );
 
-      res.json({ success: true, message: 'Documents saved successfully' });
+      // Check if all 4 docs are now uploaded
+      const checkResult = await pool.query(
+        `SELECT selfie_url, license_url, vehicle_registration_url, insurance_url, driver_status FROM drivers WHERE id = $1`,
+        [decoded.driverId]
+      );
+      const driver = checkResult.rows[0];
+      const allUploaded = driver && driver.selfie_url && driver.license_url && driver.vehicle_registration_url && driver.insurance_url;
+
+      res.json({ success: true, message: 'Documents saved successfully', allUploaded: !!allUploaded });
     } catch (err: any) {
       console.error('Document upload error:', err);
       res.status(500).json({ error: 'Failed to save documents' });
