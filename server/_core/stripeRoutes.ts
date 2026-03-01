@@ -1122,9 +1122,9 @@ export function registerStripeRoutes(app: Express) {
 
   // ==========================================================================
   // ADMIN: Drivers Stripe Status Summary
-  // GET /admin/drivers/stripe-status
+  // GET /admin/stripe/drivers-status
   // ==========================================================================
-  app.get("/admin/drivers/stripe-status", async (req: Request, res: Response) => {
+  app.get("/admin/stripe/drivers-status",async (req: Request, res: Response) => {
     try {
       const decoded = verifyAdminToken(req);
       if (!decoded) return res.status(401).json({ error: "Unauthorized (admin only)" });
