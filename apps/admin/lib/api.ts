@@ -52,7 +52,7 @@ export interface Order {
   pickup_time_window: string | null;
   items_json: any;
   pricing_json: any;
-  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'dispatching' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'refunded';
   assigned_driver_id: string | null;
   created_at: string;
   updated_at: string;
