@@ -60,6 +60,15 @@ export interface JobResponse {
   total: number
 }
 
+export interface CheckoutSessionResponse {
+  success: boolean
+  sessionId: string
+  url: string
+  totalCents: number
+  platformFeeCents: number
+  driverEarningsCents: number
+}
+
 export async function checkServiceArea(lat: number, lng: number, state?: string): Promise<ServiceAreaResponse> {
   const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
   const url = `/api/service-area-lookup?lat=${lat}&lng=${lng}${stateParam}`
@@ -136,6 +145,26 @@ export async function payJob(jobId: string, paymentMethodId: string): Promise<{ 
   }
   const data = await response.json()
   console.log('[API] payJob result:', data)
+  return data
+}
+
+export async function createCheckoutSession(jobId: string, successUrl: string, cancelUrl: string): Promise<CheckoutSessionResponse> {
+  console.log('[API] createCheckoutSession for job:', jobId)
+  const response = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ jobId, successUrl, cancelUrl }),
+  })
+  console.log('[API] createCheckoutSession status:', response.status)
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.error('[API] createCheckoutSession error:', errorData)
+    throw new Error(errorData.error || 'Failed to create checkout session')
+  }
+  const data = await response.json()
+  console.log('[API] createCheckoutSession result:', data)
   return data
 }
 

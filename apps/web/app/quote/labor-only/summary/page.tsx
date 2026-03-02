@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
-import { getQuote, createJob, payJob } from '@/lib/api'
+import { getQuote, createJob, createCheckoutSession } from '@/lib/api'
 
 export default function LaborOnlySummaryPage() {
   const router = useRouter()
@@ -62,9 +62,19 @@ export default function LaborOnlySummaryPage() {
 
       updateData({ jobId: job.id })
 
-      await payJob(job.id, 'ledger_demo')
+      // Redirect to Stripe Checkout
+      const origin = window.location.origin
+      const checkout = await createCheckoutSession(
+        job.id,
+        `${origin}/quote/tracking?jobId=${job.id}&payment=success`,
+        `${origin}/quote/labor-only/summary?payment=cancel`
+      )
 
-      router.push(`/quote/tracking?jobId=${job.id}`)
+      if (checkout.url) {
+        window.location.href = checkout.url
+      } else {
+        throw new Error('No checkout URL returned')
+      }
     } catch (err) {
       setError('Payment failed. Please try again.')
       setPaying(false)
