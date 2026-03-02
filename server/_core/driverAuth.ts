@@ -967,12 +967,43 @@ export function registerDriverAuthRoutes(app: Express) {
 
       const orderId = req.params.id;
       
-      await pool.query(
-        "UPDATE jobs SET status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = $1",
+      // Fetch order to calculate earnings
+      const orderResult = await pool.query(
+        "SELECT estimated_price, price_total_cents FROM jobs WHERE id = $1",
         [orderId]
       );
+      
+      let priceTotalCents = 0;
+      if (orderResult.rows.length > 0) {
+        const row = orderResult.rows[0];
+        // Use price_total_cents if already set (from Stripe payment), otherwise calculate from estimated_price
+        if (row.price_total_cents && row.price_total_cents > 0) {
+          priceTotalCents = parseInt(row.price_total_cents);
+        } else if (row.estimated_price) {
+          priceTotalCents = Math.round(parseFloat(row.estimated_price) * 100);
+        }
+      }
+      
+      // Calculate 70/30 split
+      const platformFeeCents = Math.round(priceTotalCents * 0.30);
+      const driverEarningsCents = priceTotalCents - platformFeeCents;
+      
+      await pool.query(
+        `UPDATE jobs SET 
+          status = 'completed', 
+          completed_at = NOW(), 
+          updated_at = NOW(),
+          price_total_cents = COALESCE(NULLIF(price_total_cents, 0), $2),
+          platform_fee_cents = COALESCE(NULLIF(platform_fee_cents, 0), $3),
+          driver_earnings_cents = COALESCE(NULLIF(driver_earnings_cents, 0), $4),
+          payout_status = COALESCE(NULLIF(payout_status, ''), 'eligible')
+        WHERE id = $1`,
+        [orderId, priceTotalCents, platformFeeCents, driverEarningsCents]
+      );
 
-      res.json({ success: true, message: 'Order completed' });
+      console.log(`[DriverAuth] Order ${orderId} completed: total=${priceTotalCents}c, platform=${platformFeeCents}c, driver=${driverEarningsCents}c`);
+
+      res.json({ success: true, message: 'Order completed', earnings: { priceTotalCents, platformFeeCents, driverEarningsCents } });
     } catch (err: any) {
       console.error('Complete order error:', err);
       res.status(500).json({ error: 'Failed to complete order' });

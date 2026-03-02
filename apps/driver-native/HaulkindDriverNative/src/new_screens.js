@@ -1362,6 +1362,7 @@ export function ActiveOrderScreen({ route, navigation }) {
   const [showSignature, setShowSignature] = useState(false);
   const [signaturePaths, setSignaturePaths] = useState([]);
   const [currentPath, setCurrentPath] = useState([]);
+  const currentPathRef = useRef([]);
 
   const price = order?.pricing?.total || order?.pricing?.estimatedTotal || order?.estimated_price || order?.final_price || "0";
   const address = order?.pickup_address || order?.address?.street || "N/A";
@@ -1489,14 +1490,22 @@ export function ActiveOrderScreen({ route, navigation }) {
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
         const { locationX, locationY } = e.nativeEvent;
-        setCurrentPath([{ x: locationX, y: locationY }]);
+        const newPath = [{ x: locationX, y: locationY }];
+        currentPathRef.current = newPath;
+        setCurrentPath(newPath);
       },
       onPanResponderMove: (e) => {
         const { locationX, locationY } = e.nativeEvent;
-        setCurrentPath((prev) => [...prev, { x: locationX, y: locationY }]);
+        const updated = [...currentPathRef.current, { x: locationX, y: locationY }];
+        currentPathRef.current = updated;
+        setCurrentPath(updated);
       },
       onPanResponderRelease: () => {
-        setSignaturePaths((prev) => [...prev, currentPath]);
+        const finishedPath = currentPathRef.current;
+        if (finishedPath.length > 0) {
+          setSignaturePaths((prev) => [...prev, finishedPath]);
+        }
+        currentPathRef.current = [];
         setCurrentPath([]);
       },
     })
@@ -2055,11 +2064,11 @@ export function EarningsScreen({ navigation }) {
     setStripeLoading(true);
     try {
       // Step 1: Create Stripe account if not exists
-      let accountData;
       try {
-        accountData = await apiPostAuth("/api/stripe/connect/create-driver-account", {});
+        await apiPostAuth("/api/stripe/connect/create-driver-account", {});
       } catch (e) {
-        // Account may already exist
+        // Account may already exist — that's OK, continue to get link
+        console.log("Create account (may already exist):", e?.message);
       }
 
       // Step 2: Get onboarding link
@@ -2069,13 +2078,13 @@ export function EarningsScreen({ navigation }) {
       });
 
       if (linkData?.url) {
-        const { Linking } = require("react-native");
         await Linking.openURL(linkData.url);
       } else {
-        Alert.alert("Error", "Could not generate Stripe onboarding link");
+        Alert.alert("Error", "Could not generate Stripe onboarding link. Please try again.");
       }
     } catch (e) {
-      Alert.alert("Error", e.message || "Failed to setup Stripe account");
+      console.log("Setup Stripe error:", e?.message);
+      Alert.alert("Error", e.message || "Failed to setup Stripe account. Check your connection and try again.");
     } finally {
       setStripeLoading(false);
     }
