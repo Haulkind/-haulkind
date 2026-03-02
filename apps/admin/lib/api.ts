@@ -150,12 +150,16 @@ class ApiClient {
   }
 
   // Auth
-  async login(email: string, password: string) {
+  async login(email: string, password: string, totp_code?: string) {
+    const body: any = { email, password };
+    if (totp_code) body.totp_code = totp_code;
     const data = await this.request('/admin/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(body),
     });
-    this.setToken(data.token);
+    if (data.token) {
+      this.setToken(data.token);
+    }
     return data;
   }
 
@@ -279,6 +283,34 @@ class ApiClient {
 
   async getCashFlow(): Promise<CashFlow> {
     return this.request('/admin/cashflow');
+  }
+
+  // Security
+  async changePassword(current_password: string, new_password: string): Promise<{ success: boolean; message: string }> {
+    return this.request('/admin/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password, new_password }),
+    });
+  }
+
+  async setup2FA(): Promise<{ secret: string; qr_code: string; otpauth_url: string }> {
+    return this.request('/admin/auth/2fa/setup', {
+      method: 'POST',
+    });
+  }
+
+  async verify2FA(totp_code: string): Promise<{ success: boolean; message: string }> {
+    return this.request('/admin/auth/2fa/verify', {
+      method: 'POST',
+      body: JSON.stringify({ totp_code }),
+    });
+  }
+
+  async disable2FA(password: string): Promise<{ success: boolean; message: string }> {
+    return this.request('/admin/auth/2fa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
   }
 }
 
