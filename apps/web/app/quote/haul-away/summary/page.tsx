@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
-import { getQuote, createJob, payJob } from '@/lib/api'
+import { getQuote, createJob, createCheckoutSession } from '@/lib/api'
 
 const VOLUME_LABELS: Record<string, string> = {
   EIGHTH: '1/8 Truck (1-2 items)',
@@ -106,8 +106,20 @@ export default function HaulAwaySummaryPage() {
       })
 
       updateData({ jobId: job.id })
-      await payJob(job.id, 'ledger_demo')
-      router.push(`/quote/tracking?jobId=${job.id}`)
+
+      // Redirect to Stripe Checkout
+      const origin = window.location.origin
+      const checkout = await createCheckoutSession(
+        job.id,
+        `${origin}/quote/tracking?jobId=${job.id}&payment=success`,
+        `${origin}/quote/haul-away/summary?payment=cancel`
+      )
+
+      if (checkout.url) {
+        window.location.href = checkout.url
+      } else {
+        throw new Error('No checkout URL returned')
+      }
     } catch (err) {
       console.error('[SUMMARY] Payment failed:', err)
       setError('Payment failed. Please try again.')
