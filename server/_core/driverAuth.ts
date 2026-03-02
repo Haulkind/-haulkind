@@ -860,10 +860,10 @@ export function registerDriverAuthRoutes(app: Express) {
 
       try {
         const result = await pool.query(
-          `SELECT j.* FROM jobs j 
+          `SELECT DISTINCT ON (j.id) j.* FROM jobs j 
            JOIN job_assignments ja ON j.id = ja.job_id 
            WHERE ja.driver_id = $1 AND j.status = 'completed'
-           ORDER BY j.updated_at DESC LIMIT 50`,
+           ORDER BY j.id, j.updated_at DESC LIMIT 50`,
           [decoded.driverId]
         );
         res.json({ orders: applyDriverCommissionToList(result.rows || []) });
@@ -920,12 +920,18 @@ export function registerDriverAuthRoutes(app: Express) {
         [decoded.driverId, orderId]
       );
 
-      // Create assignment record
+      // Create assignment record (prevent duplicates for same job+driver)
       try {
-        await pool.query(
-          `INSERT INTO job_assignments (job_id, driver_id) VALUES ($1, $2)`,
+        const existingAssignment = await pool.query(
+          `SELECT id FROM job_assignments WHERE job_id = $1 AND driver_id = $2 LIMIT 1`,
           [orderId, decoded.driverId]
         );
+        if (existingAssignment.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO job_assignments (job_id, driver_id) VALUES ($1, $2)`,
+            [orderId, decoded.driverId]
+          );
+        }
       } catch (e) {
         // ignore duplicate
       }
@@ -969,9 +975,15 @@ export function registerDriverAuthRoutes(app: Express) {
       
       // Fetch order to calculate earnings
       const orderResult = await pool.query(
-        "SELECT estimated_price, price_total_cents FROM jobs WHERE id = $1",
+        "SELECT estimated_price, price_total_cents, status FROM jobs WHERE id = $1",
         [orderId]
       );
+
+      // Guard: prevent completing an already-completed order (no duplicate earnings)
+      if (orderResult.rows.length > 0 && orderResult.rows[0].status === 'completed') {
+        console.log(`[DriverAuth] Order ${orderId} already completed — blocking duplicate completion`);
+        return res.json({ success: true, message: 'Order already completed', duplicate: true });
+      }
       
       let priceTotalCents = 0;
       if (orderResult.rows.length > 0) {
