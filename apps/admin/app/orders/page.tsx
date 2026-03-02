@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, Order, Driver } from '../../lib/api';
+import { api, Order, Driver, CashFlow } from '../../lib/api';
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -31,6 +31,7 @@ export default function OrdersPage() {
   const [mediaTab, setMediaTab] = useState<'photos' | 'signature'>('photos');
   const [mediaData, setMediaData] = useState<{ completion_photos: string | null; signature_data: string | null; photo_urls: string | null } | null>(null);
   const [mediaLoading, setMediaLoading] = useState(false);
+  const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
 
   const loadOrders= useCallback(async () => {
     try {
@@ -39,8 +40,12 @@ export default function OrdersPage() {
       if (serviceTypeFilter) params.service_type = serviceTypeFilter;
       if (searchQuery) params.search = searchQuery;
       
-      const data = await api.getOrders(params);
+      const [data, cf] = await Promise.all([
+        api.getOrders(params),
+        api.getCashFlow().catch(() => null),
+      ]);
       setOrders(data.orders);
+      if (cf) setCashFlow(cf);
       setLastUpdated(new Date());
       setCountdown(30);
     } catch (err: any) {
@@ -81,6 +86,39 @@ export default function OrdersPage() {
       return () => clearTimeout(timer);
     }
   }, [actionSuccess]);
+
+  const getPaymentBadge = (order: Order) => {
+    if (order.paid_at) {
+      return (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+          Paid
+        </span>
+      );
+    }
+    if (order.status === 'cancelled') {
+      return (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+          --
+        </span>
+      );
+    }
+    if (order.status === 'refunded') {
+      return (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+          Refunded
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+        Unpaid
+      </span>
+    );
+  };
+
+  const formatCents = (cents: number) => {
+    return `$${(cents / 100).toFixed(2)}`;
+  };
 
   const getStatusBadge= (status: string) => {
     const styles: Record<string, string> = {
@@ -267,6 +305,32 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* Cash Flow Summary Cards */}
+      {cashFlow && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+            <p className="text-xs font-medium text-gray-500 uppercase">Total Received</p>
+            <p className="text-2xl font-bold text-green-700">{formatCents(cashFlow.paid.totalCents)}</p>
+            <p className="text-xs text-gray-500">{cashFlow.paid.count} paid orders</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <p className="text-xs font-medium text-gray-500 uppercase">Haulkind Revenue (30%)</p>
+            <p className="text-2xl font-bold text-blue-700">{formatCents(cashFlow.platformFees.totalCents)}</p>
+            <p className="text-xs text-gray-500">Driver portion: {formatCents(cashFlow.driverEarnings.totalCents)}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-amber-500">
+            <p className="text-xs font-medium text-gray-500 uppercase">Unpaid Orders</p>
+            <p className="text-2xl font-bold text-amber-700">${cashFlow.unpaid.totalEstimated.toFixed(2)}</p>
+            <p className="text-xs text-gray-500">{cashFlow.unpaid.count} orders awaiting payment</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+            <p className="text-xs font-medium text-gray-500 uppercase">This Month</p>
+            <p className="text-2xl font-bold text-purple-700">{formatCents(cashFlow.thisMonth.totalCents)}</p>
+            <p className="text-xs text-gray-500">{cashFlow.thisMonth.count} orders | Week: {formatCents(cashFlow.thisWeek.totalCents)}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -322,6 +386,7 @@ export default function OrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
@@ -331,7 +396,7 @@ export default function OrdersPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">No orders found</td>
+                <td colSpan={10} className="px-6 py-8 text-center text-gray-500">No orders found</td>
               </tr>
             ) : (
               orders.map((order) => (
@@ -368,6 +433,7 @@ export default function OrdersPage() {
                     <div className="text-sm text-gray-500">{order.zip || ''}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(order.status)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{getPaymentBadge(order)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatPrice(order.pricing_json)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">

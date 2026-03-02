@@ -385,7 +385,10 @@ export function registerAdminApiRoutes(app: Express) {
                pickup_date::text, pickup_time_window::text,
                items_json::text, pricing_json::text, status,
                assigned_driver_id::text, created_at, updated_at,
-               CAST(NULL AS boolean) as has_completion_photos, CAST(NULL AS boolean) as has_signature, CAST(NULL AS boolean) as has_photo_urls
+               CAST(NULL AS boolean) as has_completion_photos, CAST(NULL AS boolean) as has_signature, CAST(NULL AS boolean) as has_photo_urls,
+               CAST(NULL AS text) as paid_at, CAST(NULL AS text) as stripe_payment_intent_id,
+               CAST(NULL AS integer) as price_total_cents, CAST(NULL AS integer) as platform_fee_cents,
+               CAST(NULL AS integer) as driver_earnings_cents, CAST(NULL AS text) as payout_status
         FROM orders
         UNION ALL
         SELECT id::text, service_type, customer_name, customer_phone as phone, customer_email as email,
@@ -396,7 +399,10 @@ export function registerAdminApiRoutes(app: Express) {
                status, assigned_driver_id::text, created_at, updated_at,
                (completion_photos IS NOT NULL AND completion_photos != '') as has_completion_photos,
                (signature_data IS NOT NULL AND signature_data != '') as has_signature,
-               (photo_urls IS NOT NULL AND photo_urls != '') as has_photo_urls
+               (photo_urls IS NOT NULL AND photo_urls != '') as has_photo_urls,
+               paid_at::text, stripe_payment_intent_id::text,
+               price_total_cents::integer, platform_fee_cents::integer,
+               driver_earnings_cents::integer, payout_status::text
         FROM jobs
       `;
       
@@ -452,6 +458,98 @@ export function registerAdminApiRoutes(app: Express) {
       res.json({ orders: result.rows, total, limit: parseInt(limit as string), offset: parseInt(offset as string) });
     } catch (err: any) {
       console.error('Get orders error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /admin/cashflow - Cash flow summary for dashboard
+  app.get('/admin/cashflow', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Total revenue (paid orders)
+      const paidResult = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(price_total_cents), 0) as total_cents
+         FROM jobs WHERE paid_at IS NOT NULL`
+      );
+
+      // Platform fees earned
+      const feesResult = await pool.query(
+        `SELECT COALESCE(SUM(platform_fee_cents), 0) as total_fees_cents
+         FROM jobs WHERE paid_at IS NOT NULL`
+      );
+
+      // Driver earnings
+      const driverResult = await pool.query(
+        `SELECT COALESCE(SUM(driver_earnings_cents), 0) as total_driver_cents
+         FROM jobs WHERE paid_at IS NOT NULL`
+      );
+
+      // Unpaid orders (pending payment)
+      const unpaidResult = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(CAST(estimated_price AS numeric)), 0) as total_estimated
+         FROM jobs WHERE paid_at IS NULL AND status NOT IN ('cancelled', 'refunded')`
+      );
+
+      // Today's revenue
+      const todayResult = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(price_total_cents), 0) as total_cents
+         FROM jobs WHERE paid_at IS NOT NULL AND paid_at::date = CURRENT_DATE`
+      );
+
+      // This week's revenue
+      const weekResult = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(price_total_cents), 0) as total_cents
+         FROM jobs WHERE paid_at IS NOT NULL AND paid_at >= date_trunc('week', CURRENT_DATE)`
+      );
+
+      // This month's revenue
+      const monthResult = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(price_total_cents), 0) as total_cents
+         FROM jobs WHERE paid_at IS NOT NULL AND paid_at >= date_trunc('month', CURRENT_DATE)`
+      );
+
+      // Refunded orders
+      const refundedResult = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(price_total_cents), 0) as total_cents
+         FROM jobs WHERE status = 'refunded'`
+      );
+
+      res.json({
+        paid: {
+          count: parseInt(paidResult.rows[0].count),
+          totalCents: parseInt(paidResult.rows[0].total_cents),
+        },
+        platformFees: {
+          totalCents: parseInt(feesResult.rows[0].total_fees_cents),
+        },
+        driverEarnings: {
+          totalCents: parseInt(driverResult.rows[0].total_driver_cents),
+        },
+        unpaid: {
+          count: parseInt(unpaidResult.rows[0].count),
+          totalEstimated: parseFloat(unpaidResult.rows[0].total_estimated) || 0,
+        },
+        today: {
+          count: parseInt(todayResult.rows[0].count),
+          totalCents: parseInt(todayResult.rows[0].total_cents),
+        },
+        thisWeek: {
+          count: parseInt(weekResult.rows[0].count),
+          totalCents: parseInt(weekResult.rows[0].total_cents),
+        },
+        thisMonth: {
+          count: parseInt(monthResult.rows[0].count),
+          totalCents: parseInt(monthResult.rows[0].total_cents),
+        },
+        refunded: {
+          count: parseInt(refundedResult.rows[0].count),
+          totalCents: parseInt(refundedResult.rows[0].total_cents),
+        },
+      });
+    } catch (err: any) {
+      console.error('Cashflow error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

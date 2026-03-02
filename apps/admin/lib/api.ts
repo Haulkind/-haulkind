@@ -64,6 +64,24 @@ export interface Order {
   completion_photos?: string | null;
   signature_data?: string | null;
   photo_urls?: string | null;
+  // Payment/Stripe columns
+  paid_at: string | null;
+  stripe_payment_intent_id: string | null;
+  price_total_cents: number | null;
+  platform_fee_cents: number | null;
+  driver_earnings_cents: number | null;
+  payout_status: string | null;
+}
+
+export interface CashFlow {
+  paid: { count: number; totalCents: number };
+  platformFees: { totalCents: number };
+  driverEarnings: { totalCents: number };
+  unpaid: { count: number; totalEstimated: number };
+  today: { count: number; totalCents: number };
+  thisWeek: { count: number; totalCents: number };
+  thisMonth: { count: number; totalCents: number };
+  refunded: { count: number; totalCents: number };
 }
 
 export interface Stats {
@@ -257,6 +275,10 @@ class ApiClient {
 
   async getDriversStripeStatus(): Promise<{ drivers: any[]; summary: any }> {
     return this.request('/admin/stripe/drivers-status');
+  }
+
+  async getCashFlow(): Promise<CashFlow> {
+    return this.request('/admin/cashflow');
   }
 }
 
