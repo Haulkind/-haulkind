@@ -1,6 +1,6 @@
 {
-  "name": "Haulkind",
-  "short_name": "Haulkind",
+  "name": "HaulKind",
+  "short_name": "HaulKind",
   "description": "Track your junk removal orders in real time",
   "start_url": "/",
   "display": "standalone",
