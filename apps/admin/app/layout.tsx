@@ -43,6 +43,18 @@ export default function RootLayout({
             gtag('js', new Date());
             gtag('config', 'G-KCC7J1ZT6Y');
           `}</Script>
+          <Script id="meta-pixel-login" strategy="afterInteractive">{`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '4348813218781671');
+            fbq('track', 'PageView');
+          `}</Script>
           {children}
         </body>
       </html>
@@ -62,6 +74,18 @@ export default function RootLayout({
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
           gtag('config', 'G-KCC7J1ZT6Y');
+        `}</Script>
+        <Script id="meta-pixel-dashboard" strategy="afterInteractive">{`
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '4348813218781671');
+          fbq('track', 'PageView');
         `}</Script>
         <div className="flex h-screen">
           {/* Sidebar */}
