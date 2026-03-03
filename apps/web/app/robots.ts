@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        disallow: ['/api/', '/driver/', '/quote/'],
+        allow: ['/', '/services/', '/contact'],
+        disallow: ['/api/', '/driver/'],
       },
     ],
     sitemap: 'https://haulkind.com/sitemap.xml',

@@ -20,18 +20,33 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4">Services</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/pricing" className="hover:text-white transition">
-                  Junk Removal
+                <Link href="/services/cleanout" className="hover:text-white transition">
+                  Property Cleanouts
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/furniture" className="hover:text-white transition">
+                  Furniture Removal
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/appliances" className="hover:text-white transition">
+                  Appliance Removal
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/moving-labor" className="hover:text-white transition">
+                  Moving Labor
+                </Link>
+              </li>
+              <li>
+                <Link href="/services/commercial" className="hover:text-white transition">
+                  Commercial
                 </Link>
               </li>
               <li>
                 <Link href="/pricing" className="hover:text-white transition">
-                  Labor Only
-                </Link>
-              </li>
-              <li>
-                <Link href="/service-areas" className="hover:text-white transition">
-                  Service Areas
+                  Pricing
                 </Link>
               </li>
             </ul>
@@ -47,8 +62,18 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/service-areas" className="hover:text-white transition">
+                  Service Areas
+                </Link>
+              </li>
+              <li>
                 <Link href="/become-a-driver" className="hover:text-white transition">
                   Become a Driver
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-white transition">
+                  Contact
                 </Link>
               </li>
               <li>
