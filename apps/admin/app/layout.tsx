@@ -2,6 +2,7 @@
 import './globals.css';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
 export default function RootLayout({
   children,
 }: {
@@ -33,7 +34,16 @@ export default function RootLayout({
         <head>
           <title>Haulkind Admin - Login</title>
         </head>
-        <body>{children}</body>
+        <body>
+          <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
+          <Script id="gtag-init" strategy="afterInteractive">{`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-KCC7J1ZT6Y');
+          `}</Script>
+          {children}
+        </body>
       </html>
     );
   }
@@ -44,6 +54,13 @@ export default function RootLayout({
         <title>Haulkind Admin Dashboard</title>
       </head>
       <body className="bg-gray-100">
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
+        <Script id="gtag-init-dashboard" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-KCC7J1ZT6Y');
+        `}</Script>
         <div className="flex h-screen">
           {/* Sidebar */}
           <div className="w-64 bg-gray-900 text-white flex flex-col">
