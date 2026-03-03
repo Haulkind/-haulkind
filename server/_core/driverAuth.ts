@@ -397,6 +397,145 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // ============================================================================
+  // WEB DRIVER APPLICATION ENDPOINT (public - no auth required)
+  // ============================================================================
+
+  // POST /drivers/apply - Web driver signup form (creates account + saves vehicle/availability + documents)
+  app.post('/drivers/apply', async (req, res) => {
+    try {
+      const {
+        firstName, lastName, email, phone, zip,
+        vehicleType, availability, canLift75, hasEquipment, experience, consents,
+        selfieUrl, licenseUrl, vehicleRegistrationUrl, insuranceUrl
+      } = req.body;
+
+      if (!firstName || !lastName || !email || !phone || !zip) {
+        return res.status(400).json({ error: 'All personal info fields are required' });
+      }
+
+      if (!vehicleType) {
+        return res.status(400).json({ error: 'Vehicle type is required' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      // Check if driver already exists
+      const existingDriver = await pool.query(
+        'SELECT id FROM drivers WHERE email = $1 LIMIT 1',
+        [email]
+      );
+      if (existingDriver.rows.length > 0) {
+        return res.status(400).json({ error: 'Email already registered as driver. Please use the driver app to login.' });
+      }
+
+      // Check if user email already exists
+      const existingUser = await pool.query(
+        'SELECT id FROM users WHERE email = $1 LIMIT 1',
+        [email]
+      );
+
+      // Generate a random password for web signups (driver can reset later via app)
+      const randomPassword = require('crypto').randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      let userId: string;
+      if (existingUser.rows.length > 0) {
+        userId = existingUser.rows[0].id;
+      } else {
+        const fullName = `${firstName} ${lastName}`;
+        const insertResult = await pool.query(
+          `INSERT INTO users (email, name, phone, password_hash)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id`,
+          [email, fullName, phone, hashedPassword]
+        );
+        userId = insertResult.rows[0]?.id;
+      }
+
+      const fullName = `${firstName} ${lastName}`;
+
+      // Determine driver_status based on whether documents were uploaded
+      const hasDocuments = selfieUrl || licenseUrl || vehicleRegistrationUrl || insuranceUrl;
+      const driverStatus = hasDocuments ? 'pending_review' : 'pending';
+
+      // Insert into drivers table with all fields including vehicle info
+      const driverResult = await pool.query(
+        `INSERT INTO drivers (
+          name, phone, email, status, driver_status,
+          first_name, last_name, zip_code,
+          vehicle_type, can_lift_75, has_equipment, experience,
+          selfie_url, license_url, vehicle_registration_url, insurance_url,
+          created_at, updated_at
+        )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
+         RETURNING id`,
+        [
+          fullName,
+          phone,
+          email,
+          'pending',
+          driverStatus,
+          firstName,
+          lastName,
+          zip,
+          vehicleType,
+          canLift75 || false,
+          hasEquipment || false,
+          experience || '',
+          selfieUrl || null,
+          licenseUrl || null,
+          vehicleRegistrationUrl || null,
+          insuranceUrl || null
+        ]
+      );
+      const driverId = driverResult.rows[0]?.id;
+
+      // Save availability as JSON in a separate update (availability columns may not exist)
+      if (availability) {
+        try {
+          await pool.query(
+            `UPDATE drivers SET services = $1 WHERE id = $2`,
+            [JSON.stringify({ availability, consents }), driverId]
+          );
+        } catch (e) {
+          // Non-critical, ignore if services column doesn't support it
+          console.log('[DriversApply] Could not save availability:', e);
+        }
+      }
+
+      // Generate token so the frontend can use it for document uploads if needed
+      const token = jwt.sign(
+        { userId, email, role: 'driver', driverId },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '7d' }
+      );
+
+      console.log(`[DriversApply] New driver application: ${fullName} (${email}), status: ${driverStatus}, docs: ${hasDocuments ? 'yes' : 'no'}`);
+
+      res.json({
+        success: true,
+        token,
+        driver: {
+          id: driverId,
+          userId,
+          email,
+          name: fullName,
+          status: driverStatus
+        }
+      });
+    } catch (error: any) {
+      console.error('Driver apply error:', error);
+      if (error?.code === '23505') {
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+      res.status(500).json({ error: 'Failed to submit application', details: error?.message || String(error) });
+    }
+  });
+
+  // ============================================================================
   // DRIVER AUTH ENDPOINTS
   // ============================================================================
 
