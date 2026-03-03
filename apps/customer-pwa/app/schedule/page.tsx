@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getQuote, createJob, payJob, createCheckoutSession, lookupServiceArea } from '@/lib/api'
 import { getCustomer, isLoggedIn } from '@/lib/auth'
@@ -71,6 +71,37 @@ function SchedulePageInner() {
   const [customerName, setCustomerName] = useState(customer?.name || '')
   const [customerEmail, setCustomerEmail] = useState(customer?.email || '')
   const [customerPhone, setCustomerPhone] = useState(customer?.phone || '')
+
+  // Photos
+  const [photos, setPhotos] = useState<string[]>([])
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    Array.from(files).forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Photo must be under 5MB')
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        setError('Only image files are allowed')
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        setPhotos(prev => [...prev, result])
+      }
+      reader.readAsDataURL(file)
+    })
+    // Reset input so the same file can be selected again
+    e.target.value = ''
+  }
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index))
+  }
 
   // Quote result
   const [quoteTotal, setQuoteTotal] = useState(0)
@@ -164,6 +195,7 @@ function SchedulePageInner() {
         customerEmail,
         timeWindow,
         total: quoteTotal,
+        photoUrls: photos.length > 0 ? photos : undefined,
       })
       if (data.error) { setError(data.error); return }
       setJobId(data.id)
@@ -464,6 +496,68 @@ function SchedulePageInner() {
                 placeholder="Any special instructions..."
               />
             </div>
+
+            {/* Photo Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Photos (optional)</label>
+              <p className="text-xs text-gray-500 mb-3">Take a photo or upload from your gallery to help us understand the job.</p>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                onChange={handlePhotoSelect}
+                className="hidden"
+              />
+              {photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {photos.map((photo, idx) => (
+                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                      <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(idx)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (photoInputRef.current) {
+                      photoInputRef.current.removeAttribute('capture')
+                      photoInputRef.current.click()
+                    }
+                  }}
+                  className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-primary-400 hover:text-primary-600 transition flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  Upload Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (photoInputRef.current) {
+                      photoInputRef.current.setAttribute('capture', 'environment')
+                      photoInputRef.current.click()
+                    }
+                  }}
+                  className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-primary-400 hover:text-primary-600 transition flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  Take Photo
+                </button>
+              </div>
+              {photos.length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">{photos.length} photo{photos.length > 1 ? 's' : ''} added</p>
+              )}
+            </div>
             <div className="flex gap-3">
               <button onClick={() => setStep('schedule')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
                 Back
@@ -519,6 +613,12 @@ function SchedulePageInner() {
                     </div>
                   </>
                 )}
+                {photos.length > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Photos</span>
+                    <span className="font-medium">{photos.length} attached</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="font-bold text-lg">Total</span>
@@ -526,6 +626,15 @@ function SchedulePageInner() {
                   </div>
                 </div>
               </div>
+              {photos.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex gap-2 overflow-x-auto">
+                    {photos.map((photo, idx) => (
+                      <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="w-16 h-16 rounded-lg object-cover border border-gray-200 flex-shrink-0" />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customer Info */}
