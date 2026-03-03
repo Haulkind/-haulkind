@@ -1,4 +1,16 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Become a Driver - Earn 60% on Every Junk Removal Job',
+  description: 'Drive with HaulKind and keep 60% of every job. Earn $65-$317 per haul or $47-$77/hr for labor. Work your own schedule. Weekly pay via direct deposit. Apply now.',
+  alternates: { canonical: '/become-a-driver' },
+  openGraph: {
+    title: 'Become a HaulKind Driver - Earn 60% Per Job',
+    description: 'Keep 60% of every job. Work your own schedule. Weekly direct deposit. Apply in 5 minutes.',
+    url: 'https://haulkind.com/become-a-driver',
+  },
+}
 
 export default function BecomeADriver() {
   return (

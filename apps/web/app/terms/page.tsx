@@ -1,3 +1,12 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description: 'HaulKind terms of service. Read our policies on booking, payments, cancellations, liability, and dispute resolution.',
+  alternates: { canonical: '/terms' },
+  robots: { index: true, follow: true },
+}
+
 export default function Terms() {
   return (
     <div className="bg-white">

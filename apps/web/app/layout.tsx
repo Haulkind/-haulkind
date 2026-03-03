@@ -10,8 +10,64 @@ import { TRPCProvider } from '@/lib/trpc-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Haulkind - Fast Local Junk Removal with Transparent Pricing',
-  description: 'No memberships. Track your driver live. Drivers keep 60%. Get a quote today.',
+  title: {
+    default: 'HaulKind - Fast Local Junk Removal & Moving Help | PA, NY, NJ',
+    template: '%s | HaulKind',
+  },
+  description: 'Affordable junk removal and moving labor in Pennsylvania, New York & New Jersey. Transparent pricing from $109. Track your driver live. Same-day service available. Get a free quote in seconds.',
+  keywords: [
+    'junk removal', 'junk hauling', 'trash removal', 'furniture removal',
+    'appliance removal', 'moving help', 'labor only moving',
+    'junk removal near me', 'cheap junk removal',
+    'junk removal Philadelphia', 'junk removal NYC', 'junk removal New Jersey',
+    'same day junk removal', 'furniture pickup', 'mattress removal',
+    'yard waste removal', 'construction debris removal',
+    'local moving help', 'loading unloading help',
+    'Pennsylvania junk removal', 'New York junk removal', 'New Jersey junk removal',
+    'transparent pricing junk removal', 'track driver live',
+    'HaulKind', 'haul away service',
+  ],
+  metadataBase: new URL('https://haulkind.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://haulkind.com',
+    siteName: 'HaulKind',
+    title: 'HaulKind - Fast Local Junk Removal & Moving Help',
+    description: 'Affordable junk removal starting at $109. Transparent pricing, live driver tracking, same-day service. Serving PA, NY & NJ. Get a free quote now!',
+    images: [
+      {
+        url: '/haulkind_hero_truck.webp',
+        width: 1200,
+        height: 630,
+        alt: 'HaulKind - Professional Junk Removal Service',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HaulKind - Fast Local Junk Removal & Moving Help',
+    description: 'Affordable junk removal starting at $109. Transparent pricing, live driver tracking. Serving PA, NY & NJ.',
+    images: ['/haulkind_hero_truck.webp'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'G-KCC7J1ZT6Y',
+  },
+  category: 'Home Services',
 }
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +77,75 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: 'HaulKind',
+    description: 'Fast local junk removal and moving help with transparent pricing. Serving Pennsylvania, New York, and New Jersey.',
+    url: 'https://haulkind.com',
+    logo: 'https://haulkind.com/haulkind_hero_truck.webp',
+    image: 'https://haulkind.com/haulkind_hero_truck.webp',
+    telephone: '(800) 555-1234',
+    email: 'support@haulkind.com',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '123 Main Street',
+      addressLocality: 'Philadelphia',
+      addressRegion: 'PA',
+      postalCode: '19103',
+      addressCountry: 'US',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 39.9526,
+      longitude: -75.1652,
+    },
+    areaServed: [
+      { '@type': 'State', name: 'Pennsylvania' },
+      { '@type': 'State', name: 'New York' },
+      { '@type': 'State', name: 'New Jersey' },
+    ],
+    serviceType: ['Junk Removal', 'Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal'],
+    priceRange: '$109 - $529',
+    openingHours: 'Mo-Su 07:00-19:00',
+    sameAs: [],
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Junk Removal & Moving Services',
+      itemListElement: [
+        {
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: 'Junk Removal (Haul Away)',
+            description: 'Professional junk removal service. We load, haul, and dispose of your items.',
+          },
+          priceSpecification: {
+            '@type': 'PriceSpecification',
+            price: '109',
+            priceCurrency: 'USD',
+            minPrice: '109',
+            maxPrice: '529',
+          },
+        },
+        {
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: 'Labor Only (Moving Help)',
+            description: 'Hourly moving labor. Helpers to load, unload, and move heavy items.',
+          },
+          priceSpecification: {
+            '@type': 'PriceSpecification',
+            price: '79',
+            priceCurrency: 'USD',
+            unitText: 'HOUR',
+          },
+        },
+      ],
+    },
+  }
+
   return (
     <html lang="en">
       <head>
@@ -31,6 +156,10 @@ export default function RootLayout({
           gtag('js', new Date());
           gtag('config', 'G-KCC7J1ZT6Y');
         `}</Script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className={inter.className}>
         <TRPCProvider>
