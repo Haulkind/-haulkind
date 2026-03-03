@@ -1875,9 +1875,16 @@ export function ProfileScreen({ navigation }) {
       </View>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 20, alignItems: "center", marginBottom: 16 }}>
-          <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.primaryLight, justifyContent: "center", alignItems: "center", marginBottom: 12 }}>
-            <Text style={{ fontSize: 28, fontWeight: "700", color: C.primary }}>{(profile?.name || "D")[0].toUpperCase()}</Text>
-          </View>
+          {(profile?.selfieUrl || profile?.selfie_url) ? (
+            <Image
+              source={{ uri: profile.selfieUrl || profile.selfie_url }}
+              style={{ width: 72, height: 72, borderRadius: 36, marginBottom: 12, borderWidth: 2, borderColor: C.primaryLight }}
+            />
+          ) : (
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.primaryLight, justifyContent: "center", alignItems: "center", marginBottom: 12 }}>
+              <Text style={{ fontSize: 28, fontWeight: "700", color: C.primary }}>{(profile?.name || "D")[0].toUpperCase()}</Text>
+            </View>
+          )}
           <Text style={{ fontSize: 20, fontWeight: "700", color: C.dark }}>{profile?.name || "Driver"}</Text>
           <Text style={{ fontSize: 14, color: C.gray, marginTop: 4 }}>{profile?.email || ""}</Text>
           <View style={{ backgroundColor: profile?.status === "approved" ? C.successLight : "#fef3c7", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginTop: 8 }}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, SafeAreaView,
   StatusBar, ActivityIndicator, Alert, Animated, Dimensions,
-  ScrollView, Pressable,
+  ScrollView, Pressable, Image,
 } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -36,6 +36,7 @@ const Stack = createNativeStackNavigator();
 function SideMenu({ visible, onClose, navigation }) {
   const [driverName, setDriverName] = useState('Driver');
   const [driverEmail, setDriverEmail] = useState('');
+  const [selfieUrl, setSelfieUrl] = useState(null);
   const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
   useEffect(() => {
@@ -56,17 +57,32 @@ function SideMenu({ visible, onClose, navigation }) {
 
   const loadDriverInfo = async () => {
     try {
+      // Load from local storage first for instant display
       const driverData = await AsyncStorage.getItem('driver_data');
       if (driverData) {
         const d = JSON.parse(driverData);
         setDriverName(d.name || d.firstName || 'Driver');
         setDriverEmail(d.email || '');
+        if (d.selfieUrl || d.selfie_url) setSelfieUrl(d.selfieUrl || d.selfie_url);
       }
       const userData = await AsyncStorage.getItem('user_data');
       if (userData) {
         const u = JSON.parse(userData);
-        if (!driverName || driverName === 'Driver') setDriverName(u.name || 'Driver');
-        if (!driverEmail) setDriverEmail(u.email || '');
+        if (!driverData || !(JSON.parse(driverData).name)) setDriverName(u.name || 'Driver');
+        if (!driverData || !(JSON.parse(driverData).email)) setDriverEmail(u.email || '');
+      }
+      // Fetch fresh data from API to get latest name + selfie
+      const token = await AsyncStorage.getItem('driver_token');
+      if (token) {
+        const API_URL = 'https://haulkind-production-285b.up.railway.app';
+        const res = await fetch(`${API_URL}/driver/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        const driver = data?.driver || data;
+        if (driver?.name) setDriverName(driver.name);
+        if (driver?.email) setDriverEmail(driver.email);
+        if (driver?.selfieUrl || driver?.selfie_url) setSelfieUrl(driver.selfieUrl || driver.selfie_url);
       }
     } catch (e) {}
   };
@@ -138,16 +154,27 @@ function SideMenu({ visible, onClose, navigation }) {
               <TouchableOpacity onPress={handleClose} style={{ position: 'absolute', top: StatusBar.currentHeight ? StatusBar.currentHeight + 8 : 40, left: 16, zIndex: 10 }}>
                 <Text style={{ fontSize: 22, color: COLORS.white }}>{'<'}</Text>
               </TouchableOpacity>
-              <View style={{
-                width: 56, height: 56, borderRadius: 28,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                justifyContent: 'center', alignItems: 'center',
-                marginBottom: 10, marginTop: 8,
-              }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: COLORS.white }}>
-                  {(driverName || 'D')[0].toUpperCase()}
-                </Text>
-              </View>
+              {selfieUrl ? (
+                <Image
+                  source={{ uri: selfieUrl }}
+                  style={{
+                    width: 56, height: 56, borderRadius: 28,
+                    marginBottom: 10, marginTop: 8,
+                    borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)',
+                  }}
+                />
+              ) : (
+                <View style={{
+                  width: 56, height: 56, borderRadius: 28,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  justifyContent: 'center', alignItems: 'center',
+                  marginBottom: 10, marginTop: 8,
+                }}>
+                  <Text style={{ fontSize: 22, fontWeight: '700', color: COLORS.white }}>
+                    {(driverName || 'D')[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
               <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.white }}>{driverName}</Text>
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{driverEmail}</Text>
             </View>
