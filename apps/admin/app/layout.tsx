@@ -3,6 +3,8 @@ import './globals.css';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
+import { useState, useEffect } from 'react';
+
 export default function RootLayout({
   children,
 }: {
@@ -11,6 +13,21 @@ export default function RootLayout({
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === '/login';
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Close sidebar on escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -34,6 +51,7 @@ export default function RootLayout({
         <head>
           <title>Haulkind Admin - Login</title>
           <meta name="robots" content="noindex, nofollow" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
         </head>
         <body>
           <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
@@ -66,6 +84,7 @@ export default function RootLayout({
       <head>
         <title>Haulkind Admin Dashboard</title>
         <meta name="robots" content="noindex, nofollow" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body className="bg-gray-100">
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
@@ -87,15 +106,38 @@ export default function RootLayout({
           fbq('init', '4348813218781671');
           fbq('track', 'PageView');
         `}</Script>
-        <div className="flex h-screen">
+        <div className="flex h-screen overflow-hidden">
+          {/* Mobile overlay */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
           {/* Sidebar */}
-          <div className="w-64 bg-gray-900 text-white flex flex-col">
-            <div className="p-6 border-b border-gray-700">
-              <h1 className="text-2xl font-bold">🚛 Haulkind</h1>
-              <p className="text-sm text-gray-400 mt-1">Admin Dashboard</p>
+          <div className={`
+            fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col
+            transform transition-transform duration-200 ease-in-out
+            lg:relative lg:translate-x-0 lg:flex-shrink-0
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}>
+            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">🚛 Haulkind</h1>
+                <p className="text-sm text-gray-400 mt-1">Admin Dashboard</p>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden text-gray-400 hover:text-white p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            <nav className="flex-1 p-4">
+            <nav className="flex-1 p-4 overflow-y-auto">
               <ul className="space-y-2">
                 {navItems.map((item) => {
                   const isActive = pathname === item.href;
@@ -130,8 +172,32 @@ export default function RootLayout({
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-auto">
-            {children}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* Mobile top bar */}
+            <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="text-gray-600 hover:text-gray-900 p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <h1 className="text-lg font-bold text-gray-900">🚛 Haulkind</h1>
+              <button
+                onClick={handleLogout}
+                className="text-red-600 hover:text-red-700 p-1"
+                title="Logout"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {children}
+            </div>
           </div>
         </div>
       </body>

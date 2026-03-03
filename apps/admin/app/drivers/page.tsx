@@ -141,30 +141,30 @@ export default function DriversPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Driver Compliance Management</h1>
-          <p className="text-gray-600 mt-2">Review documents, approve/reject drivers, and manage compliance</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Drivers</h1>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Review documents, approve/reject drivers, and manage compliance</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span>Auto-refresh: {countdown}s</span>
+            <span>{countdown}s</span>
           </div>
           {lastUpdated && (
-            <span className="text-xs text-gray-500">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+            <span className="text-xs text-gray-500 hidden sm:inline">
+              {lastUpdated.toLocaleTimeString()}
             </span>
           )}
           <button
             onClick={loadDrivers}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+            className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs sm:text-sm"
           >
-            Refresh Now
+            Refresh
           </button>
         </div>
       </div>
@@ -220,7 +220,8 @@ export default function DriversPage() {
         <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">{drivers.length} driver{drivers.length !== 1 ? 's' : ''} found</span>
         </div>
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-[950px] w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
@@ -257,10 +258,10 @@ export default function DriversPage() {
                     {new Date(driver.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={() => viewDriverDetails(driver)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                       >
                         View Details
                       </button>
@@ -268,7 +269,7 @@ export default function DriversPage() {
                         <>
                           <button
                             onClick={() => handleApprove(driver.id)}
-                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                           >
                             Approve
                           </button>
@@ -277,7 +278,7 @@ export default function DriversPage() {
                               const reason = prompt('Reason for rejection:');
                               if (reason) handleReject(driver.id, reason);
                             }}
-                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                           >
                             Reject
                           </button>
@@ -289,7 +290,7 @@ export default function DriversPage() {
                             const reason = prompt('Reason for suspension:');
                             if (reason) handleSuspend(driver.id, reason);
                           }}
-                          className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+                          className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
                         >
                           Suspend
                         </button>
@@ -297,7 +298,7 @@ export default function DriversPage() {
                       {driver.driver_status === 'suspended' && (
                         <button
                           onClick={() => handleActivate(driver.id)}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                         >
                           Activate
                         </button>
@@ -308,13 +309,14 @@ export default function DriversPage() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {/* Driver Details Modal */}
       {showDetailsModal && selectedDriver && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Driver Details</h2>
               <button
@@ -325,7 +327,7 @@ export default function DriversPage() {
               </button>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
                 <h3 className="font-semibold text-gray-700">Personal Information</h3>
                 <p><strong>Name:</strong> {selectedDriver.name}</p>
@@ -342,7 +344,7 @@ export default function DriversPage() {
 
             <div className="mb-6">
               <h3 className="font-semibold text-gray-700 mb-2">Documents</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {selectedDriver.selfie_url && (
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Selfie</p>

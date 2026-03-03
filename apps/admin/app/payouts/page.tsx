@@ -179,17 +179,17 @@ export default function PayoutsPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payouts Management</h1>
-          <p className="text-gray-600 mt-2">Manage driver payouts via Stripe Connect</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Payouts</h1>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Manage driver payouts via Stripe Connect</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <button
             onClick={handleRunWeekly}
             disabled={actionLoading}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+            className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium text-sm"
           >
             {actionLoading ? 'Processing...' : 'Run Weekly Payout'}
           </button>
@@ -213,7 +213,7 @@ export default function PayoutsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('payouts')}
           className={`px-6 py-3 text-sm font-medium ${activeTab === 'payouts' ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
@@ -231,7 +231,8 @@ export default function PayoutsPage() {
       {/* Payouts Tab */}
       {activeTab === 'payouts' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1000px] w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payout ID</th>
@@ -285,7 +286,8 @@ export default function PayoutsPage() {
                 ))
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 
@@ -293,7 +295,7 @@ export default function PayoutsPage() {
       {activeTab === 'drivers' && (
         <div>
           {driversSummary && (
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-lg shadow p-4 text-center">
                 <div className="text-2xl font-bold text-gray-900">{driversSummary.total}</div>
                 <div className="text-sm text-gray-500">Total with Stripe</div>
@@ -317,7 +319,8 @@ export default function PayoutsPage() {
             {driversLoading ? (
               <div className="p-8 text-center text-gray-500">Loading driver Stripe status...</div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200">
+              <div className="overflow-x-auto">
+                <table className="min-w-[900px] w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
@@ -354,7 +357,8 @@ export default function PayoutsPage() {
                     ))
                   )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -364,7 +368,7 @@ export default function PayoutsPage() {
       {detailPayout && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] overflow-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold">Payout Details</h2>
                 <p className="text-sm text-gray-500 mt-1">
@@ -374,11 +378,12 @@ export default function PayoutsPage() {
               </div>
               <button onClick={() => setDetailPayout(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {detailLoading ? (
                 <div className="text-center text-gray-500 py-8">Loading...</div>
               ) : (
-                <table className="min-w-full divide-y divide-gray-200">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[800px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
@@ -414,7 +419,8 @@ export default function PayoutsPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               )}
             </div>
           </div>
