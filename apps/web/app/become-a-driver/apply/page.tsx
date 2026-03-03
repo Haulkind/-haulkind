@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Step1Data = {
@@ -22,12 +22,20 @@ type Step2Data = {
   consents: boolean
 }
 
+type PhotoData = {
+  selfie: string | null
+  license: string | null
+  vehicleRegistration: string | null
+  insurance: string | null
+}
+
 export default function DriverApplicationPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const totalSteps = 3
 
   // Step 1 data
   const [step1, setStep1] = useState<Step1Data>({
@@ -50,6 +58,21 @@ export default function DriverApplicationPage() {
     consents: false,
   })
 
+  // Step 3 data - photos
+  const [photos, setPhotos] = useState<PhotoData>({
+    selfie: null,
+    license: null,
+    vehicleRegistration: null,
+    insurance: null,
+  })
+  const [photoNames, setPhotoNames] = useState<Record<string, string>>({})
+
+  // File input refs
+  const selfieRef = useRef<HTMLInputElement>(null)
+  const licenseRef = useRef<HTMLInputElement>(null)
+  const vehicleRegRef = useRef<HTMLInputElement>(null)
+  const insuranceRef = useRef<HTMLInputElement>(null)
+
   const handleStep1Continue = () => {
     if (!step1.firstName || !step1.lastName || !step1.email || !step1.phone || !step1.zip) {
       setError('Please fill in all required fields')
@@ -65,7 +88,7 @@ export default function DriverApplicationPage() {
     setCurrentStep(2)
   }
 
-  const handleStep2Submit = async () => {
+  const handleStep2Continue = () => {
     if (!step2.vehicleType || step2.availabilityDays.length === 0) {
       setError('Please fill in all required fields')
       return
@@ -76,12 +99,37 @@ export default function DriverApplicationPage() {
       return
     }
 
+    setError('')
+    setCurrentStep(3)
+  }
+
+  const handleFileChange = (field: keyof PhotoData, file: File | null) => {
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File is too large. Maximum size is 5MB.')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file (JPG, PNG, etc.)')
+      return
+    }
+    setError('')
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result as string
+      setPhotos(prev => ({ ...prev, [field]: base64 }))
+      setPhotoNames(prev => ({ ...prev, [field]: file.name }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSubmitApplication = async () => {
     setLoading(true)
     setError('')
 
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'
-      
+
       const response = await fetch(`${API_BASE_URL}/drivers/apply`, {
         method: 'POST',
         headers: {
@@ -105,16 +153,23 @@ export default function DriverApplicationPage() {
             independentContractor: step2.consents,
             backgroundCheck: step2.consents,
           },
+          selfieUrl: photos.selfie || null,
+          licenseUrl: photos.license || null,
+          vehicleRegistrationUrl: photos.vehicleRegistration || null,
+          insuranceUrl: photos.insurance || null,
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to submit application')
+        throw new Error(data.error || 'Failed to submit application')
       }
 
       setSuccess(true)
-    } catch (err) {
-      setError('Failed to submit application. Please try again.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to submit application. Please try again.'
+      setError(message)
       setLoading(false)
     }
   }
@@ -126,6 +181,9 @@ export default function DriverApplicationPage() {
       setStep2({ ...step2, availabilityDays: [...step2.availabilityDays, day] })
     }
   }
+
+  const hasAllPhotos = photos.selfie && photos.license && photos.vehicleRegistration && photos.insurance
+  const uploadedCount = [photos.selfie, photos.license, photos.vehicleRegistration, photos.insurance].filter(Boolean).length
 
   if (success) {
     return (
@@ -139,16 +197,23 @@ export default function DriverApplicationPage() {
             </div>
             <h1 className="text-3xl font-bold mb-2">Application Received!</h1>
             <p className="text-gray-600 mb-6">
-              Thank you for applying to become a Haulkind driver. We'll review your application and get back to you within 24 hours.
+              Thank you for applying to become a Haulkind driver. We&apos;ll review your application and get back to you within 24 hours.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800">
                 <strong>What happens next:</strong><br />
-                1. We review your application<br />
-                2. If approved, we'll request documents (license, insurance, vehicle registration)<br />
-                3. You can start accepting jobs!
+                1. Our team reviews your application and documents<br />
+                2. Once approved, download the Haulkind Driver app<br />
+                3. Log in with your email and start accepting jobs!
               </p>
             </div>
+            {!hasAllPhotos && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> You didn&apos;t upload all required documents. You can upload them later through the Haulkind Driver app after logging in.
+                </p>
+              </div>
+            )}
             <button
               onClick={() => router.push('/')}
               className="px-6 py-3 bg-secondary-600 text-white rounded-lg font-medium hover:bg-secondary-700 transition"
@@ -169,11 +234,11 @@ export default function DriverApplicationPage() {
           <h1 className="text-3xl font-bold mb-2">Become a Haulkind Driver</h1>
           <p className="text-gray-600">Join our team and start earning on your schedule</p>
           <div className="mt-4">
-            <span className="text-sm text-gray-500">Step {currentStep} of 2</span>
+            <span className="text-sm text-gray-500">Step {currentStep} of {totalSteps}</span>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2 max-w-xs mx-auto">
               <div 
                 className="bg-secondary-600 h-2 rounded-full transition-all"
-                style={{ width: `${(currentStep / 2) * 100}%` }}
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               />
             </div>
           </div>
@@ -265,7 +330,7 @@ export default function DriverApplicationPage() {
                     className="mt-0.5 h-4 w-4 text-secondary-600 focus:ring-secondary-500 border-gray-300 rounded"
                   />
                   <label htmlFor="eligible" className="text-sm text-gray-700">
-                    I'm 18+ and legally allowed to work in the United States *
+                    I&apos;m 18+ and legally allowed to work in the United States *
                   </label>
                 </div>
 
@@ -391,13 +456,193 @@ export default function DriverApplicationPage() {
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setCurrentStep(1)}
+                    onClick={() => { setError(''); setCurrentStep(1); }}
                     className="w-2/5 h-11 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 font-medium hover:bg-gray-50 transition"
                   >
                     Back
                   </button>
                   <button
-                    onClick={handleStep2Submit}
+                    onClick={handleStep2Continue}
+                    className="w-3/5 h-11 px-4 py-2 bg-secondary-600 text-white rounded-lg text-sm font-medium hover:bg-secondary-700 transition"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Document Upload */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold mb-2">Upload Documents</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload your documents for faster approval. You can also upload them later through the driver app.
+                </p>
+
+                {/* Selfie / Profile Photo */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">Profile Photo (Selfie)</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">A clear photo of your face</p>
+                    </div>
+                    {photos.selfie ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-600 font-medium">Uploaded</span>
+                        <button
+                          onClick={() => { setPhotos(prev => ({ ...prev, selfie: null })); setPhotoNames(prev => { const n = { ...prev }; delete n.selfie; return n; }); }}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => selfieRef.current?.click()}
+                        className="px-3 py-1.5 text-xs bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition"
+                      >
+                        Upload
+                      </button>
+                    )}
+                  </div>
+                  {photos.selfie && (
+                    <div className="mt-2">
+                      <img src={photos.selfie} alt="Selfie preview" className="h-20 w-20 object-cover rounded-lg border" />
+                      <p className="text-xs text-gray-400 mt-1">{photoNames.selfie}</p>
+                    </div>
+                  )}
+                  <input ref={selfieRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => handleFileChange('selfie', e.target.files?.[0] || null)} />
+                </div>
+
+                {/* Driver's License */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">Driver&apos;s License</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">Front of your valid driver&apos;s license</p>
+                    </div>
+                    {photos.license ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-600 font-medium">Uploaded</span>
+                        <button
+                          onClick={() => { setPhotos(prev => ({ ...prev, license: null })); setPhotoNames(prev => { const n = { ...prev }; delete n.license; return n; }); }}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => licenseRef.current?.click()}
+                        className="px-3 py-1.5 text-xs bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition"
+                      >
+                        Upload
+                      </button>
+                    )}
+                  </div>
+                  {photos.license && (
+                    <div className="mt-2">
+                      <img src={photos.license} alt="License preview" className="h-20 w-20 object-cover rounded-lg border" />
+                      <p className="text-xs text-gray-400 mt-1">{photoNames.license}</p>
+                    </div>
+                  )}
+                  <input ref={licenseRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange('license', e.target.files?.[0] || null)} />
+                </div>
+
+                {/* Vehicle Registration */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">Vehicle Registration</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">Photo of your vehicle registration document</p>
+                    </div>
+                    {photos.vehicleRegistration ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-600 font-medium">Uploaded</span>
+                        <button
+                          onClick={() => { setPhotos(prev => ({ ...prev, vehicleRegistration: null })); setPhotoNames(prev => { const n = { ...prev }; delete n.vehicleRegistration; return n; }); }}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => vehicleRegRef.current?.click()}
+                        className="px-3 py-1.5 text-xs bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition"
+                      >
+                        Upload
+                      </button>
+                    )}
+                  </div>
+                  {photos.vehicleRegistration && (
+                    <div className="mt-2">
+                      <img src={photos.vehicleRegistration} alt="Vehicle registration preview" className="h-20 w-20 object-cover rounded-lg border" />
+                      <p className="text-xs text-gray-400 mt-1">{photoNames.vehicleRegistration}</p>
+                    </div>
+                  )}
+                  <input ref={vehicleRegRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange('vehicleRegistration', e.target.files?.[0] || null)} />
+                </div>
+
+                {/* Insurance */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">Insurance Card</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">Photo of your vehicle insurance card</p>
+                    </div>
+                    {photos.insurance ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-600 font-medium">Uploaded</span>
+                        <button
+                          onClick={() => { setPhotos(prev => ({ ...prev, insurance: null })); setPhotoNames(prev => { const n = { ...prev }; delete n.insurance; return n; }); }}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => insuranceRef.current?.click()}
+                        className="px-3 py-1.5 text-xs bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition"
+                      >
+                        Upload
+                      </button>
+                    )}
+                  </div>
+                  {photos.insurance && (
+                    <div className="mt-2">
+                      <img src={photos.insurance} alt="Insurance preview" className="h-20 w-20 object-cover rounded-lg border" />
+                      <p className="text-xs text-gray-400 mt-1">{photoNames.insurance}</p>
+                    </div>
+                  )}
+                  <input ref={insuranceRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange('insurance', e.target.files?.[0] || null)} />
+                </div>
+
+                {/* Upload progress indicator */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium text-gray-700">Documents uploaded:</span>
+                    <span className={`font-bold ${hasAllPhotos ? 'text-green-600' : uploadedCount > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                      {uploadedCount} / 4
+                    </span>
+                  </div>
+                  {!hasAllPhotos && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Uploading all 4 documents speeds up the approval process.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setError(''); setCurrentStep(2); }}
+                    className="w-2/5 h-11 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 font-medium hover:bg-gray-50 transition"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSubmitApplication}
                     disabled={loading}
                     className="w-3/5 h-11 px-4 py-2 bg-secondary-600 text-white rounded-lg text-sm font-medium hover:bg-secondary-700 transition disabled:opacity-50"
                   >
@@ -412,31 +657,47 @@ export default function DriverApplicationPage() {
           <div className="space-y-4">
             {/* What you earn */}
             <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-bold text-sm mb-2">💰 What You Earn</h3>
+              <h3 className="font-bold text-sm mb-2">What You Earn</h3>
               <ul className="text-xs text-gray-600 space-y-1">
-                <li>• Keep 60% of every job</li>
-                <li>• Weekly payouts</li>
-                <li>• Work when you want</li>
+                <li>Keep 70% of every job</li>
+                <li>Weekly payouts via Stripe</li>
+                <li>Work when you want</li>
               </ul>
             </div>
 
             {/* Requirements */}
             <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-bold text-sm mb-2">📋 Requirements</h3>
+              <h3 className="font-bold text-sm mb-2">Requirements</h3>
               <ul className="text-xs text-gray-600 space-y-1">
-                <li>• Valid driver's license</li>
-                <li>• Vehicle that fits the job</li>
-                <li>• Basic equipment recommended</li>
+                <li>Valid driver&apos;s license</li>
+                <li>Vehicle that fits the job</li>
+                <li>Vehicle insurance</li>
+                <li>Basic equipment recommended</li>
               </ul>
             </div>
 
-            {/* What happens next */}
+            {/* Steps indicator */}
             <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-bold text-sm mb-2">🚀 What Happens Next</h3>
-              <ul className="text-xs text-gray-600 space-y-1">
-                <li>• We review within 24 hours</li>
-                <li>• We request documents after approval</li>
-                <li>• Start accepting jobs</li>
+              <h3 className="font-bold text-sm mb-2">Application Steps</h3>
+              <ul className="text-xs space-y-2">
+                <li className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-secondary-600 font-medium' : 'text-gray-400'}`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${currentStep > 1 ? 'bg-green-100 text-green-600' : currentStep === 1 ? 'bg-secondary-100 text-secondary-600' : 'bg-gray-100 text-gray-400'}`}>
+                    {currentStep > 1 ? '\u2713' : '1'}
+                  </span>
+                  Personal Info
+                </li>
+                <li className={`flex items-center gap-2 ${currentStep >= 2 ? 'text-secondary-600 font-medium' : 'text-gray-400'}`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${currentStep > 2 ? 'bg-green-100 text-green-600' : currentStep === 2 ? 'bg-secondary-100 text-secondary-600' : 'bg-gray-100 text-gray-400'}`}>
+                    {currentStep > 2 ? '\u2713' : '2'}
+                  </span>
+                  Vehicle & Availability
+                </li>
+                <li className={`flex items-center gap-2 ${currentStep >= 3 ? 'text-secondary-600 font-medium' : 'text-gray-400'}`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${currentStep === 3 ? 'bg-secondary-100 text-secondary-600' : 'bg-gray-100 text-gray-400'}`}>
+                    3
+                  </span>
+                  Upload Documents
+                </li>
               </ul>
             </div>
           </div>
