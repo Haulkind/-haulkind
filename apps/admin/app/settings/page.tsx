@@ -121,11 +121,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Settings</h1>
+    <div className="p-4 sm:p-8 max-w-2xl">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Settings</h1>
 
       {/* Change Password Section */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Change Password</h2>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
@@ -190,7 +190,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Two-Factor Authentication Section */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Two-Factor Authentication (2FA)</h2>
           {totpEnabled ? (
