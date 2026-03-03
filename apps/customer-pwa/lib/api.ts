@@ -102,7 +102,8 @@ export async function createJob(data: {
   customerEmail?: string;
   timeWindow?: string;
   total?: number;
-}) {
+  photoUrls?: string[];
+}){
   const res = await fetch(`${API_URL}/jobs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
