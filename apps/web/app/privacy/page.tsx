@@ -1,3 +1,12 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'HaulKind privacy policy. Learn how we collect, use, and protect your personal information when using our junk removal and moving services.',
+  alternates: { canonical: '/privacy' },
+  robots: { index: true, follow: true },
+}
+
 export default function Privacy() {
   return (
     <div className="bg-white">

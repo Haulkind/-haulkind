@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: 'Haulkind - Track Your Order',
   description: 'Track your junk removal order in real time, manage bookings, and get notifications.',
   manifest: '/manifest.json',
+  robots: {
+    index: false,
+    follow: false,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

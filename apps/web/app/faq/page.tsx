@@ -1,3 +1,16 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'FAQ - Junk Removal & Moving Help Questions Answered',
+  description: 'Answers to common questions about HaulKind junk removal and moving services. Pricing, booking, tracking, cancellations, driver info & more.',
+  alternates: { canonical: '/faq' },
+  openGraph: {
+    title: 'Frequently Asked Questions | HaulKind',
+    description: 'Everything you need to know about HaulKind junk removal and moving help. Pricing, booking, tracking & more.',
+    url: 'https://haulkind.com/faq',
+  },
+}
+
 export default function FAQ() {
   const faqs = [
     {
@@ -149,8 +162,27 @@ export default function FAQ() {
     },
   ]
 
+  // Build FAQ JSON-LD structured data for Google rich results
+  const allQuestions = faqs.flatMap(cat => cat.questions)
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: allQuestions.map(faq => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
+      },
+    })),
+  }
+
   return (
     <div className="bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {/* Hero */}
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">

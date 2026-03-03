@@ -1,4 +1,16 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'How It Works - Book Junk Removal in 3 Easy Steps',
+  description: 'Get a quote, book online, and track your driver in real time. Simple, transparent junk removal and moving help in PA, NY & NJ. No hidden fees.',
+  alternates: { canonical: '/how-it-works' },
+  openGraph: {
+    title: 'How HaulKind Works - 3 Easy Steps to Junk-Free',
+    description: 'Get a quote in seconds, book & pay online, track your driver live. Junk removal made simple.',
+    url: 'https://haulkind.com/how-it-works',
+  },
+}
 
 export default function HowItWorks() {
   return (

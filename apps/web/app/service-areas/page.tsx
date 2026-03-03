@@ -1,4 +1,16 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Service Areas - Junk Removal in PA, NY & NJ',
+  description: 'HaulKind serves Philadelphia, NYC, Pittsburgh, Newark, and more across Pennsylvania, New York & New Jersey. Check if we cover your area and get a free quote.',
+  alternates: { canonical: '/service-areas' },
+  openGraph: {
+    title: 'HaulKind Service Areas - PA, NY & NJ Coverage',
+    description: 'Junk removal and moving help in Philadelphia, NYC, Pittsburgh, Newark & more. Check coverage instantly.',
+    url: 'https://haulkind.com/service-areas',
+  },
+}
 
 export default function ServiceAreas() {
   return (

@@ -1,4 +1,16 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Junk Removal Pricing - Transparent Rates from $109',
+  description: 'See exact junk removal and moving labor prices. Haul Away from $109 (1/8 truck) to $529 (full truck). Labor help from $79/hr. No hidden fees, no surprises.',
+  alternates: { canonical: '/pricing' },
+  openGraph: {
+    title: 'Junk Removal Pricing - Transparent Rates | HaulKind',
+    description: 'Junk removal from $109. Moving labor from $79/hr. No hidden fees. See all prices upfront before you book.',
+    url: 'https://haulkind.com/pricing',
+  },
+}
 
 export default function Pricing() {
   return (

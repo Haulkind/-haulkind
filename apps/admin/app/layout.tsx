@@ -33,6 +33,7 @@ export default function RootLayout({
       <html lang="en">
         <head>
           <title>Haulkind Admin - Login</title>
+          <meta name="robots" content="noindex, nofollow" />
         </head>
         <body>
           <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
@@ -52,6 +53,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <title>Haulkind Admin Dashboard</title>
+        <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className="bg-gray-100">
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
