@@ -156,6 +156,19 @@ export default function RootLayout({
           gtag('js', new Date());
           gtag('config', 'G-KCC7J1ZT6Y');
           gtag('config', 'AW-17988332947');
+          function gtagSendEvent(url) {
+            var callback = function () {
+              if (typeof url === 'string') {
+                window.location = url;
+              }
+            };
+            gtag('event', 'ads_conversion_Solicitar_cota_o_1', {
+              'event_callback': callback,
+              'event_timeout': 2000,
+            });
+            return false;
+          }
+          window.gtagSendEvent = gtagSendEvent;
         `}</Script>
         <Script id="meta-pixel" strategy="afterInteractive">{`
           !function(f,b,e,v,n,t,s)

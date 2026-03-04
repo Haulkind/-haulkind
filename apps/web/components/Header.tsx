@@ -49,6 +49,7 @@ export default function Header() {
           </Link>
           <Link 
             href="/quote" 
+            onClick={() => { if (typeof window !== 'undefined' && window.gtag) window.gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
             className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition font-medium"
           >
             Get a Quote
@@ -81,7 +82,7 @@ export default function Header() {
             <Link href="/become-a-driver" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Become a Driver</Link>
             <Link href="/faq" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">FAQ</Link>
             <div className="border-t my-2" />
-            <Link href="/quote" onClick={() => setMobileOpen(false)} className="block bg-primary-600 text-white text-center px-4 py-3 rounded-lg font-medium hover:bg-primary-700 transition">Get a Quote</Link>
+            <Link href="/quote" onClick={() => { setMobileOpen(false); if (typeof window !== 'undefined' && window.gtag) window.gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }} className="block bg-primary-600 text-white text-center px-4 py-3 rounded-lg font-medium hover:bg-primary-700 transition">Get a Quote</Link>
           </div>
         </div>
       )}

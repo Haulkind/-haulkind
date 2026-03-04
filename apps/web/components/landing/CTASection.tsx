@@ -17,6 +17,7 @@ export default function CTASection() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/quote?service=haul-away"
+              onClick={() => { if (typeof window !== 'undefined' && window.gtag) window.gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
               className="inline-flex flex-col items-center justify-center bg-orange-500 hover:bg-orange-600 text-white px-8 py-5 rounded-xl transition-all shadow-lg hover:shadow-xl"
             >
               <span className="text-lg font-bold">Get Your Free Quote!</span>
