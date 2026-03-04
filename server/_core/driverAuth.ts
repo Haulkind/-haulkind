@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import multer from "multer";
 
 // Driver commission rate: drivers receive 70% of the order value
 const DRIVER_COMMISSION_RATE = 0.70;
@@ -785,6 +786,115 @@ export function registerDriverAuthRoutes(app: Express) {
     } catch (err: any) {
       console.error('Document upload error:', err);
       res.status(500).json({ error: 'Failed to save documents' });
+    }
+  });
+
+  // POST /driver/documents/upload - Mobile app file upload (multipart/form-data)
+  // Converts uploaded file to base64 data URL and saves to drivers table
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+  app.post('/driver/documents/upload', upload.single('file'), async (req: any, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const documentType = req.body?.documentType;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      // Map mobile app document types to database columns
+      const typeToColumn: Record<string, string> = {
+        profilePhoto: 'selfie_url',
+        selfie: 'selfie_url',
+        driversLicense: 'license_url',
+        license: 'license_url',
+        vehicleInsurance: 'insurance_url',
+        insurance: 'insurance_url',
+        vehicleRegistration: 'vehicle_registration_url',
+        registration: 'vehicle_registration_url',
+      };
+
+      const column = typeToColumn[documentType];
+      if (!column) {
+        return res.status(400).json({ error: `Unknown document type: ${documentType}. Valid types: ${Object.keys(typeToColumn).join(', ')}` });
+      }
+
+      // Convert file buffer to base64 data URL
+      const mimeType = file.mimetype || 'image/jpeg';
+      const base64 = file.buffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      // Save to drivers table
+      await pool.query(
+        `UPDATE drivers SET ${column} = $1, driver_status = COALESCE(NULLIF(driver_status, 'approved'), 'pending_review'), updated_at = NOW() WHERE id = $2`,
+        [dataUrl, decoded.driverId]
+      );
+
+      console.log(`[DocUpload] Driver ${decoded.driverId}: ${documentType} -> ${column} saved (${file.size} bytes)`);
+
+      // Check if all 4 docs are now uploaded
+      const checkResult = await pool.query(
+        `SELECT selfie_url, license_url, vehicle_registration_url, insurance_url FROM drivers WHERE id = $1`,
+        [decoded.driverId]
+      );
+      const driver = checkResult.rows[0];
+      const allUploaded = driver && driver.selfie_url && driver.license_url && driver.vehicle_registration_url && driver.insurance_url;
+
+      res.json({ success: true, message: 'Document received', column, allUploaded: !!allUploaded });
+    } catch (err: any) {
+      console.error('Document upload error:', err);
+      res.status(500).json({ error: 'Failed to upload document' });
+    }
+  });
+
+  // POST /driver/profile/vehicle - Save vehicle info from mobile app onboarding
+  app.post('/driver/profile/vehicle', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      const { vehicleType, vehicleCapacity, liftingLimit, services, licensePlate } = req.body;
+
+      await pool.query(
+        `UPDATE drivers SET 
+          vehicle_type = COALESCE($1, vehicle_type),
+          vehicle_capacity = COALESCE($2, vehicle_capacity),
+          lifting_limit = COALESCE($3, lifting_limit),
+          services = COALESCE($4, services),
+          license_plate = COALESCE($5, license_plate),
+          updated_at = NOW()
+        WHERE id = $6`,
+        [
+          vehicleType || null,
+          vehicleCapacity || null,
+          liftingLimit || null,
+          services ? JSON.stringify(services) : null,
+          licensePlate || null,
+          decoded.driverId
+        ]
+      );
+
+      console.log(`[VehicleInfo] Driver ${decoded.driverId}: vehicle info saved`);
+      res.json({ success: true, message: 'Vehicle info saved' });
+    } catch (err: any) {
+      console.error('Save vehicle info error:', err);
+      res.status(500).json({ error: 'Failed to save vehicle info' });
     }
   });
 
