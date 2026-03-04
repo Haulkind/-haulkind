@@ -60,6 +60,7 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-KCC7J1ZT6Y');
+            gtag('config', 'AW-17988332947');
           `}</Script>
           <Script id="meta-pixel-login" strategy="afterInteractive">{`
             !function(f,b,e,v,n,t,s)
@@ -93,6 +94,7 @@ export default function RootLayout({
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
           gtag('config', 'G-KCC7J1ZT6Y');
+          gtag('config', 'AW-17988332947');
         `}</Script>
         <Script id="meta-pixel-dashboard" strategy="afterInteractive">{`
           !function(f,b,e,v,n,t,s)
