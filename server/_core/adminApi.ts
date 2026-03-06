@@ -309,36 +309,55 @@ export function registerAdminApiRoutes(app: Express) {
 
       const { search, limit = 50, offset = 0 } = req.query;
       
-      // Combine customers from customer_accounts (PWA) AND orders/jobs tables
-      // so ALL customers who ever placed an order appear here
-      let query = `
-        SELECT id, name, email, phone, total_orders FROM (
-          -- PWA registered customers
+      // Check if customer_accounts table exists
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_accounts') as exists
+      `);
+      const hasCustomerAccounts = tableCheck.rows[0]?.exists === true;
+
+      // Build UNION query from all available customer sources
+      const unions: string[] = [];
+
+      if (hasCustomerAccounts) {
+        unions.push(`
           SELECT ca.id::text, ca.name, ca.email, ca.phone,
                  (SELECT COUNT(*) FROM jobs j WHERE j.customer_email = ca.email) as total_orders,
                  ca.created_at
           FROM customer_accounts ca
-          UNION
-          -- Customers from jobs table (not in customer_accounts)
-          SELECT 'job-' || MIN(j.id)::text as id, j.customer_name as name, j.customer_email as email, j.customer_phone as phone,
-                 COUNT(*) as total_orders,
-                 MIN(j.created_at) as created_at
-          FROM jobs j
-          WHERE j.customer_email IS NOT NULL AND j.customer_email != ''
-            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = j.customer_email)
-          GROUP BY j.customer_name, j.customer_email, j.customer_phone
-          UNION
-          -- Customers from legacy orders table (not in customer_accounts or jobs)
-          SELECT 'ord-' || MIN(o.id)::text as id, o.customer_name as name, o.email, o.phone,
-                 COUNT(*) as total_orders,
-                 MIN(o.created_at) as created_at
-          FROM orders o
-          WHERE o.email IS NOT NULL AND o.email != ''
-            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = o.email)
-            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)
-          GROUP BY o.customer_name, o.email, o.phone
-        ) all_customers WHERE 1=1
-      `;
+        `);
+      }
+
+      // Customers from jobs table
+      const jobsExclude = hasCustomerAccounts
+        ? `AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = j.customer_email)`
+        : '';
+      unions.push(`
+        SELECT 'job-' || MIN(j.id)::text as id, j.customer_name as name, j.customer_email as email, j.customer_phone as phone,
+               COUNT(*) as total_orders,
+               MIN(j.created_at) as created_at
+        FROM jobs j
+        WHERE j.customer_email IS NOT NULL AND j.customer_email != ''
+          ${jobsExclude}
+        GROUP BY j.customer_name, j.customer_email, j.customer_phone
+      `);
+
+      // Customers from legacy orders table
+      const ordersExclude = hasCustomerAccounts
+        ? `AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = o.email)
+           AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)`
+        : `AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)`;
+      unions.push(`
+        SELECT 'ord-' || MIN(o.id)::text as id, o.customer_name as name, o.email, o.phone,
+               COUNT(*) as total_orders,
+               MIN(o.created_at) as created_at
+        FROM orders o
+        WHERE o.email IS NOT NULL AND o.email != ''
+          ${ordersExclude}
+        GROUP BY o.customer_name, o.email, o.phone
+      `);
+
+      const baseQuery = unions.join(' UNION ');
+      let query = `SELECT id, name, email, phone, total_orders FROM (${baseQuery}) all_customers WHERE 1=1`;
       const params: any[] = [];
       let paramIndex = 1;
 
@@ -353,19 +372,9 @@ export function registerAdminApiRoutes(app: Express) {
 
       const result = await pool.query(query, params);
       
-      // Get total count from all sources
-      const countResult = await pool.query(`
-        SELECT COUNT(*) as count FROM (
-          SELECT ca.email FROM customer_accounts ca
-          UNION
-          SELECT j.customer_email FROM jobs j WHERE j.customer_email IS NOT NULL AND j.customer_email != ''
-            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = j.customer_email)
-          UNION
-          SELECT o.email FROM orders o WHERE o.email IS NOT NULL AND o.email != ''
-            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = o.email)
-            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)
-        ) all_customers
-      `);
+      // Get total count
+      const countQuery = `SELECT COUNT(*) as count FROM (${baseQuery}) all_customers`;
+      const countResult = await pool.query(countQuery);
       const total = parseInt(countResult.rows[0]?.count || 0);
 
       res.json({ customers: result.rows, total, limit: parseInt(limit as string), offset: parseInt(offset as string) });
