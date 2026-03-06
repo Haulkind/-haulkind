@@ -379,13 +379,14 @@ export default function OrdersPage() {
           <span className="text-sm font-medium text-gray-700">{orders.length} order{orders.length !== 1 ? 's' : ''} found</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-[1100px] w-full divide-y divide-gray-200">
+          <table className="min-w-[1250px] w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
@@ -397,7 +398,7 @@ export default function OrdersPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-8 text-center text-gray-500">No orders found</td>
+                <td colSpan={11} className="px-6 py-8 text-center text-gray-500">No orders found</td>
               </tr>
             ) : (
               orders.map((order) => (
@@ -432,6 +433,16 @@ export default function OrdersPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{order.street || (order.city ? `${order.city}, ${order.state || ''}` : 'N/A')}</div>
                     <div className="text-sm text-gray-500">{order.zip || ''}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {order.assigned_driver_id ? (
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{order.driver_display_name || order.driver_name || 'Unknown'}</div>
+                        {order.driver_phone && <div className="text-xs text-gray-500">{order.driver_phone}</div>}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">--</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(order.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getPaymentBadge(order)}</td>

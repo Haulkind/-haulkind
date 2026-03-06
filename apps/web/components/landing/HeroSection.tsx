@@ -59,7 +59,7 @@ export default function HeroSection() {
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             <Link
               href="/quote?service=haul-away"
-              onClick={() => { if (typeof window !== 'undefined' && window.gtag) window.gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
+              onClick={() => { if (typeof window !== 'undefined' && (window as any).gtag) (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
               className="inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl"
             >
               Get Instant Quote
