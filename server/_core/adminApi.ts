@@ -309,31 +309,63 @@ export function registerAdminApiRoutes(app: Express) {
 
       const { search, limit = 50, offset = 0 } = req.query;
       
-      // Try customer_accounts first (PWA customers), then fallback to customers+users join
-      // Also count orders from jobs table (primary) by matching email
+      // Combine customers from customer_accounts (PWA) AND orders/jobs tables
+      // so ALL customers who ever placed an order appear here
       let query = `
-        SELECT ca.id, ca.id as user_id, ca.name, ca.email, ca.phone,
-               COUNT(j.id) as total_orders
-        FROM customer_accounts ca
-        LEFT JOIN jobs j ON j.customer_email = ca.email
-        WHERE 1=1
+        SELECT id, name, email, phone, total_orders FROM (
+          -- PWA registered customers
+          SELECT ca.id::text, ca.name, ca.email, ca.phone,
+                 (SELECT COUNT(*) FROM jobs j WHERE j.customer_email = ca.email) as total_orders,
+                 ca.created_at
+          FROM customer_accounts ca
+          UNION
+          -- Customers from jobs table (not in customer_accounts)
+          SELECT 'job-' || MIN(j.id)::text as id, j.customer_name as name, j.customer_email as email, j.customer_phone as phone,
+                 COUNT(*) as total_orders,
+                 MIN(j.created_at) as created_at
+          FROM jobs j
+          WHERE j.customer_email IS NOT NULL AND j.customer_email != ''
+            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = j.customer_email)
+          GROUP BY j.customer_name, j.customer_email, j.customer_phone
+          UNION
+          -- Customers from legacy orders table (not in customer_accounts or jobs)
+          SELECT 'ord-' || MIN(o.id)::text as id, o.customer_name as name, o.email, o.phone,
+                 COUNT(*) as total_orders,
+                 MIN(o.created_at) as created_at
+          FROM orders o
+          WHERE o.email IS NOT NULL AND o.email != ''
+            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = o.email)
+            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)
+          GROUP BY o.customer_name, o.email, o.phone
+        ) all_customers WHERE 1=1
       `;
       const params: any[] = [];
       let paramIndex = 1;
 
       if (search) {
-        query += ` AND (ca.name ILIKE $${paramIndex++} OR ca.email ILIKE $${paramIndex++})`;
+        query += ` AND (name ILIKE $${paramIndex++} OR email ILIKE $${paramIndex++} OR phone ILIKE $${paramIndex++})`;
         const searchPattern = `%${search}%`;
-        params.push(searchPattern, searchPattern);
+        params.push(searchPattern, searchPattern, searchPattern);
       }
 
-      query += ` GROUP BY ca.id, ca.name, ca.email, ca.phone ORDER BY ca.id DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+      query += ` ORDER BY total_orders DESC, created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
       params.push(limit, offset);
 
       const result = await pool.query(query, params);
       
-      // Get total count
-      const countResult = await pool.query('SELECT COUNT(*) as count FROM customer_accounts');
+      // Get total count from all sources
+      const countResult = await pool.query(`
+        SELECT COUNT(*) as count FROM (
+          SELECT ca.email FROM customer_accounts ca
+          UNION
+          SELECT j.customer_email FROM jobs j WHERE j.customer_email IS NOT NULL AND j.customer_email != ''
+            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = j.customer_email)
+          UNION
+          SELECT o.email FROM orders o WHERE o.email IS NOT NULL AND o.email != ''
+            AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = o.email)
+            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)
+        ) all_customers
+      `);
       const total = parseInt(countResult.rows[0]?.count || 0);
 
       res.json({ customers: result.rows, total, limit: parseInt(limit as string), offset: parseInt(offset as string) });
