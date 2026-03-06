@@ -406,7 +406,7 @@ export function registerAdminApiRoutes(app: Express) {
         FROM jobs
       `;
       
-      let query = `SELECT * FROM (${baseQuery}) combined WHERE 1=1`;
+      let query = `SELECT combined.*, d.name as driver_name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as driver_display_name, d.phone as driver_phone FROM (${baseQuery}) combined LEFT JOIN drivers d ON combined.assigned_driver_id = d.id::text WHERE 1=1`;
       const params: any[] = [];
       let paramIndex = 1;
 

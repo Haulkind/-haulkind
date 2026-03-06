@@ -54,6 +54,9 @@ export interface Order {
   pricing_json: any;
   status: 'pending' | 'dispatching' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'refunded';
   assigned_driver_id: string | null;
+  driver_name: string | null;
+  driver_display_name: string | null;
+  driver_phone: string | null;
   created_at: string;
   updated_at: string;
   // Boolean flags from list query (lightweight)
