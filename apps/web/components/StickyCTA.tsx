@@ -15,7 +15,7 @@ export default function StickyCTA() {
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40">
       <Link 
         href="/quote"
-        onClick={() => { if (typeof window !== 'undefined' && window.gtag) window.gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
+        onClick={() => { if (typeof window !== 'undefined' && (window as any).gtag) (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
         className="block w-full bg-primary-600 text-white text-center py-3 rounded-lg font-semibold hover:bg-primary-700 transition"
       >
         Get a Quote

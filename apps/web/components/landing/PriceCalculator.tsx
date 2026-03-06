@@ -52,8 +52,8 @@ export default function PriceCalculator() {
 
   const handleGetQuote = () => {
     // Fire Google Ads conversion event
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'ads_conversion_Solicitar_cota_o_1', {});
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {});
     }
     // Store selections in sessionStorage for the checkout flow
     sessionStorage.setItem('hk_zip', zipCode)
