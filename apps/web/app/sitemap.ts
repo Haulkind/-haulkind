@@ -1,9 +1,11 @@
 import type { MetadataRoute } from 'next'
+import { SERVICES, CITIES } from '@/lib/seo-data'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://haulkind.com'
 
-  return [
+  // Core pages
+  const corePages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -55,8 +57,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${baseUrl}/service-areas`,
       lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
+      changeFrequency: 'weekly',
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/contact`,
@@ -89,4 +91,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
   ]
+
+  // Local SEO pages: service + city combinations
+  const localPages: MetadataRoute.Sitemap = []
+  for (const service of SERVICES) {
+    for (const city of CITIES) {
+      localPages.push({
+        url: `${baseUrl}/${service.slug}-${city.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.8,
+      })
+    }
+  }
+
+  return [...corePages, ...localPages]
 }

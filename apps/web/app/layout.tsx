@@ -70,7 +70,6 @@ export const metadata: Metadata = {
   category: 'Home Services',
 }
 
-export const dynamic = 'force-dynamic'
 
 export default function RootLayout({
   children,
@@ -85,21 +84,7 @@ export default function RootLayout({
     url: 'https://haulkind.com',
     logo: 'https://haulkind.com/haulkind_hero_truck.webp',
     image: 'https://haulkind.com/haulkind_hero_truck.webp',
-    telephone: '(800) 555-1234',
     email: 'support@haulkind.com',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: '123 Main Street',
-      addressLocality: 'Philadelphia',
-      addressRegion: 'PA',
-      postalCode: '19103',
-      addressCountry: 'US',
-    },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: 39.9526,
-      longitude: -75.1652,
-    },
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },

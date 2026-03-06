@@ -102,8 +102,26 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-          <p>&copy; {new Date().getFullYear()} Haulkind. All rights reserved.</p>
+        {/* Popular Service Areas - SEO internal links */}
+        <div className="border-t border-gray-800 mt-8 pt-8">
+          <h4 className="text-white font-semibold mb-3 text-sm">Popular Service Areas</h4>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <Link href="/junk-removal-philadelphia-pa" className="hover:text-white transition">Junk Removal Philadelphia</Link>
+            <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Removal Philadelphia</Link>
+            <Link href="/junk-removal-camden-nj" className="hover:text-white transition">Junk Removal Camden NJ</Link>
+            <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Removal Cherry Hill</Link>
+            <Link href="/appliance-removal-trenton-nj" className="hover:text-white transition">Appliance Removal Trenton</Link>
+            <Link href="/moving-help-princeton-nj" className="hover:text-white transition">Moving Help Princeton</Link>
+            <Link href="/garage-cleanout-mount-laurel-nj" className="hover:text-white transition">Garage Cleanout Mount Laurel</Link>
+            <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Removal Philadelphia</Link>
+            <Link href="/basement-cleanout-camden-nj" className="hover:text-white transition">Basement Cleanout Camden</Link>
+            <Link href="/donation-pickup-cherry-hill-nj" className="hover:text-white transition">Donation Pickup Cherry Hill</Link>
+            <Link href="/service-areas" className="text-primary-400 hover:text-white transition font-medium">View All Service Areas &rarr;</Link>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-800 mt-6 pt-6 text-sm text-center">
+          <p>&copy; {new Date().getFullYear()} HaulKind. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -1,200 +1,224 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { SERVICES, CITIES } from '@/lib/seo-data'
 
 export const metadata: Metadata = {
-  title: 'Service Areas - Junk Removal in PA, NY & NJ',
-  description: 'HaulKind serves Philadelphia, NYC, Pittsburgh, Newark, and more across Pennsylvania, New York & New Jersey. Check if we cover your area and get a free quote.',
+  title: 'Service Areas - Junk Removal & Moving Help in PA & NJ | HaulKind',
+  description: 'HaulKind serves Philadelphia PA, Camden NJ, Cherry Hill NJ, Trenton NJ, Princeton NJ, Mount Laurel NJ and surrounding areas. Professional junk removal, furniture removal, cleanouts, and moving help. Get a free quote.',
   alternates: { canonical: '/service-areas' },
   openGraph: {
-    title: 'HaulKind Service Areas - PA, NY & NJ Coverage',
-    description: 'Junk removal and moving help in Philadelphia, NYC, Pittsburgh, Newark & more. Check coverage instantly.',
+    title: 'HaulKind Service Areas - PA & NJ Coverage',
+    description: 'Professional junk removal and moving help in Philadelphia, Camden, Cherry Hill, Trenton, Princeton, Mount Laurel and surrounding areas. Book online in 60 seconds.',
     url: 'https://haulkind.com/service-areas',
   },
 }
 
+// Group cities by state
+const citiesByState: Record<string, typeof CITIES> = {}
+CITIES.forEach((city) => {
+  if (!citiesByState[city.state]) citiesByState[city.state] = []
+  citiesByState[city.state].push(city)
+})
+
+const featuredServices = SERVICES.filter((s) =>
+  ['junk-removal', 'furniture-removal', 'mattress-removal', 'appliance-removal', 'garage-cleanout', 'moving-help'].includes(s.slug)
+)
+
 export default function ServiceAreas() {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://haulkind.com' },
+      { '@type': 'ListItem', position: 2, name: 'Service Areas', item: 'https://haulkind.com/service-areas' },
+    ],
+  }
+
   return (
-    <div className="bg-white">
-      {/* Hero */}
-      <section className="bg-primary-50 py-16 md:py-24">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Service Areas
-          </h1>
-          <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-            We serve Pennsylvania, New York, and New Jersey. Check if we're in your area.
-          </p>
-        </div>
-      </section>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
-      {/* Service Areas List */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {/* Pennsylvania */}
-            <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition">
-              <h2 className="text-3xl font-bold mb-6 text-primary-600">Pennsylvania</h2>
-              <ul className="space-y-3 text-gray-700">
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Philadelphia</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Pittsburgh</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Allentown</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Reading</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Scranton</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Harrisburg</span>
-                </li>
-              </ul>
-            </div>
+      <div className="bg-white">
+        {/* Breadcrumb */}
+        <nav className="container mx-auto px-4 py-3 text-sm text-gray-500" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1">
+            <li><Link href="/" className="hover:text-primary-600">Home</Link></li>
+            <li>/</li>
+            <li><span className="text-gray-900 font-medium">Service Areas</span></li>
+          </ol>
+        </nav>
 
-            {/* New York */}
-            <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition">
-              <h2 className="text-3xl font-bold mb-6 text-primary-600">New York</h2>
-              <ul className="space-y-3 text-gray-700">
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>New York City (5 boroughs)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Buffalo</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Rochester</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Syracuse</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Albany</span>
-                </li>
-              </ul>
-            </div>
+        {/* Hero */}
+        <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-20">
+          <div className="container mx-auto px-4 text-center max-w-4xl">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+              Junk Removal &amp; Moving Help Service Areas
+            </h1>
+            <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
+              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor across Pennsylvania and New Jersey. Find your city below and book online in 60 seconds.
+            </p>
+            <Link
+              href="/quote"
+              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
+            >
+              Get Instant Quote
+            </Link>
+          </div>
+        </section>
 
-            {/* New Jersey */}
-            <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition">
-              <h2 className="text-3xl font-bold mb-6 text-primary-600">New Jersey</h2>
-              <ul className="space-y-3 text-gray-700">
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Newark</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Jersey City</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Paterson</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Elizabeth</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Trenton</span>
-                </li>
-              </ul>
+        {/* Cities by State */}
+        <section className="py-16 md:py-20">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Our Service Areas</h2>
+
+            {Object.entries(citiesByState).map(([state, cities]) => (
+              <div key={state} className="mb-16">
+                <h3 className="text-2xl md:text-3xl font-bold text-primary-600 mb-6 border-b-2 border-primary-100 pb-3">
+                  {state}
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {cities.map((city) => (
+                    <div key={city.slug} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition">
+                      <h4 className="text-xl font-bold text-gray-900 mb-2">
+                        {city.name}, {city.stateAbbr}
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Population: {city.population} &middot; {city.neighborhoods.length}+ neighborhoods served
+                      </p>
+                      <div className="space-y-2 mb-4">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Popular services:</p>
+                        {featuredServices.slice(0, 4).map((service) => (
+                          <Link
+                            key={service.slug}
+                            href={`/${service.slug}-${city.slug}`}
+                            className="block text-sm text-primary-600 hover:text-primary-800 hover:underline"
+                          >
+                            {service.name} in {city.name} &rarr;
+                          </Link>
+                        ))}
+                      </div>
+                      <Link
+                        href={`/junk-removal-${city.slug}`}
+                        className="inline-block w-full text-center bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition text-sm"
+                      >
+                        View All Services in {city.name}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Popular Services Grid */}
+        <section className="py-16 md:py-20 bg-gray-50">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">Popular Services</h2>
+            <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
+              Browse our most requested services by location. Click any combination to learn more and get an instant quote.
+            </p>
+            <div className="space-y-8">
+              {SERVICES.slice(0, 8).map((service) => (
+                <div key={service.slug}>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">{service.name}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {CITIES.map((city) => (
+                      <Link
+                        key={`${service.slug}-${city.slug}`}
+                        href={`/${service.slug}-${city.slug}`}
+                        className="bg-white px-4 py-2 rounded-full text-sm text-gray-700 border border-gray-200 hover:border-primary-400 hover:text-primary-600 transition shadow-sm"
+                      >
+                        {city.name}, {city.stateAbbr}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        </section>
 
-          <div className="bg-primary-50 rounded-xl p-8 text-center">
-            <h3 className="text-2xl font-bold mb-4">Not sure if we serve your area?</h3>
+        {/* All Services by City */}
+        <section className="py-16 md:py-20">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">All Services by City</h2>
+            {CITIES.map((city) => (
+              <div key={city.slug} className="mb-10">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{city.name}, {city.stateAbbr}</h3>
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {SERVICES.map((service) => (
+                    <Link
+                      key={`${service.slug}-${city.slug}`}
+                      href={`/${service.slug}-${city.slug}`}
+                      className="text-sm text-primary-600 hover:text-primary-800 hover:underline py-1"
+                    >
+                      {service.name} in {city.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Not sure section */}
+        <section className="py-12 md:py-16 bg-primary-50">
+          <div className="container mx-auto px-4 max-w-3xl text-center">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">Not sure if we serve your area?</h2>
             <p className="text-gray-700 mb-6 text-lg">
-              Enter your address in our quote tool and we'll check coverage instantly.
+              Enter your address in our quote tool and we will check coverage instantly. We are actively expanding to new areas.
             </p>
-            <Link 
+            <Link
               href="/quote"
               className="inline-block bg-primary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-700 transition shadow-lg"
             >
-              Check Coverage
+              Check Coverage &amp; Get a Quote
             </Link>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Expansion Info */}
-      <section className="py-16 md:py-24 bg-gray-50">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Expanding Soon</h2>
-          <p className="text-gray-700 text-lg mb-8">
-            We're actively expanding to new cities and states. Want Haulkind in your area? Let us know!
-          </p>
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <h3 className="text-xl font-bold mb-4">Request Your Area</h3>
-            <p className="text-gray-600 mb-6">
-              Email us at <a href="mailto:expansion@haulkind.com" className="text-primary-600 font-semibold hover:underline">expansion@haulkind.com</a> with your city and ZIP code. We'll notify you when we launch in your area.
-            </p>
+        {/* Quick links */}
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <h2 className="text-2xl font-bold mb-6">Explore HaulKind</h2>
+            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <Link href="/pricing" className="bg-gray-50 p-4 rounded-lg hover:bg-primary-50 transition text-center">
+                <h3 className="font-bold text-gray-900">Pricing</h3>
+                <p className="text-sm text-gray-600">Transparent rates</p>
+              </Link>
+              <Link href="/how-it-works" className="bg-gray-50 p-4 rounded-lg hover:bg-primary-50 transition text-center">
+                <h3 className="font-bold text-gray-900">How It Works</h3>
+                <p className="text-sm text-gray-600">3 simple steps</p>
+              </Link>
+              <Link href="/faq" className="bg-gray-50 p-4 rounded-lg hover:bg-primary-50 transition text-center">
+                <h3 className="font-bold text-gray-900">FAQ</h3>
+                <p className="text-sm text-gray-600">Common questions</p>
+              </Link>
+              <Link href="/become-a-driver" className="bg-gray-50 p-4 rounded-lg hover:bg-primary-50 transition text-center">
+                <h3 className="font-bold text-gray-900">Become a Driver</h3>
+                <p className="text-sm text-gray-600">Join our team</p>
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Driver CTA */}
-      <section className="py-16 md:py-24 bg-secondary-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Are you a driver in these areas?</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join Haulkind and keep 60% of every job. Work on your own schedule.
-          </p>
-          <Link 
-            href="/become-a-driver"
-            className="inline-block bg-white text-secondary-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition shadow-lg"
-          >
-            Become a Driver
-          </Link>
-        </div>
-      </section>
-    </div>
+        {/* Driver CTA */}
+        <section className="py-16 md:py-20 bg-secondary-600 text-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Are you a driver in these areas?</h2>
+            <p className="text-xl mb-8 max-w-2xl mx-auto">
+              Join HaulKind and earn competitive pay on your own schedule. We are looking for drivers in all our service areas.
+            </p>
+            <Link
+              href="/become-a-driver"
+              className="inline-block bg-white text-secondary-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition shadow-lg"
+            >
+              Become a Driver
+            </Link>
+          </div>
+        </section>
+      </div>
+    </>
   )
 }
