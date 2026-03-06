@@ -41,11 +41,13 @@ const STATUS_MESSAGES = {
 export default function TrackingPage() {
   const searchParams = useSearchParams()
   const jobId = searchParams.get('jobId')
+  const paymentStatus = searchParams.get('payment')
   
   const [status, setStatus] = useState<string>('PENDING')
   const [driver, setDriver] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showInstallModal, setShowInstallModal] = useState(false)
 
   useEffect(() => {
     if (!jobId) {
@@ -61,6 +63,15 @@ export default function TrackingPage() {
     
     return () => clearInterval(interval)
   }, [jobId])
+
+  // Show PWA install modal after successful payment
+  useEffect(() => {
+    if (paymentStatus === 'success') {
+      // Short delay so the page loads first
+      const timer = setTimeout(() => setShowInstallModal(true), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [paymentStatus])
 
   const fetchStatus = async () => {
     try {
@@ -102,11 +113,84 @@ export default function TrackingPage() {
   }
 
   const statusInfo = STATUS_MESSAGES[status as keyof typeof STATUS_MESSAGES] || STATUS_MESSAGES.PENDING
+  const trackingAppUrl = `https://app.haulkind.com/track?orderId=${jobId}`
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-3xl">
+
+        {/* Payment Success + Install App Modal (overlay) */}
+        {showInstallModal && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-[scale-in_0.3s_ease-out]">
+              {/* Green success header */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-center text-white">
+                <div className="text-5xl mb-3">&#10003;</div>
+                <h2 className="text-2xl font-bold">Payment Confirmed!</h2>
+                <p className="text-green-100 mt-1">Your order has been placed successfully</p>
+              </div>
+
+              {/* Install CTA */}
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg">
+                    <span className="text-white text-2xl font-bold">H</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Install the Haulkind App</h3>
+                    <p className="text-sm text-gray-500">Track your order in real time</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-gray-700">
+                    <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0 text-xs font-bold">&#10003;</span>
+                    <span>Real-time driver tracking on the map</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-700">
+                    <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0 text-xs font-bold">&#10003;</span>
+                    <span>Push notifications when driver is on the way</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-700">
+                    <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0 text-xs font-bold">&#10003;</span>
+                    <span>Easy rebooking for future orders</span>
+                  </div>
+                </div>
+
+                <a
+                  href={trackingAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-4 bg-blue-600 text-white text-center font-bold text-lg rounded-xl hover:bg-blue-700 transition shadow-lg"
+                >
+                  Open Tracking App
+                </a>
+
+                <button
+                  onClick={() => setShowInstallModal(false)}
+                  className="block w-full py-3 mt-3 text-gray-500 text-sm font-medium hover:text-gray-700 transition"
+                >
+                  Continue without app
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-lg p-8">
+          {/* Payment Success Banner (inline, stays after modal dismissed) */}
+          {paymentStatus === 'success' && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+                <span className="text-white text-lg font-bold">&#10003;</span>
+              </div>
+              <div>
+                <p className="font-bold text-green-800">Payment Successful!</p>
+                <p className="text-sm text-green-700">Your order is confirmed and we&apos;re matching you with a driver.</p>
+              </div>
+            </div>
+          )}
+
           {/* Status Header */}
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">{statusInfo.icon}</div>
@@ -177,26 +261,33 @@ export default function TrackingPage() {
             )}
           </div>
 
-          {/* PWA Install Prompt */}
-          <div className="mt-8 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+          {/* PWA Install CTA (always visible) */}
+          <div className="mt-8 p-6 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl text-white shadow-lg">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
-                <span className="text-white text-xl font-bold">H</span>
+              <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center shrink-0">
+                <span className="text-white text-2xl font-bold">H</span>
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-1">Track orders on the go</h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  Install the Haulkind app on your phone for real-time tracking, push notifications, and easy rebooking.
+                <h3 className="font-bold text-lg mb-1">Download the Haulkind App</h3>
+                <p className="text-sm text-blue-100 mb-4">
+                  Track your driver in real time, get push notifications, and easily rebook. Free and instant — no app store needed!
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-3">
                   <a
-                    href={`https://app.haulkind.com/track?orderId=${jobId}`}
+                    href={trackingAppUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+                    className="inline-flex items-center gap-2 px-5 py-3 bg-white text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition shadow"
                   >
-                    Open Tracking App
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Install App Now
                   </a>
+                  <button
+                    onClick={() => setShowInstallModal(true)}
+                    className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition"
+                  >
+                    Learn More
+                  </button>
                 </div>
               </div>
             </div>
