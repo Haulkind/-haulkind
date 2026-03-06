@@ -5,10 +5,11 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/services/', '/contact'],
-        disallow: ['/api/', '/driver/'],
+        allow: '/',
+        disallow: ['/api/', '/driver/', '/quote/tracking'],
       },
     ],
     sitemap: 'https://haulkind.com/sitemap.xml',
+    host: 'https://haulkind.com',
   }
 }
