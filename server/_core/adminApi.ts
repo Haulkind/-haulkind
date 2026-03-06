@@ -332,7 +332,7 @@ export function registerAdminApiRoutes(app: Express) {
         ? `AND NOT EXISTS (SELECT 1 FROM customer_accounts ca WHERE ca.email = j.customer_email)`
         : '';
       unions.push(`
-        SELECT 'job-' || MIN(j.id)::text as id, j.customer_name as name, j.customer_email as email, j.customer_phone as phone,
+        SELECT 'job-' || MIN(j.id::text) as id, j.customer_name as name, j.customer_email as email, j.customer_phone as phone,
                COUNT(*) as total_orders,
                MIN(j.created_at) as created_at
         FROM jobs j
@@ -347,7 +347,7 @@ export function registerAdminApiRoutes(app: Express) {
            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)`
         : `AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.customer_email = o.email)`;
       unions.push(`
-        SELECT 'ord-' || MIN(o.id)::text as id, o.customer_name as name, o.email, o.phone,
+        SELECT 'ord-' || MIN(o.id::text) as id, o.customer_name as name, o.email, o.phone,
                COUNT(*) as total_orders,
                MIN(o.created_at) as created_at
         FROM orders o
