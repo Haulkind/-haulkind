@@ -12,9 +12,9 @@ export default function QuotePage() {
     setSelectedService(service)
     // Navigate to the appropriate flow
     if (service === 'HAUL_AWAY') {
-      router.push('/quote/haul-away/location')
+      router.push('/quote/haul-away/volume')
     } else {
-      router.push('/quote/labor-only/location')
+      router.push('/quote/labor-only/hours')
     }
   }
 

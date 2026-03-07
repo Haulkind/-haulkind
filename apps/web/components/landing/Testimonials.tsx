@@ -2,42 +2,17 @@
 
 const testimonials = [
   {
-    quote: 'Outstanding service! HaulKind moved our entire office equipment smoothly and professionally.',
-    name: 'Michael Thompson',
-    role: 'Business Owner, NYC',
-    avatar: 'MT',
+    quote: 'Fast, professional, and the GPS tracking made it so easy to know when they\'d arrive. Highly recommend.',
+    name: '[Customer Name]',
+    role: 'Homeowner, Philadelphia PA',
+    avatar: 'CN',
   },
   {
-    quote: 'Best hauling service I\'ve ever used! The driver was punctual, careful with my furniture.',
-    name: 'Sarah Martinez',
-    role: 'Homeowner, Los Angeles',
-    avatar: 'SM',
+    quote: 'Removed an old couch and mattress same day. Great price, no hidden fees. Will use again.',
+    name: '[Customer Name]',
+    role: 'Renter, Cherry Hill NJ',
+    avatar: 'CN',
   },
-  {
-    quote: 'Incredible reliability! HaulKind has been our go-to for all restaurant equipment deliveries.',
-    name: 'David Chen',
-    role: 'Restaurant Owner, Chicago',
-    avatar: 'DC',
-  },
-  {
-    quote: 'Professional and efficient! I use HaulKind for all my client deliveries. Highly recommend!',
-    name: 'Jennifer Wilson',
-    role: 'Interior Designer, Miami',
-    avatar: 'JW',
-  },
-  {
-    quote: 'Always reliable! HaulKind handles all our construction debris removal with zero hassle.',
-    name: 'Robert Johnson',
-    role: 'Contractor, Dallas',
-    avatar: 'RJ',
-  },
-]
-
-const stats = [
-  { value: '15,000+', label: 'Items Removed' },
-  { value: '2,500+', label: 'Happy Customers' },
-  { value: '4.9/5', label: 'Average Rating' },
-  { value: '98.5%', label: 'On-Time Rate' },
 ]
 
 export default function Testimonials() {
@@ -46,16 +21,16 @@ export default function Testimonials() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            What Our Customers Say
+            What Our First Customers Say
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Real feedback from real customers who trust HaulKind for their junk removal needs
+            We launched in 2025. Real jobs, real people, right here in our area.
           </p>
         </div>
 
-        {/* Testimonials carousel/grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto mb-16">
-          {testimonials.slice(0, 3).map((testimonial, index) => (
+        {/* Testimonials */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {testimonials.map((testimonial, index) => (
             <div
               key={index}
               className="bg-gray-50 rounded-xl p-6 relative"
@@ -82,27 +57,6 @@ export default function Testimonials() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Stats section */}
-        <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl p-8 md:p-12 max-w-5xl mx-auto">
-          <h3 className="text-2xl font-bold text-white text-center mb-8">
-            Trusted by Thousands
-          </h3>
-          <p className="text-teal-100 text-center mb-8">
-            Join our growing community of satisfied customers
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <p className="text-3xl md:text-4xl font-bold text-white mb-1">
-                  {stat.value}
-                </p>
-                <p className="text-teal-200 text-sm">{stat.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </section>

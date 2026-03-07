@@ -45,12 +45,12 @@ export default function HaulAwayPhotosPage() {
 
   const handleContinue = () => {
     updateData({ photoUrls: photos })
-    router.push('/quote/haul-away/summary')
+    router.push('/quote/haul-away/location')
   }
 
   const handleSkip = () => {
     updateData({ photoUrls: [] })
-    router.push('/quote/haul-away/summary')
+    router.push('/quote/haul-away/location')
   }
 
   return (
