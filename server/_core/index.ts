@@ -54,12 +54,14 @@ async function startServer() {
       'https://exciting-bravery-production.up.railway.app',
       'https://admin.haulkind.com',
       'https://app.haulkind.com',
+      'https://drive.haulkind.com',
       'https://haulkind.com',
       'https://www.haulkind.com',
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
-      'http://localhost:3003'
+      'http://localhost:3003',
+      'http://localhost:3004'
     ];
     
     // Check if origin matches allowed patterns (Railway subdomains only, no Vercel)
