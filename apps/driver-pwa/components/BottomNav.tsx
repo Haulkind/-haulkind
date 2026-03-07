@@ -16,7 +16,7 @@ export default function BottomNav() {
   const { token } = useAuth()
 
   // Hide nav on login/signup pages
-  if (!token || pathname === '/' || pathname?.startsWith('/login') || pathname?.startsWith('/signup')) {
+  if (!token || pathname === '/' || pathname?.startsWith('/login') || pathname?.startsWith('/signup') || pathname?.startsWith('/install')) {
     return null
   }
 
