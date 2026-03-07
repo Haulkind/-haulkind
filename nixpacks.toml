@@ -2,4 +2,7 @@
 cmds = ["pnpm i --no-frozen-lockfile"]
 
 [phases.build]
-cmds = ["npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist"]
+cmds = ["npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/server/_core"]
+
+[start]
+cmd = "NODE_ENV=production node dist/server/_core/index.js"
