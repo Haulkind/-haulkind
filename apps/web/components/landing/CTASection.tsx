@@ -32,6 +32,9 @@ export default function CTASection() {
               <span className="text-sm text-gray-300">Earn on your own schedule</span>
             </Link>
           </div>
+          <p className="mt-3 text-[12px] text-gray-400 text-center">
+            or <a href="sms:+18573229269" className="underline hover:text-gray-300">text us directly</a>
+          </p>
         </div>
       </div>
     </section>

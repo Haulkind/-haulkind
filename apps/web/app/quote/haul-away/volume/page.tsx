@@ -16,6 +16,7 @@ export default function HaulAwayVolumePage() {
   const router = useRouter()
   const { data, updateData } = useQuote()
   const [selectedVolume, setSelectedVolume] = useState(data.volumeTier || '')
+  const [pickupType, setPickupType] = useState<'IN_HOME' | 'CURBSIDE'>(data.addons?.includes('CURBSIDE') ? 'CURBSIDE' : 'IN_HOME')
 
   const handleContinue = () => {
     if (!selectedVolume) {
@@ -23,7 +24,10 @@ export default function HaulAwayVolumePage() {
       return
     }
 
-    updateData({ volumeTier: selectedVolume })
+    const addons = pickupType === 'CURBSIDE'
+      ? [...(data.addons || []).filter(a => a !== 'CURBSIDE'), 'CURBSIDE']
+      : (data.addons || []).filter(a => a !== 'CURBSIDE')
+    updateData({ volumeTier: selectedVolume, addons })
     router.push('/quote/haul-away/addons')
   }
 
@@ -59,7 +63,36 @@ export default function HaulAwayVolumePage() {
             ))}
           </div>
 
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+          {/* Curbside vs In-Home toggle */}
+          <div className="mt-6">
+            <p className="text-sm font-medium text-gray-700 mb-3">Where are your items?</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setPickupType('IN_HOME')}
+                className={`p-4 rounded-lg border-2 transition text-left ${
+                  pickupType === 'IN_HOME'
+                    ? 'border-primary-600 bg-primary-50'
+                    : 'border-gray-200 hover:border-primary-300'
+                }`}
+              >
+                <div className="font-semibold text-sm">In-Home Pickup</div>
+                <p className="text-xs text-gray-500 mt-1">We come inside &amp; carry items out</p>
+              </button>
+              <button
+                onClick={() => setPickupType('CURBSIDE')}
+                className={`p-4 rounded-lg border-2 transition text-left ${
+                  pickupType === 'CURBSIDE'
+                    ? 'border-green-600 bg-green-50'
+                    : 'border-gray-200 hover:border-green-300'
+                }`}
+              >
+                <div className="font-semibold text-sm">Curbside Pickup <span className="text-green-600">— Save $5</span></div>
+                <p className="text-xs text-gray-500 mt-1">Items already outside at the curb</p>
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-900">
               <strong>Note:</strong> Prices include up to $50 in disposal fees. If disposal costs exceed $50, you pay the difference (driver provides receipt).
             </p>

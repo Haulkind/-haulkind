@@ -30,7 +30,7 @@ export default function LaborOnlyDetailsPage() {
       customerNotes: notes,
       photoUrls: photos,
     })
-    router.push('/quote/labor-only/summary')
+    router.push('/quote/labor-only/location')
   }
 
   return (

@@ -11,7 +11,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Haulkind</h3>
             <p className="text-sm">
-              Fast local junk removal with transparent pricing. No memberships. Track your driver live.
+              Fast local junk removal with transparent pricing in Pennsylvania, New Jersey &amp; New York. No memberships. Track your driver live.
             </p>
           </div>
 

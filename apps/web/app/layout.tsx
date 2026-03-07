@@ -4,6 +4,8 @@ import Script from 'next/script'
 import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import StickyCTA from '@/components/StickyCTA'
+import RecruitBanner from '@/components/RecruitBanner'
 import { QuoteProvider } from '@/lib/QuoteContext'
 import { TRPCProvider } from '@/lib/trpc-provider'
 
@@ -175,14 +177,16 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} pb-[72px] md:pb-0`}>
         <TRPCProvider>
           <QuoteProvider>
             <Header />
             <main className="min-h-screen">
               {children}
             </main>
+            <RecruitBanner />
             <Footer />
+            <StickyCTA />
           </QuoteProvider>
         </TRPCProvider>
       </body>

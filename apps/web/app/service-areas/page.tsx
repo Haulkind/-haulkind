@@ -3,12 +3,12 @@ import Link from 'next/link'
 import { SERVICES, CITIES } from '@/lib/seo-data'
 
 export const metadata: Metadata = {
-  title: 'Service Areas - Junk Removal & Moving Help in PA & NJ | HaulKind',
-  description: 'HaulKind serves Philadelphia PA, Camden NJ, Cherry Hill NJ, Trenton NJ, Princeton NJ, Mount Laurel NJ and surrounding areas. Professional junk removal, furniture removal, cleanouts, and moving help. Get a free quote.',
+  title: 'Service Areas - Junk Removal & Moving Help in PA, NJ & NY | HaulKind',
+  description: 'HaulKind serves Philadelphia PA, South Jersey, New York City, Long Island and surrounding areas. Professional junk removal, furniture removal, cleanouts, and moving help. Get a free quote.',
   alternates: { canonical: '/service-areas' },
   openGraph: {
-    title: 'HaulKind Service Areas - PA & NJ Coverage',
-    description: 'Professional junk removal and moving help in Philadelphia, Camden, Cherry Hill, Trenton, Princeton, Mount Laurel and surrounding areas. Book online in 60 seconds.',
+    title: 'HaulKind Service Areas - PA, NJ & NY Coverage',
+    description: 'Professional junk removal and moving help in Philadelphia, South Jersey, NYC, Long Island and surrounding areas. Book online in 60 seconds.',
     url: 'https://haulkind.com/service-areas',
   },
 }
@@ -55,7 +55,7 @@ export default function ServiceAreas() {
               Junk Removal &amp; Moving Help Service Areas
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor across Pennsylvania and New Jersey. Find your city below and book online in 60 seconds.
+              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor across Pennsylvania, New Jersey, and the New York Metro area. Find your city below and book online in 60 seconds.
             </p>
             <Link
               href="/quote"
@@ -108,6 +108,37 @@ export default function ServiceAreas() {
                 </div>
               </div>
             ))}
+
+            {/* New York Metro — C1 */}
+            <div className="mb-16">
+              <h3 className="text-2xl md:text-3xl font-bold text-primary-600 mb-6 border-b-2 border-primary-100 pb-3">
+                New York Metro
+              </h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { name: 'Manhattan', desc: 'All of Manhattan from the Financial District to Washington Heights.' },
+                  { name: 'Brooklyn', desc: 'Williamsburg, Park Slope, Bushwick, Flatbush, and all Brooklyn neighborhoods.' },
+                  { name: 'Queens', desc: 'Astoria, Flushing, Jamaica, Long Island City, and more.' },
+                  { name: 'The Bronx', desc: 'Riverdale, Fordham, Pelham Bay, Mott Haven, and beyond.' },
+                  { name: 'Staten Island', desc: 'North Shore to South Shore — all of Staten Island.' },
+                  { name: 'Long Island', desc: 'Nassau County and Suffolk County — Hempstead to the Hamptons.' },
+                  { name: 'Westchester County', desc: 'White Plains, Yonkers, New Rochelle, Scarsdale, and more.' },
+                  { name: 'Jersey City / Hoboken', desc: 'Downtown JC, the Heights, and all of Hoboken.' },
+                  { name: 'Newark', desc: 'Ironbound, North Ward, and all Newark neighborhoods.' },
+                ].map((area) => (
+                  <div key={area.name} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{area.name}</h4>
+                    <p className="text-sm text-gray-600 mb-4">{area.desc}</p>
+                    <Link
+                      href="/quote"
+                      className="inline-block w-full text-center bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition text-sm"
+                    >
+                      Get a Quote in {area.name}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

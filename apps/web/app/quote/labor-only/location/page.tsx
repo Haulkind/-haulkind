@@ -247,7 +247,7 @@ export default function LaborOnlyLocationPage() {
         preferredDateTime,
       })
 
-      router.push('/quote/labor-only/details')
+      router.push('/quote/labor-only/summary')
     } catch (err: any) {
       console.error('[ERROR] Full error:', err)
       setError(`We couldn't verify the service area right now. Please try again in a minute.`)
@@ -270,59 +270,10 @@ export default function LaborOnlyLocationPage() {
           )}
 
           <div className="space-y-4">
-            {/* TASK 4: Customer Info Section - COMPACTED */}
-            <div className="border-b pb-4">
-              <h2 className="text-base font-semibold mb-3">Customer Information</h2>
-              
-              <div className="space-y-2.5">
-                {/* Row 1: Full Name (60%) + Phone (40%) */}
-                <div className="grid grid-cols-5 gap-3">
-                  <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="John Smith"
-                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Phone *
-                    </label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="(215) 555-0123"
-                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: Email (100%) */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="john@example.com"
-                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
 
             {/* TASK 5: Structured Address Section - COMPACTED */}
             <div className="border-b pb-4">
-              <h2 className="text-base font-semibold mb-3">Service Address</h2>
+              <h2 className="text-base font-semibold mb-3">Step 1: Service Address</h2>
               
               <div className="space-y-2.5">
                 {/* Row 1: Street Address (100%) with Autocomplete */}
@@ -395,7 +346,7 @@ export default function LaborOnlyLocationPage() {
 
             {/* Date & Time Section - COMPACTED */}
             <div>
-              <h2 className="text-base font-semibold mb-3">When would you like your items picked up?</h2>
+              <h2 className="text-base font-semibold mb-3">Step 2: Schedule</h2>
               
               {/* Row: Pickup Date (50%) + Pickup Time (50%) */}
               <div className="grid grid-cols-2 gap-3 mb-2.5">
@@ -445,6 +396,47 @@ export default function LaborOnlyLocationPage() {
                 <label htmlFor="asap" className="text-[11px] text-gray-600 leading-snug">
                   ⚡ Complete order ASAP if possible (we'll contact you to confirm earlier time)
                 </label>
+              </div>
+            </div>
+
+            <div className="border-b pb-4">
+              <h2 className="text-base font-semibold mb-3">Step 3: Your Contact Info</h2>
+
+              <div className="space-y-2.5">
+                <div className="grid grid-cols-5 gap-3">
+                  <div className="col-span-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Smith"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(215) 555-0123"
+                      className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="john@example.com"
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
 
