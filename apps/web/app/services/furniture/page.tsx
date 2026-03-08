@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Furniture Removal & Pickup in PA, NY & NJ | HaulKind',
-  description: 'Fast furniture removal in Pennsylvania, New York & New Jersey. Couches, mattresses, desks, tables, dressers. We haul and dispose. From $109. Same-day available.',
+  description: 'Fast furniture removal in Pennsylvania, New York & New Jersey. Couches, mattresses, desks, tables, dressers. We haul and dispose. From $99. Disposal included. Same-day available.',
   alternates: { canonical: '/services/furniture' },
   openGraph: {
     title: 'Furniture Removal & Pickup | HaulKind',
@@ -65,7 +65,7 @@ export default function FurniturePage() {
             HaulKind eliminates all of that. You tell us what needs to go, we give you an instant price, and our insured team shows up to carry it out — no matter what floor it's on or how tight the hallway is. We handle the heavy lifting, the loading, the transportation, and the disposal. You just point and we go.
           </p>
           <p className="text-gray-700 text-lg">
-            Our pricing starts at $109 for small loads like a single piece of furniture. Need a full room cleared? We've got truck-load pricing for that too. Everything is transparent — you see the price before you book, and there are no surprise charges at the door. Homeowners, renters, landlords, and offices across Pennsylvania, New York, and New Jersey rely on HaulKind for fast, no-hassle furniture removal.
+            Our pricing starts at $99 for small loads like a single piece of furniture — disposal included. Need a full room cleared? We've got truck-load pricing for that too. Everything is transparent and all-in — you see the price before you book, and there are no surprise charges at the door. Homeowners, renters, landlords, and offices across Pennsylvania, New York, and New Jersey rely on HaulKind for fast, no-hassle furniture removal.
           </p>
         </div>
       </section>

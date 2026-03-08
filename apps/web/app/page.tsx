@@ -30,6 +30,18 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Price Anchor — BLOCO 2B */}
+      <div className="py-4 bg-primary-50 border-b border-primary-100">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-[15px] font-semibold text-primary-800">
+            Half a truck starting at $314 — disposal included, no hidden fees.
+          </p>
+          <p className="text-[11px] text-gray-500 mt-1">
+            Licensed & insured drivers · GPS tracking · Price guaranteed before you book
+          </p>
+        </div>
+      </div>
+
       {/* Why HaulKind is Different - 3 feature cards */}
       <WhyDifferent />
 

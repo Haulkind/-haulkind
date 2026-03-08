@@ -47,8 +47,8 @@ export default function AdsLandingPage({ city, state, h1, subtitle, neighborhood
               <p className="text-sm text-gray-500">Pickup Available</p>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary-600">$109</div>
-              <p className="text-sm text-gray-500">Starting Price</p>
+              <div className="text-2xl font-bold text-primary-600">$99</div>
+              <p className="text-sm text-gray-500">All-In Price</p>
             </div>
             <div>
               <div className="text-2xl font-bold text-primary-600">Live GPS</div>

@@ -46,7 +46,7 @@ export default function QuotePage() {
               We haul it away and dispose of it. Perfect for furniture, appliances, yard waste, and general junk.
             </p>
             <div className="text-primary-600 font-semibold">
-              Starting at $109 →
+              Starting at $99 — disposal included →
             </div>
           </button>
 

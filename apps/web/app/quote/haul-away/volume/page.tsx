@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 
 const VOLUME_TIERS = [
-  { id: 'EIGHTH', label: '1/8 Truck', description: 'Small load (1-2 items)', price: 109 },
-  { id: 'QUARTER', label: '1/4 Truck', description: 'Medium load (3-5 items)', price: 169 },
-  { id: 'HALF', label: '1/2 Truck', description: 'Large load (6-10 items)', price: 279 },
-  { id: 'THREE_QUARTER', label: '3/4 Truck', description: 'Very large load (11-15 items)', price: 389 },
-  { id: 'FULL', label: 'Full Truck', description: 'Maximum capacity (16+ items)', price: 529 },
+  { id: 'EIGHTH', label: '1/8 Truck', description: 'Small load (1-2 items)', price: 99, disposal: 10 },
+  { id: 'QUARTER', label: '1/4 Truck', description: 'Medium load (3-5 items)', price: 189, disposal: 20 },
+  { id: 'HALF', label: '1/2 Truck', description: 'Large load (6-10 items)', price: 314, disposal: 35 },
+  { id: 'THREE_QUARTER', label: '3/4 Truck', description: 'Very large load (11-15 items)', price: 439, disposal: 50 },
+  { id: 'FULL', label: 'Full Truck', description: 'Maximum capacity (16+ items)', price: 599, disposal: 70 },
 ]
 
 export default function HaulAwayVolumePage() {
@@ -56,7 +56,7 @@ export default function HaulAwayVolumePage() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary-600">${tier.price}</div>
-                    <div className="text-sm text-gray-500">+ disposal</div>
+                    <div className="text-sm text-green-600 font-medium">Disposal included</div>
                   </div>
                 </div>
               </button>
@@ -92,11 +92,16 @@ export default function HaulAwayVolumePage() {
             </div>
           </div>
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-900">
-              <strong>Note:</strong> Prices include up to $50 in disposal fees. If disposal costs exceed $50, you pay the difference (driver provides receipt).
+          <div className="mt-6 p-4 bg-green-50 rounded-lg">
+            <p className="text-sm text-green-900">
+              <strong>All-in pricing.</strong> Disposal fee already included in every price above — paid directly to your driver. No per-mile charges. No surprises.
             </p>
           </div>
+
+          {/* Inline comparison */}
+          <p className="mt-3 text-[11px] text-gray-400 italic text-center">
+            1-800-GOT-JUNK charges $400-600 for a half truck — and doesn&apos;t show you the price until they arrive.
+          </p>
 
           <div className="flex gap-4 mt-8">
             <button

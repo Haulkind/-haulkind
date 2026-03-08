@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Junk Removal Pricing - Transparent Rates from $109',
-  description: 'See exact junk removal and moving labor prices. Haul Away from $109 (1/8 truck) to $529 (full truck). Labor help from $79/hr. No hidden fees, no surprises.',
+  title: 'Junk Removal Pricing - All-In Rates from $99 | HaulKind',
+  description: 'See exact junk removal and moving labor prices. Haul Away from $99 (1/8 truck) to $599 (full truck). Disposal included. Labor help from $79/hr. No hidden fees.',
   alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'Junk Removal Pricing - Transparent Rates | HaulKind',
-    description: 'Junk removal from $109. Moving labor from $79/hr. No hidden fees. See all prices upfront before you book.',
+    title: 'Junk Removal Pricing - All-In Rates from $99 | HaulKind',
+    description: 'Junk removal from $99, disposal included. Moving labor from $79/hr. No hidden fees. See all prices upfront before you book.',
     url: 'https://haulkind.com/pricing',
   },
 }
@@ -22,7 +22,7 @@ export default function Pricing() {
             Transparent Pricing
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-            No hidden fees. No surprises. See exactly what you'll pay before you book.
+            The price you see is the price you pay. Disposal included. No hidden fees. No surprises.
           </p>
         </div>
       </section>
@@ -34,28 +34,42 @@ export default function Pricing() {
             Junk Removal (Haul Away)
           </h2>
           <p className="text-center text-gray-600 mb-12 text-lg">
-            Pricing based on volume. We haul it away and dispose of it for you.
+            All-in pricing based on volume. Disposal included in every price.
           </p>
 
-          <div className="grid md:grid-cols-5 gap-6 mb-12">
+          <div className="grid md:grid-cols-5 gap-6 mb-8">
             {[
-              { size: '1/8 Truck', price: '$109', desc: 'Single item or small load' },
-              { size: '1/4 Truck', price: '$169', desc: 'Couch, mattress, or 5-8 items' },
-              { size: '1/2 Truck', price: '$279', desc: 'Room cleanout, 10-15 items' },
-              { size: '3/4 Truck', price: '$389', desc: 'Large furniture set, 15-20 items' },
-              { size: 'Full Truck', price: '$529', desc: 'Full house cleanout, 20+ items' },
+              { size: '1/8 Truck', items: '1–2 items', price: '$99', disposal: '$10' },
+              { size: '1/4 Truck', items: '3–5 items', price: '$189', disposal: '$20' },
+              { size: '1/2 Truck', items: '6–10 items', price: '$314', disposal: '$35' },
+              { size: '3/4 Truck', items: '11–15 items', price: '$439', disposal: '$50' },
+              { size: 'Full Truck', items: '16+ items', price: '$599', disposal: '$70' },
             ].map((tier) => (
               <div key={tier.size} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
                 <div className="text-4xl font-bold text-primary-600 mb-2">{tier.price}</div>
-                <div className="font-bold text-lg mb-2">{tier.size}</div>
-                <div className="text-sm text-gray-600">{tier.desc}</div>
-                <div className="text-xs text-gray-500 mt-4">+ disposal fees</div>
+                <div className="font-bold text-lg mb-1">{tier.size} · {tier.items}</div>
+                <div className="text-sm text-green-700 font-medium">Disposal included · All-in price</div>
+                <div className="text-[11px] text-gray-400 mt-3">Includes {tier.disposal} disposal fee — paid directly to your driver</div>
               </div>
             ))}
           </div>
 
+          {/* Transparency Guarantee Box — BLOCO 1F */}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 md:p-8 mb-8">
+            <h3 className="text-lg font-bold text-green-900 mb-3">The price you see is the price you pay. Period.</h3>
+            <p className="text-[13px] text-green-800 mb-3">Every HaulKind price already includes:</p>
+            <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-[13px] text-green-800 mb-3">
+              <li className="flex items-center gap-2"><span className="text-green-600 font-bold">✓</span> Labor (loading + hauling)</li>
+              <li className="flex items-center gap-2"><span className="text-green-600 font-bold">✓</span> Transportation to disposal facility</li>
+              <li className="flex items-center gap-2"><span className="text-green-600 font-bold">✓</span> Disposal fee (fixed, based on load size)</li>
+              <li className="flex items-center gap-2"><span className="text-green-600 font-bold">✓</span> Cleanup after loading</li>
+            </ul>
+            <p className="text-[13px] text-green-700">No per-mile charges. No receipt after the fact. No surprise fees at checkout.</p>
+          </div>
+
+          {/* What's Included — BLOCO 1D */}
           <div className="bg-gray-50 rounded-xl p-8 mb-8">
-            <h3 className="text-2xl font-bold mb-6">What's Included</h3>
+            <h3 className="text-2xl font-bold mb-6">What&apos;s Included</h3>
             <ul className="space-y-3 text-gray-700">
               <li className="flex items-start gap-3">
                 <svg className="w-6 h-6 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -73,7 +87,7 @@ export default function Pricing() {
                 <svg className="w-6 h-6 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span><strong>Disposal:</strong> Up to $50 in disposal fees included per load</span>
+                <span><strong>Disposal:</strong> Fixed disposal fee already included in your price — goes directly to your driver</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-6 h-6 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -84,15 +98,87 @@ export default function Pricing() {
             </ul>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+          {/* Additional Fees — BLOCO 1E */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
             <h3 className="text-xl font-bold mb-4 text-yellow-900">Additional Fees</h3>
             <ul className="space-y-2 text-gray-700">
               <li><strong>Heavy items:</strong> $25 per item (appliances, pianos, safes)</li>
               <li><strong>Stairs:</strong> $15 per flight (beyond first floor)</li>
-              <li><strong>Extra distance:</strong> $1 per mile beyond 5 miles from driver</li>
-              <li><strong>Disposal fees:</strong> Actual cost above $50 cap (receipt provided)</li>
               <li><strong>Same-day service:</strong> $50 surcharge (subject to availability)</li>
+              <li><strong>Disposal:</strong> Fixed fee based on load size — already included in all prices above. No receipts. No surprises.</li>
             </ul>
+          </div>
+
+          {/* Recycling explanation — BLOCO 2C */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-8">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">♻️</span>
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2">What happens to your junk?</h3>
+                <p className="text-[13px] text-gray-600">
+                  Your disposal fee goes directly to your driver to cover certified disposal at an approved facility. Items that can be donated or recycled are — keeping your neighborhood clean and out of landfills. No hidden landfill upsells. No surprise charges when the truck arrives.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Competitive Comparison — BLOCO 2A */}
+          <div className="mb-8">
+            <h3 className="text-2xl md:text-3xl font-bold text-center mb-2">How HaulKind compares</h3>
+            <p className="text-center text-gray-600 mb-6 text-sm">We checked. You&apos;re paying less — and getting more.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left py-3 px-3 text-gray-600 font-medium"></th>
+                    <th className="py-3 px-3 text-center bg-primary-50 text-primary-700 font-bold rounded-t-lg">HaulKind</th>
+                    <th className="py-3 px-3 text-center text-gray-600 font-medium">1-800-GOT-JUNK</th>
+                    <th className="py-3 px-3 text-center text-gray-600 font-medium">LoadUp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-3 px-3 text-gray-700">Half truck price</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-primary-700">$314</td>
+                    <td className="py-3 px-3 text-center text-gray-600">$400–600</td>
+                    <td className="py-3 px-3 text-center text-gray-600">$200–300</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-3 px-3 text-gray-700">Disposal included?</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-green-700">✓ Yes, fixed fee</td>
+                    <td className="py-3 px-3 text-center text-red-600">✗ Extra charge</td>
+                    <td className="py-3 px-3 text-center text-red-600">✗ Varies</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-3 px-3 text-gray-700">Online price (no visit needed)</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-green-700">✓ Instant</td>
+                    <td className="py-3 px-3 text-center text-red-600">✗ Onsite estimate only</td>
+                    <td className="py-3 px-3 text-center text-green-700">✓ Online</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-3 px-3 text-gray-700">GPS tracking</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-green-700">✓ Real-time</td>
+                    <td className="py-3 px-3 text-center text-red-600">✗ No</td>
+                    <td className="py-3 px-3 text-center text-red-600">✗ No</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="py-3 px-3 text-gray-700">Local verified drivers</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-green-700">✓ Yes</td>
+                    <td className="py-3 px-3 text-center text-gray-500">National franchise</td>
+                    <td className="py-3 px-3 text-center text-gray-500">National network</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3 text-gray-700">Price guarantee</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-green-700 rounded-b-lg">✓ Guaranteed</td>
+                    <td className="py-3 px-3 text-center text-red-600">✗ &quot;May vary onsite&quot;</td>
+                    <td className="py-3 px-3 text-center text-green-700">✓ Upfront</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[13px] text-gray-400 italic text-center mt-4">
+              1-800-GOT-JUNK doesn&apos;t show you the price until their truck is in your driveway. HaulKind shows it before you even finish your morning coffee.
+            </p>
           </div>
         </div>
       </section>
@@ -154,7 +240,7 @@ export default function Pricing() {
           </div>
 
           <div className="bg-white rounded-xl p-8 mb-8 shadow-lg">
-            <h3 className="text-2xl font-bold mb-6">What's Included</h3>
+            <h3 className="text-2xl font-bold mb-6">What&apos;s Included</h3>
             <ul className="space-y-3 text-gray-700">
               <li className="flex items-start gap-3">
                 <svg className="w-6 h-6 text-secondary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -178,11 +264,11 @@ export default function Pricing() {
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-            <h3 className="text-xl font-bold mb-4 text-yellow-900">What's NOT Included</h3>
+            <h3 className="text-xl font-bold mb-4 text-yellow-900">What&apos;s NOT Included</h3>
             <ul className="space-y-2 text-gray-700">
               <li><strong>Transportation:</strong> You provide the truck/van (we just load/unload)</li>
-              <li><strong>Disposal:</strong> We don't haul items away (use Haul Away service for that)</li>
-              <li><strong>Packing:</strong> We move items, but don't pack boxes</li>
+              <li><strong>Disposal:</strong> We don&apos;t haul items away (use Haul Away service for that)</li>
+              <li><strong>Packing:</strong> We move items, but don&apos;t pack boxes</li>
             </ul>
           </div>
         </div>
@@ -201,6 +287,9 @@ export default function Pricing() {
           >
             Get a Quote Now
           </Link>
+          <p className="mt-3 text-[12px] text-primary-200">
+            Book before noon for same-day pickup — limited slots today
+          </p>
         </div>
       </section>
     </div>

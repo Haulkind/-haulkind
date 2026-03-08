@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Appliance Removal & Disposal in PA, NY & NJ | HaulKind',
-  description: 'Fast appliance removal in Pennsylvania, New York & New Jersey. Fridges, washers, dryers, ovens, dishwashers. We haul and dispose responsibly. From $109.',
+  description: 'Fast appliance removal in Pennsylvania, New York & New Jersey. Fridges, washers, dryers, ovens, dishwashers. We haul and dispose responsibly. From $99. Disposal included.',
   alternates: { canonical: '/services/appliances' },
   openGraph: {
     title: 'Appliance Removal & Disposal | HaulKind',

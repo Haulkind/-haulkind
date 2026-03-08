@@ -103,8 +103,8 @@ export const SERVICES: ServiceData[] = [
     category: 'removal',
     items: ['Old furniture', 'Broken appliances', 'Electronics and e-waste', 'Yard debris', 'Construction scraps', 'Boxes and packing materials', 'Mattresses and bed frames', 'Exercise equipment', 'Hot tubs and spas', 'General household clutter'],
     benefits: ['Same-day pickup available', 'We do all the heavy lifting', 'Eco-friendly disposal and recycling', 'Transparent upfront pricing', 'No hidden fees'],
-    priceRange: '$109 - $529',
-    priceNote: 'Based on truck volume. 1/8 truck starts at $109.',
+    priceRange: '$99 - $599',
+    priceNote: 'Based on truck volume. 1/8 truck starts at $99. Disposal included.',
   },
   {
     name: 'Furniture Removal',
@@ -114,7 +114,7 @@ export const SERVICES: ServiceData[] = [
     category: 'removal',
     items: ['Couches and sectionals', 'Dining tables and chairs', 'Bedroom sets and dressers', 'Office desks and cubicles', 'Bookshelves and cabinets', 'Entertainment centers', 'Patio furniture', 'Recliners and armchairs', 'Bed frames and headboards', 'Futons and sleeper sofas'],
     benefits: ['Careful removal from any room or floor', 'We navigate tight hallways and stairs', 'Donation of usable items when possible', 'Same-day removal available', 'No damage to your walls or floors'],
-    priceRange: '$109 - $399',
+    priceRange: '$99 - $439',
     priceNote: 'Price depends on the number and size of items.',
   },
   {
@@ -125,8 +125,8 @@ export const SERVICES: ServiceData[] = [
     category: 'removal',
     items: ['Standard sofas', 'Sectional couches', 'Sleeper sofas and pullout couches', 'Loveseats', 'Recliners', 'Futons', 'Chaise lounges', 'Outdoor sofas', 'Theater seating', 'Oversized armchairs'],
     benefits: ['We fit through tight doorways and hallways', 'Removal from any floor including basements', 'Responsible disposal or donation', 'Fast scheduling, often same-day', 'No need to move it yourself'],
-    priceRange: '$109 - $249',
-    priceNote: 'Single couch starts at $109. Sectionals and multiples may cost more.',
+    priceRange: '$99 - $314',
+    priceNote: 'Single couch starts at $99. Disposal included. Sectionals and multiples may cost more.',
   },
   {
     name: 'Mattress Removal',
@@ -136,8 +136,8 @@ export const SERVICES: ServiceData[] = [
     category: 'removal',
     items: ['King-size mattresses', 'Queen-size mattresses', 'Full and twin mattresses', 'Box springs', 'Memory foam mattresses', 'Adjustable bed bases', 'Crib mattresses', 'Futon mattresses', 'Air mattresses (deflated)', 'Mattress toppers and pads'],
     benefits: ['Compliant disposal meeting local regulations', 'Pickup from any room in your home', 'Available same-day in most areas', 'Recycling when facilities are available', 'Bundle with other items for savings'],
-    priceRange: '$109 - $199',
-    priceNote: 'Single mattress removal starts at $109.',
+    priceRange: '$99 - $189',
+    priceNote: 'Single mattress removal starts at $99. Disposal included.',
   },
   {
     name: 'Appliance Removal',
@@ -147,8 +147,8 @@ export const SERVICES: ServiceData[] = [
     category: 'removal',
     items: ['Refrigerators and freezers', 'Washing machines and dryers', 'Dishwashers', 'Ovens and stoves', 'Microwaves', 'Air conditioners and window units', 'Water heaters', 'Dehumidifiers', 'Trash compactors', 'Small kitchen appliances (bulk)'],
     benefits: ['Safe handling of heavy appliances', 'Freon-safe disposal for refrigerators', 'Recycling of metals and components', 'Removal from basements or upper floors', 'No scratching your floors or walls'],
-    priceRange: '$109 - $349',
-    priceNote: 'Single appliance starts at $109. Multiple appliances get volume pricing.',
+    priceRange: '$99 - $439',
+    priceNote: 'Single appliance starts at $99. Disposal included. Multiple appliances get volume pricing.',
   },
   {
     name: 'Garage Cleanout',
@@ -158,7 +158,7 @@ export const SERVICES: ServiceData[] = [
     category: 'cleanout',
     items: ['Old tools and equipment', 'Broken lawn equipment', 'Boxes of stored items', 'Holiday decorations you no longer want', 'Old paint cans and chemicals (non-hazardous)', 'Bicycles and sports gear', 'Shelving and workbenches', 'Auto parts and tires', 'Excess building materials', 'General accumulated clutter'],
     benefits: ['Full cleanout in one visit', 'We sort, load, and haul everything', 'Sweep-clean finish available', 'Donation of usable items', 'Same-day or next-day scheduling'],
-    priceRange: '$199 - $529',
+    priceRange: '$189 - $599',
     priceNote: 'Based on volume. Half-garage starts at $199.',
   },
   {
@@ -169,7 +169,7 @@ export const SERVICES: ServiceData[] = [
     category: 'cleanout',
     items: ['Old furniture and mattresses', 'Boxes of stored belongings', 'Broken exercise equipment', 'Water-damaged items', 'Old electronics', 'Unused appliances', 'Shelving and storage racks', 'Seasonal decorations', 'Old carpeting and padding', 'General basement clutter'],
     benefits: ['We carry everything up the stairs', 'Full cleanout in a single visit', 'Ideal for pre-sale or renovation prep', 'Water damage cleanup support', 'Proper disposal of all items'],
-    priceRange: '$249 - $529',
+    priceRange: '$314 - $599',
     priceNote: 'Based on volume and stair access. Most basements fall in the $299-$449 range.',
   },
   {
@@ -213,8 +213,8 @@ export const SERVICES: ServiceData[] = [
     category: 'pickup',
     items: ['Gently used furniture', 'Working appliances', 'Clothing and shoes (bagged)', 'Books and media', 'Kitchenware and small electronics', 'Toys and games', 'Sporting goods', 'Office furniture and supplies', 'Home decor items', 'Bedding and linens (clean)'],
     benefits: ['Items go to local charities, not landfills', 'We handle all the heavy lifting', 'Potential tax deduction for donated items', 'Feel good about giving back to the community', 'Combine donation and junk removal in one trip'],
-    priceRange: '$109 - $349',
-    priceNote: 'Pricing similar to junk removal. Donation routing at no extra charge.',
+    priceRange: '$99 - $439',
+    priceNote: 'Pricing similar to junk removal. Disposal included. Donation routing at no extra charge.',
   },
 ]
 

@@ -144,7 +144,7 @@ export default function HowItWorks() {
                   Navigate to the customer's location. Complete the job professionally. Mark it complete in the app.
                 </p>
                 <p className="text-gray-600 text-lg mb-4">
-                  You keep 60% of the service price. For disposal jobs, we reimburse your disposal fees above the included amount.
+                  You keep 60% of the service price. Every job includes a fixed disposal fee ($10-$70) that goes directly to you as part of your earnings.
                 </p>
                 <p className="text-gray-600 text-lg">
                   Get paid weekly via direct deposit. Track your earnings in real-time in the driver app.
