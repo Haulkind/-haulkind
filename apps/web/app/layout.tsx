@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: 'HaulKind - Fast Local Junk Removal & Moving Help | PA, NY, NJ',
     template: '%s | HaulKind',
   },
-  description: 'Affordable junk removal and moving labor in Pennsylvania, New York & New Jersey. All-in pricing from $99, disposal included. Track your driver live. Same-day service available. Get a free quote in seconds.',
+  description: 'Affordable junk removal & moving labor in PA, NY & NJ. All-in pricing from $99, disposal included. Same-day service. Get a free quote now!',
   keywords: [
     'junk removal', 'junk hauling', 'trash removal', 'furniture removal',
     'appliance removal', 'moving help', 'labor only moving',
@@ -176,7 +176,7 @@ export default function RootLayout({
           fbq('track', 'PageView');
         `}</Script>
         <noscript>
-          <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=4348813218781671&ev=PageView&noscript=1" alt="" />
+          <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=4348813218781671&ev=PageView&noscript=1" alt="Meta Pixel tracking" />
         </noscript>
         <script
           type="application/ld+json"
