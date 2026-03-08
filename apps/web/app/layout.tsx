@@ -136,8 +136,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
-        <Script id="gtag-init" strategy="afterInteractive">{`
+        {/* Preconnect to third-party domains for faster resource loading */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://www.google-analytics.com" />
+        <link rel="preconnect" href="https://connect.facebook.net" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://connect.facebook.net" />
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="lazyOnload" />
+        <Script id="gtag-init" strategy="lazyOnload">{`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
@@ -157,7 +163,7 @@ export default function RootLayout({
           }
           window.gtagSendEvent = gtagSendEvent;
         `}</Script>
-        <Script id="meta-pixel" strategy="afterInteractive">{`
+        <Script id="meta-pixel" strategy="lazyOnload">{`
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
           n.callMethod.apply(n,arguments):n.queue.push(arguments)};
