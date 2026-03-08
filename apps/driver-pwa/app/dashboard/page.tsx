@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOrder, type Order } from '@/lib/api'
+import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOrder, getProfile, type Order } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import Sidebar from '@/components/Sidebar'
 
@@ -15,8 +15,9 @@ type OrderTab = 'today' | 'all' | 'new'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { token, driver, isLoading } = useAuth()
+  const { token, driver, isLoading, updateDriver } = useAuth()
   const [isOnline, setIsOnline] = useState(false)
+  const [statusLoaded, setStatusLoaded] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [availableOrders, setAvailableOrders] = useState<Order[]>([])
   const [todayOrders, setTodayOrders] = useState<Order[]>([])
@@ -45,6 +46,19 @@ export default function DashboardPage() {
     )
     return () => navigator.geolocation.clearWatch(watchId)
   }, [])
+
+  // Fetch profile on mount to get real name, selfie, and online status
+  useEffect(() => {
+    if (!token) return
+    getProfile(token).then(data => {
+      if (data.driver) {
+        updateDriver(data.driver)
+        const online = data.driver.is_online || data.driver.status === 'available' || data.driver.status === 'active'
+        setIsOnline(online)
+      }
+      setStatusLoaded(true)
+    }).catch(() => setStatusLoaded(true))
+  }, [token])
 
   // Poll for orders when online
   useEffect(() => {
@@ -121,7 +135,8 @@ export default function DashboardPage() {
     try {
       await acceptOrder(token, orderId)
       setAvailableOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
-      await fetchTodayOrders()
+      setAllOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
+      await fetchAllData()
       router.push(`/orders/${orderId}`)
     } catch (err: any) {
       alert(err.message || 'Failed to accept order')
@@ -321,12 +336,21 @@ function statusColor(status: string): string {
 }
 
 function formatPayout(order: Order): string {
-  const cents = order.driver_earnings_cents || order.driver_earnings
-  if (cents && cents > 100) return (cents / 100).toFixed(2)
-  if (order.payout) return order.payout.toFixed(2)
-  if (order.driver_earnings) return order.driver_earnings.toFixed(2)
-  const price = order.price || order.total || 0
-  return (price * 0.7).toFixed(2) // 70% driver share
+  // Check driver_earnings first (backend sends 70% share)
+  if (order.driver_earnings && Number(order.driver_earnings) > 0) {
+    return Number(order.driver_earnings).toFixed(2)
+  }
+  // Check payout field
+  if (order.payout && Number(order.payout) > 0) {
+    return Number(order.payout).toFixed(2)
+  }
+  // Check driver_earnings_cents (cents format)
+  const cents = order.driver_earnings_cents
+  if (cents && cents > 0) return (cents / 100).toFixed(2)
+  // Fallback: calculate 70% of total price
+  const price = order.price || order.total || (order as any).estimated_price || 0
+  if (Number(price) > 0) return (Number(price) * 0.7).toFixed(2)
+  return '0.00'
 }
 
 function formatTime(order: Order): string {
