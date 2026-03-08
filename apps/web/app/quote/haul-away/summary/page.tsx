@@ -234,10 +234,17 @@ export default function HaulAwaySummaryPage() {
             </div>
           </div>
 
-          {/* Disposal Notice */}
-          <div className="mb-8 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-900">
-              <strong>Includes disposal up to ${quote?.disposalIncluded || 50}.</strong> If disposal fees exceed this amount, you will pay the difference (driver provides receipt).
+          {/* All-in notice */}
+          <div className="mb-4 p-4 bg-green-50 rounded-lg">
+            <p className="text-sm text-green-900">
+              <strong>All-in price.</strong> Disposal fee is already included. No per-mile charges. No receipts. No surprise fees when the driver arrives.
+            </p>
+          </div>
+
+          {/* Price lock guarantee — BLOCO 5B */}
+          <div className="mb-8 text-center">
+            <p className="text-[12px] text-gray-500">
+              Price lock guarantee: The price shown is your final price. Nothing changes when the driver arrives.
             </p>
           </div>
 

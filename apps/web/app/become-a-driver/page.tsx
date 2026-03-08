@@ -90,6 +90,19 @@ export default function BecomeADriver() {
               </p>
             </div>
           </div>
+
+          {/* Disposal Fee Card — BLOCO 4A */}
+          <div className="mt-8 bg-green-50 border border-green-200 rounded-xl p-6 max-w-2xl mx-auto">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl flex-shrink-0">💵</span>
+              <div>
+                <h3 className="text-lg font-bold text-green-900 mb-2">Disposal fees go straight to you</h3>
+                <p className="text-sm text-green-800">
+                  Every job includes a fixed disposal fee ($10–$70 depending on load size). That fee is collected from the customer upfront and paid directly to you as part of your job payment — no waiting, no reimbursement process, no receipts to file. It&apos;s already in your earnings when the job closes.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -263,24 +276,24 @@ export default function BecomeADriver() {
                 <h3 className="text-xl font-bold mb-4 text-secondary-600">Junk Removal (Haul Away)</h3>
                 <ul className="space-y-3 text-gray-700">
                   <li className="flex justify-between">
-                    <span>1/8 Truck ($109)</span>
-                    <span className="font-bold">$65</span>
+                    <span>1/8 Truck ($99)</span>
+                    <span className="font-bold">$59 + $10 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>1/4 Truck ($169)</span>
-                    <span className="font-bold">$101</span>
+                    <span>1/4 Truck ($189)</span>
+                    <span className="font-bold">$113 + $20 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>1/2 Truck ($279)</span>
-                    <span className="font-bold">$167</span>
+                    <span>1/2 Truck ($314)</span>
+                    <span className="font-bold">$188 + $35 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>3/4 Truck ($389)</span>
-                    <span className="font-bold">$233</span>
+                    <span>3/4 Truck ($439)</span>
+                    <span className="font-bold">$263 + $50 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>Full Truck ($529)</span>
-                    <span className="font-bold">$317</span>
+                    <span>Full Truck ($599)</span>
+                    <span className="font-bold">$359 + $70 disposal</span>
                   </li>
                 </ul>
               </div>
@@ -331,8 +344,8 @@ export default function BecomeADriver() {
                 a: 'You can rent a truck and still make good money. Many drivers start by renting and buy their own truck later.',
               },
               {
-                q: 'How do I get reimbursed for disposal fees?',
-                a: 'Upload a photo of your disposal receipt in the app. We reimburse fees above $50 within 48 hours.',
+                q: 'How do disposal fees work?',
+                a: 'Every job includes a fixed disposal fee ($10-$70 based on load size) that is collected from the customer upfront and paid directly to you as part of your job payment. No waiting, no reimbursement process, no receipts to file.',
               },
               {
                 q: 'Can I work in multiple states?',

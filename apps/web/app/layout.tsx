@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: 'HaulKind - Fast Local Junk Removal & Moving Help | PA, NY, NJ',
     template: '%s | HaulKind',
   },
-  description: 'Affordable junk removal and moving labor in Pennsylvania, New York & New Jersey. Transparent pricing from $109. Track your driver live. Same-day service available. Get a free quote in seconds.',
+  description: 'Affordable junk removal and moving labor in Pennsylvania, New York & New Jersey. All-in pricing from $99, disposal included. Track your driver live. Same-day service available. Get a free quote in seconds.',
   keywords: [
     'junk removal', 'junk hauling', 'trash removal', 'furniture removal',
     'appliance removal', 'moving help', 'labor only moving',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     url: 'https://haulkind.com',
     siteName: 'HaulKind',
     title: 'HaulKind - Fast Local Junk Removal & Moving Help',
-    description: 'Affordable junk removal starting at $109. Transparent pricing, live driver tracking, same-day service. Serving PA, NY & NJ. Get a free quote now!',
+    description: 'Affordable junk removal starting at $99, disposal included. Transparent pricing, live driver tracking, same-day service. Serving PA, NY & NJ. Get a free quote now!',
     images: [
       {
         url: '/haulkind_hero_truck.webp',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'HaulKind - Fast Local Junk Removal & Moving Help',
-    description: 'Affordable junk removal starting at $109. Transparent pricing, live driver tracking. Serving PA, NY & NJ.',
+    description: 'Affordable junk removal starting at $99, disposal included. Transparent pricing, live driver tracking. Serving PA, NY & NJ.',
     images: ['/haulkind_hero_truck.webp'],
   },
   robots: {
@@ -93,7 +93,7 @@ export default function RootLayout({
       { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: ['Junk Removal', 'Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal'],
-    priceRange: '$109 - $529',
+    priceRange: '$99 - $599',
     openingHours: 'Mo-Su 07:00-19:00',
     sameAs: [],
     hasOfferCatalog: {
@@ -109,10 +109,10 @@ export default function RootLayout({
           },
           priceSpecification: {
             '@type': 'PriceSpecification',
-            price: '109',
+            price: '99',
             priceCurrency: 'USD',
-            minPrice: '109',
-            maxPrice: '529',
+            minPrice: '99',
+            maxPrice: '599',
           },
         },
         {

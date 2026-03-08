@@ -35,11 +35,11 @@ export default function FAQ() {
       questions: [
         {
           q: 'How does pricing work?',
-          a: 'For Junk Removal (Haul Away), pricing is based on volume ($109 for 1/8 truck to $529 for full truck) plus disposal fees and any addons. For Labor Only, it is $79/hr for 1 helper or $129/hr for 2 helpers (2 hour minimum). You see your total price before booking—no hidden fees.',
+          a: 'For Junk Removal (Haul Away), pricing is all-in based on volume: $99 (1/8 truck) to $599 (full truck). Disposal is already included. For Labor Only, it is $79/hr for 1 helper or $129/hr for 2 helpers (2 hour minimum). You see your total price before booking — no hidden fees.',
         },
         {
-          q: 'What are disposal fees?',
-          a: 'Disposal fees are what the dump/transfer station charges to accept your items. We include up to $50 in disposal fees. If fees exceed $50, you pay the difference (driver provides receipt). Fees vary by item type and location.',
+          q: 'Are disposal fees included in the price?',
+          a: 'Yes — always. Every HaulKind price includes a fixed disposal fee based on your load size: 1-2 items ($10), 3-5 items ($20), 6-10 items ($35), 11-15 items ($50), Full truck ($70). The disposal fee is paid directly to your driver to cover certified facility disposal. You pay one price at checkout — nothing changes when the driver arrives.',
         },
         {
           q: 'When do I pay?',
@@ -49,6 +49,18 @@ export default function FAQ() {
           q: 'Can I get a refund?',
           a: 'Yes. Cancel more than 24 hours before your booking for a full refund. Cancel within 24 hours for a 50% refund. No refund for no-shows. Contact support for special circumstances.',
         },
+          {
+            q: 'Do you charge extra for distance or mileage?',
+            a: 'No. HaulKind does not charge per mile. Your price covers transportation to the disposal facility. No mileage fees. The only thing that affects your price is the volume of your load and whether any items are heavy or require stairs.',
+          },
+          {
+            q: 'Why is the disposal fee separate from the base price?',
+            a: 'It isn\'t — it\'s already included. The price you see in your quote is your all-in total. We show the disposal amount separately only so you understand exactly where your money goes: part covers labor, part covers the certified disposal of your items. No surprises.',
+          },
+          {
+            q: 'How does HaulKind compare to 1-800-GOT-JUNK or LoadUp?',
+            a: '1-800-GOT-JUNK doesn\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $314 all-in vs $400-600 with 1-800-GOT-JUNK. LoadUp is similar in price but doesn\'t offer GPS tracking or local driver verification.',
+          },
       ],
     },
     {
@@ -140,7 +152,7 @@ export default function FAQ() {
       questions: [
         {
           q: 'How much do drivers earn?',
-          a: 'Drivers keep 60% of the service price. That\'s $65-$317 per haul-away job, or $47-$77 per labor hour. Plus reimbursement for disposal fees above $50.',
+          a: 'Drivers keep 60% of the service price. That\'s $59-$419 per haul-away job, or $47-$77 per labor hour. Every job also includes a fixed disposal fee ($10-$70) paid directly to the driver.',
         },
         {
           q: 'What do I need to become a driver?',
@@ -152,7 +164,7 @@ export default function FAQ() {
         },
         {
           q: 'How do I get paid?',
-          a: 'Weekly direct deposit. Earnings are tracked in real-time in the driver app. Payment includes your 60% share plus disposal reimbursement.',
+          a: 'Weekly direct deposit. Earnings are tracked in real-time in the driver app. Payment includes your 60% share plus the disposal fee, which goes directly to you.',
         },
         {
           q: 'Can I work part-time?',
@@ -232,8 +244,8 @@ export default function FAQ() {
               </div>
               <div>
                 <h3 className="font-bold text-xl mb-3">Call Us</h3>
-                <a href="tel:+18005551234" className="text-primary-600 font-semibold hover:underline text-lg">
-                  (800) 555-1234
+                <a href="tel:+18573229269" className="text-primary-600 font-semibold hover:underline text-lg">
+                  (857) 322-9269
                 </a>
                 <p className="text-gray-600 mt-2">Mon-Fri 9am-6pm EST</p>
               </div>
