@@ -149,6 +149,12 @@ function statusColor(status: string): string {
 }
 
 function formatPayout(order: Order): string {
+  // Backend applyDriverCommission already applies 70% to estimated_price
+  // So we show estimated_price DIRECTLY — do NOT multiply by 0.7 again
+  const ep = (order as any).estimated_price
+  if (ep && Number(ep) > 0) {
+    return Number(ep).toFixed(2)
+  }
   if (order.driver_earnings && Number(order.driver_earnings) > 0) {
     return Number(order.driver_earnings).toFixed(2)
   }
@@ -157,8 +163,8 @@ function formatPayout(order: Order): string {
   }
   const cents = order.driver_earnings_cents
   if (cents && cents > 0) return (cents / 100).toFixed(2)
-  const price = order.price || order.total || (order as any).estimated_price || 0
-  if (Number(price) > 0) return (Number(price) * 0.7).toFixed(2)
+  const price = order.price || order.total || 0
+  if (Number(price) > 0) return Number(price).toFixed(2)
   return '0.00'
 }
 
