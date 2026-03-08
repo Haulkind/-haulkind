@@ -3,15 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { getMyOrders, getOrderHistory, type Order } from '@/lib/api'
+import { getOrderHistory, type Order } from '@/lib/api'
 import PageHeader from '@/components/PageHeader'
 
-type Tab = 'today' | 'scheduled' | 'history'
-
-export default function OrdersPage() {
+export default function OrderHistoryPage() {
   const router = useRouter()
   const { token, isLoading } = useAuth()
-  const [tab, setTab] = useState<Tab>('today')
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -19,27 +16,22 @@ export default function OrdersPage() {
     if (!isLoading && !token) router.replace('/login')
   }, [token, isLoading, router])
 
-  const fetchOrders = useCallback(async () => {
+  const fetchHistory = useCallback(async () => {
     if (!token) return
     setLoading(true)
     try {
-      if (tab === 'history') {
-        const data = await getOrderHistory(token)
-        setOrders(data.orders || [])
-      } else {
-        const data = await getMyOrders(token, tab)
-        setOrders(data.orders || [])
-      }
+      const data = await getOrderHistory(token)
+      setOrders(data.orders || [])
     } catch (err) {
-      console.error('Fetch orders error:', err)
+      console.error('Fetch history error:', err)
     } finally {
       setLoading(false)
     }
-  }, [token, tab])
+  }, [token])
 
   useEffect(() => {
-    fetchOrders()
-  }, [fetchOrders])
+    fetchHistory()
+  }, [fetchHistory])
 
   if (isLoading || !token) {
     return (
@@ -51,26 +43,8 @@ export default function OrdersPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <PageHeader title="My Orders" />
+      <PageHeader title="Order History" />
 
-      {/* Tabs */}
-      <div className="flex bg-white border-b border-gray-200 sticky top-0 z-10">
-        {(['today', 'scheduled', 'history'] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
-              tab === t
-                ? 'text-primary-600 border-primary-600'
-                : 'text-gray-400 border-transparent'
-            }`}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Orders List */}
       <div className="px-5 py-4">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -78,16 +52,9 @@ export default function OrdersPage() {
           </div>
         ) : orders.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-4xl mb-3">
-              {tab === 'today' ? '📋' : tab === 'scheduled' ? '📅' : '📜'}
-            </p>
-            <p className="text-gray-500 font-medium">
-              {tab === 'today'
-                ? 'No orders for today'
-                : tab === 'scheduled'
-                ? 'No scheduled orders'
-                : 'No completed orders yet'}
-            </p>
+            <p className="text-4xl mb-3">📜</p>
+            <p className="text-gray-500 font-medium">No completed orders yet</p>
+            <p className="text-sm text-gray-400 mt-1">Your completed orders will appear here</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -100,7 +67,7 @@ export default function OrdersPage() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusColor(order.status)}`}>
-                      {order.status?.replace(/_/g, ' ')}
+                      {order.status?.replace(/_/g, ' ').toUpperCase()}
                     </span>
                     <span className="text-xs text-gray-400 ml-2">
                       {order.service_type || order.serviceType || ''}
@@ -122,9 +89,8 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {/* Pull to refresh hint */}
         <button
-          onClick={fetchOrders}
+          onClick={fetchHistory}
           className="w-full mt-4 py-3 text-sm text-primary-600 font-medium hover:bg-primary-50 rounded-xl transition"
         >
           Tap to refresh
@@ -138,12 +104,6 @@ function statusColor(status: string): string {
   switch (status?.toLowerCase()) {
     case 'completed': return 'bg-green-100 text-green-700'
     case 'cancelled': return 'bg-red-100 text-red-700'
-    case 'in_progress':
-    case 'started':
-    case 'en_route':
-    case 'arrived': return 'bg-blue-100 text-blue-700'
-    case 'accepted':
-    case 'assigned': return 'bg-secondary-100 text-secondary-700'
     default: return 'bg-gray-100 text-gray-600'
   }
 }

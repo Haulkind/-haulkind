@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth'
-import BottomNav from '@/components/BottomNav'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -36,10 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={inter.className}>
         <AuthProvider>
-          <main className="min-h-screen pb-20">
+          <main className="min-h-screen">
             {children}
           </main>
-          <BottomNav />
         </AuthProvider>
       </body>
     </html>

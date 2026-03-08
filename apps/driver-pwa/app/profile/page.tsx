@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { getProfile, updateProfile, type Driver } from '@/lib/api'
+import PageHeader from '@/components/PageHeader'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -83,8 +84,8 @@ export default function ProfilePage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-primary-900 text-white px-5 pt-14 pb-8 text-center">
+      <PageHeader title="My Profile" />
+      <div className="bg-primary-900 text-white px-5 pb-8 text-center">
         <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
           {profile?.selfie_url ? (
             <img src={profile.selfie_url} alt="" className="w-20 h-20 rounded-full object-cover" />
