@@ -58,8 +58,8 @@ export default function FAQ() {
             a: 'It isn\'t — it\'s already included. The price you see in your quote is your all-in total. We show the disposal amount separately only so you understand exactly where your money goes: part covers labor, part covers the certified disposal of your items. No surprises.',
           },
           {
-            q: 'How does HaulKind compare to 1-800-GOT-JUNK or LoadUp?',
-            a: '1-800-GOT-JUNK doesn\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $314 all-in vs $400-600 with 1-800-GOT-JUNK. LoadUp is similar in price but doesn\'t offer GPS tracking or local driver verification.',
+            q: 'How does HaulKind compare to other junk removal services?',
+            a: 'Many traditional junk companies don\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $314 all-in vs $400-600 with traditional companies. Online-only platforms may offer similar pricing but don\'t provide GPS tracking or local driver verification.',
           },
       ],
     },
