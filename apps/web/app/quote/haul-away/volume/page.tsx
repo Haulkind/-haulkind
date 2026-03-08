@@ -100,7 +100,7 @@ export default function HaulAwayVolumePage() {
 
           {/* Inline comparison */}
           <p className="mt-3 text-[11px] text-gray-400 italic text-center">
-            1-800-GOT-JUNK charges $400-600 for a half truck — and doesn&apos;t show you the price until they arrive.
+            Traditional junk companies charge $400-600 for a half truck — and don&apos;t show you the price until they arrive.
           </p>
 
           <div className="flex gap-4 mt-8">

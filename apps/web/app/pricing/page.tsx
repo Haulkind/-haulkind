@@ -132,8 +132,8 @@ export default function Pricing() {
                   <tr className="border-b-2 border-gray-200">
                     <th className="text-left py-3 px-3 text-gray-600 font-medium"></th>
                     <th className="py-3 px-3 text-center bg-primary-50 text-primary-700 font-bold rounded-t-lg">HaulKind</th>
-                    <th className="py-3 px-3 text-center text-gray-600 font-medium">1-800-GOT-JUNK</th>
-                    <th className="py-3 px-3 text-center text-gray-600 font-medium">LoadUp</th>
+                    <th className="py-3 px-3 text-center text-gray-600 font-medium">Traditional Junk Companies</th>
+                    <th className="py-3 px-3 text-center text-gray-600 font-medium">Online-Only Platforms</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,7 +177,7 @@ export default function Pricing() {
               </table>
             </div>
             <p className="text-[13px] text-gray-400 italic text-center mt-4">
-              1-800-GOT-JUNK doesn&apos;t show you the price until their truck is in your driveway. HaulKind shows it before you even finish your morning coffee.
+              Some junk removal companies won&apos;t show you a price until their truck is in your driveway. HaulKind shows it before you even finish your morning coffee.
             </p>
           </div>
         </div>
