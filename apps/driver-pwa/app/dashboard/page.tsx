@@ -4,44 +4,78 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOrder, type Order } from '@/lib/api'
+import dynamic from 'next/dynamic'
+import Sidebar from '@/components/Sidebar'
+
+const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
 const POLL_INTERVAL = 10000
 
+type OrderTab = 'today' | 'all' | 'new'
+
 export default function DashboardPage() {
   const router = useRouter()
-  const { token, driver, isLoading, logout } = useAuth()
+  const { token, driver, isLoading } = useAuth()
   const [isOnline, setIsOnline] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [availableOrders, setAvailableOrders] = useState<Order[]>([])
   const [todayOrders, setTodayOrders] = useState<Order[]>([])
+  const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState<OrderTab>('all')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
   }, [token, isLoading, router])
 
+  // Start GPS tracking
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setLat(pos.coords.latitude)
+        setLng(pos.coords.longitude)
+      },
+      (err) => console.warn('GPS error:', err),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    )
+    return () => navigator.geolocation.clearWatch(watchId)
+  }, [])
+
   // Poll for orders when online
   useEffect(() => {
     if (isOnline && token) {
-      fetchOrders()
-      pollRef.current = setInterval(fetchOrders, POLL_INTERVAL)
+      fetchAllData()
+      pollRef.current = setInterval(fetchAllData, POLL_INTERVAL)
     } else {
       if (pollRef.current) clearInterval(pollRef.current)
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [isOnline, token])
 
-  // Fetch today orders on mount
+  // Fetch orders on mount
   useEffect(() => {
-    if (token) fetchTodayOrders()
+    if (token) {
+      fetchTodayOrders()
+      fetchAllOrders()
+    }
   }, [token])
 
-  const fetchOrders = useCallback(async () => {
+  const fetchAllData = useCallback(async () => {
     if (!token) return
     try {
-      const data = await getAvailableOrders(token)
-      setAvailableOrders(data.orders || [])
+      const [available, today, all] = await Promise.all([
+        getAvailableOrders(token).catch(() => ({ orders: [] as Order[] })),
+        getMyOrders(token, 'today').catch(() => ({ orders: [] as Order[] })),
+        getMyOrders(token, 'all').catch(() => ({ orders: [] as Order[] })),
+      ])
+      setAvailableOrders(available.orders || [])
+      setTodayOrders(today.orders || [])
+      setAllOrders(all.orders || [])
     } catch (err) {
       console.error('Fetch orders error:', err)
     }
@@ -57,25 +91,21 @@ export default function DashboardPage() {
     }
   }, [token])
 
+  const fetchAllOrders = useCallback(async () => {
+    if (!token) return
+    try {
+      const data = await getMyOrders(token, 'all')
+      setAllOrders(data.orders || [])
+    } catch (err) {
+      console.error('Fetch all orders error:', err)
+    }
+  }, [token])
+
   const toggleOnline = async () => {
     if (!token) return
     setToggling(true)
     try {
-      // Get GPS location for going online
-      let lat: number | undefined
-      let lng: number | undefined
-      if (!isOnline && navigator.geolocation) {
-        try {
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
-          )
-          lat = pos.coords.latitude
-          lng = pos.coords.longitude
-        } catch (e) {
-          console.warn('GPS not available:', e)
-        }
-      }
-      await setOnlineStatus(token, !isOnline, lat, lng)
+      await setOnlineStatus(token, !isOnline, lat || undefined, lng || undefined)
       setIsOnline(!isOnline)
       if (isOnline) setAvailableOrders([])
     } catch (err) {
@@ -112,133 +142,182 @@ export default function DashboardPage() {
 
   if (isLoading || !token) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-primary-900">
+        <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
-  const driverName = driver?.first_name || driver?.name || 'Driver'
+  const nearbyCount = availableOrders.length
+
+  // Get current tab orders
+  const currentOrders = tab === 'today' ? todayOrders : tab === 'new' ? availableOrders : allOrders
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-primary-900 text-white px-5 pt-14 pb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-primary-200 text-sm">Welcome back</p>
-            <h1 className="text-2xl font-bold">{driverName}</h1>
-          </div>
-          <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-400' : 'bg-gray-500'}`} />
-        </div>
+    <div className="fixed inset-0 overflow-hidden">
+      {/* Sidebar */}
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        {/* Online/Offline Toggle */}
-        <button
-          onClick={toggleOnline}
-          disabled={toggling}
-          className={`w-full py-4 rounded-xl text-lg font-bold transition ${
-            isOnline
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-green-500 hover:bg-green-600 text-white'
-          } disabled:opacity-50`}
-        >
-          {toggling ? 'Updating...' : isOnline ? 'Go Offline' : 'Go Online'}
-        </button>
+      {/* Map (full screen) */}
+      <MapView lat={lat} lng={lng} />
+
+      {/* Top bar overlay */}
+      <div className="absolute top-0 left-0 right-0 z-10 bg-primary-900/95 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 pt-12 pb-3">
+          {/* Hamburger menu */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-white p-1"
+          >
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          {/* Title + order count */}
+          <div className="text-white text-center">
+            <h1 className="text-lg font-bold leading-tight">Haulkind</h1>
+            <p className="text-xs text-primary-200">{nearbyCount} orders nearby</p>
+          </div>
+
+          {/* Online toggle */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isOnline ? 'text-green-400' : 'text-gray-400'}`}>
+              {isOnline ? 'ONLINE' : 'OFFLINE'}
+            </span>
+            <button
+              onClick={toggleOnline}
+              disabled={toggling}
+              className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+                isOnline ? 'bg-green-500' : 'bg-gray-500'
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
+                  isOnline ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Active/Today Orders */}
-      {todayOrders.length > 0 && (
-        <div className="px-5 mt-5">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">Today&apos;s Orders</h2>
-          <div className="space-y-3">
-            {todayOrders.map((order) => (
-              <button
-                key={order.id}
-                onClick={() => router.push(`/orders/${order.id}`)}
-                className="w-full bg-white rounded-xl p-4 border-2 border-secondary-400 shadow-sm text-left"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-sm font-semibold text-secondary-700 bg-secondary-100 px-2 py-0.5 rounded">
-                    {order.status?.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-lg font-bold text-green-600">
-                    ${formatPayout(order)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 truncate">{order.pickup_address || order.pickupAddress}</p>
-                <p className="text-xs text-gray-400 mt-1">{formatTime(order)}</p>
-                <p className="text-xs text-primary-600 font-semibold mt-2">Tap to view details →</p>
-              </button>
-            ))}
-          </div>
+      {/* Bottom sheet */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-2xl shadow-2xl" style={{ maxHeight: '45vh' }}>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
-      )}
 
-      {/* Available Orders (when online) */}
-      {isOnline && (
-        <div className="px-5 mt-5">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">
-            {availableOrders.length > 0
-              ? `${availableOrders.length} Available Order${availableOrders.length > 1 ? 's' : ''}`
-              : 'Waiting for orders...'}
-          </h2>
-          {availableOrders.length === 0 && (
-            <div className="bg-white rounded-xl p-8 text-center shadow-sm">
-              <p className="text-4xl mb-3">👀</p>
-              <p className="text-gray-500">Looking for jobs nearby...</p>
-              <p className="text-xs text-gray-400 mt-1">Orders refresh every 10 seconds</p>
+        {/* Tab bar */}
+        <div className="flex items-center px-4 pb-2 gap-2">
+          {(['today', 'all', 'new'] as OrderTab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                tab === t
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+          <span className="ml-auto text-xs text-gray-400">Within 80 mi</span>
+        </div>
+
+        {/* Orders list */}
+        <div className="overflow-y-auto px-4 pb-8" style={{ maxHeight: '32vh' }}>
+          {currentOrders.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-lg font-bold text-gray-900">
+                {tab === 'new' && !isOnline ? 'Go online to see new orders' : 'No orders nearby'}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {tab === 'new' ? 'Orders within 80 miles will appear here' : 'Check back soon'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {currentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusColor(order.status)}`}>
+                        {order.status?.replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {order.service_type || order.serviceType || 'HAUL_AWAY'}
+                      </span>
+                    </div>
+                    <span className="text-lg font-bold text-green-600">
+                      ${formatPayout(order)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 truncate">
+                    {order.pickup_address || order.pickupAddress || 'Address not available'}
+                  </p>
+                  {order.customer_name && (
+                    <p className="text-xs text-gray-500 mt-1">Customer: {order.customer_name}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">{formatTime(order)}</p>
+
+                  {/* Action buttons for new/available orders */}
+                  {tab === 'new' && (
+                    <div className="flex gap-3 mt-3">
+                      <button
+                        onClick={() => handleReject(String(order.id))}
+                        disabled={loading}
+                        className="flex-1 py-2.5 border-2 border-red-500 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => handleAccept(String(order.id))}
+                        disabled={loading}
+                        className="flex-[2] py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        Accept Order
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tap to view for today/all orders */}
+                  {tab !== 'new' && (
+                    <button
+                      onClick={() => router.push(`/orders/${order.id}`)}
+                      className="w-full mt-3 py-2 text-sm text-primary-600 font-semibold hover:bg-primary-50 rounded-lg transition"
+                    >
+                      View Details
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           )}
-          <div className="space-y-3">
-            {availableOrders.map((order) => (
-              <div key={order.id} className="bg-white rounded-xl p-4 border-2 border-primary-500 shadow-sm">
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-sm font-semibold text-primary-700 bg-primary-100 px-2 py-0.5 rounded">
-                    {order.service_type || order.serviceType || 'HAUL_AWAY'}
-                  </span>
-                  <span className="text-2xl font-bold text-green-600">
-                    ${formatPayout(order)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 mb-1">{order.pickup_address || order.pickupAddress}</p>
-                <p className="text-xs text-gray-400 mb-3">{formatTime(order)}</p>
-                {order.customer_name && (
-                  <p className="text-xs text-gray-500 mb-3">Customer: {order.customer_name}</p>
-                )}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleReject(String(order.id))}
-                    disabled={loading}
-                    className="flex-1 py-3 border-2 border-red-500 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition disabled:opacity-50"
-                  >
-                    Decline
-                  </button>
-                  <button
-                    onClick={() => handleAccept(String(order.id))}
-                    disabled={loading}
-                    className="flex-[2] py-3 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50"
-                  >
-                    Accept Order
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
-      )}
-
-      {/* Offline state */}
-      {!isOnline && todayOrders.length === 0 && (
-        <div className="px-5 mt-12 text-center">
-          <p className="text-5xl mb-4">🚛</p>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">You&apos;re Offline</h2>
-          <p className="text-gray-500 max-w-xs mx-auto">
-            Go online to start receiving job offers from customers in your area.
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   )
+}
+
+function statusColor(status: string): string {
+  switch (status?.toLowerCase()) {
+    case 'completed': return 'bg-green-100 text-green-700'
+    case 'cancelled': return 'bg-red-100 text-red-700'
+    case 'in_progress':
+    case 'started':
+    case 'en_route':
+    case 'arrived': return 'bg-blue-100 text-blue-700'
+    case 'accepted':
+    case 'assigned': return 'bg-secondary-100 text-secondary-700'
+    case 'pending': return 'bg-yellow-100 text-yellow-700'
+    default: return 'bg-gray-100 text-gray-600'
+  }
 }
 
 function formatPayout(order: Order): string {

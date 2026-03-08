@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { getEarnings, type EarningsData } from '@/lib/api'
+import PageHeader from '@/components/PageHeader'
 
 export default function EarningsPage() {
   const router = useRouter()
@@ -47,9 +48,9 @@ export default function EarningsPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="bg-primary-900 text-white px-5 pt-14 pb-6">
-        <h1 className="text-2xl font-bold mb-4">Earnings</h1>
+      <PageHeader title="Earnings" />
+
+      <div className="bg-primary-900 text-white px-5 pb-6">
 
         {/* Total Earnings */}
         <div className="bg-white/10 rounded-2xl p-5 text-center">
