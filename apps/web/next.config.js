@@ -19,6 +19,10 @@ const nextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
           },
+          {
+            key: 'Expires',
+            value: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString(),
+          },
         ],
       },
       {
