@@ -74,10 +74,8 @@ export default function MapView({ lat, lng }: MapViewProps) {
   // Update marker position when GPS changes
   useEffect(() => {
     if (!mapInstanceRef.current || !markerRef.current || !lat || !lng) return
-    const L = require('leaflet')
-    const pos = L.latLng(lat, lng)
-    markerRef.current.setLatLng(pos)
-    mapInstanceRef.current.setView(pos, mapInstanceRef.current.getZoom())
+    markerRef.current.setLatLng([lat, lng])
+    mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom())
   }, [lat, lng])
 
   return (
