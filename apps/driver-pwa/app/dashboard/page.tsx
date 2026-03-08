@@ -52,8 +52,19 @@ export default function DashboardPage() {
     if (!token) return
     getProfile(token).then(data => {
       if (data.driver) {
-        updateDriver(data.driver)
-        const online = data.driver.is_online || data.driver.status === 'available' || data.driver.status === 'active'
+        // Map camelCase from backend to snake_case for PWA Driver interface
+        const d = data.driver as any
+        const mapped: any = {
+          ...d,
+          first_name: d.first_name || d.firstName || '',
+          last_name: d.last_name || d.lastName || '',
+          selfie_url: d.selfie_url || d.selfieUrl || null,
+          is_online: d.is_online !== undefined ? d.is_online : d.isOnline,
+          is_active: d.is_active !== undefined ? d.is_active : d.isActive,
+          driver_status: d.driver_status || d.driverStatus || 'pending_review',
+        }
+        updateDriver(mapped)
+        const online = mapped.is_online === true
         setIsOnline(online)
       }
       setStatusLoaded(true)
@@ -166,7 +177,13 @@ export default function DashboardPage() {
   const nearbyCount = availableOrders.length
 
   // Get current tab orders
-  const currentOrders = tab === 'today' ? todayOrders : tab === 'new' ? availableOrders : allOrders
+  // "All" tab = my assigned orders (today + scheduled), "New" = available unassigned, "Today" = today's assigned
+  // Filter out orders that are already accepted/en_route/in_progress from "New" available tab
+  const filteredAvailable = availableOrders.filter(o => {
+    const s = o.status?.toLowerCase()
+    return s === 'pending' || s === 'dispatching'
+  })
+  const currentOrders = tab === 'today' ? todayOrders : tab === 'new' ? filteredAvailable : allOrders
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -336,7 +353,13 @@ function statusColor(status: string): string {
 }
 
 function formatPayout(order: Order): string {
-  // Check driver_earnings first (backend sends 70% share)
+  // Backend applyDriverCommission already applies 70% to estimated_price
+  // So we show estimated_price DIRECTLY — do NOT multiply by 0.7 again
+  const ep = (order as any).estimated_price
+  if (ep && Number(ep) > 0) {
+    return Number(ep).toFixed(2)
+  }
+  // Check driver_earnings (pre-calculated by backend)
   if (order.driver_earnings && Number(order.driver_earnings) > 0) {
     return Number(order.driver_earnings).toFixed(2)
   }
@@ -347,9 +370,9 @@ function formatPayout(order: Order): string {
   // Check driver_earnings_cents (cents format)
   const cents = order.driver_earnings_cents
   if (cents && cents > 0) return (cents / 100).toFixed(2)
-  // Fallback: calculate 70% of total price
-  const price = order.price || order.total || (order as any).estimated_price || 0
-  if (Number(price) > 0) return (Number(price) * 0.7).toFixed(2)
+  // Fallback: price/total are already 70% from backend
+  const price = order.price || order.total || 0
+  if (Number(price) > 0) return Number(price).toFixed(2)
   return '0.00'
 }
 

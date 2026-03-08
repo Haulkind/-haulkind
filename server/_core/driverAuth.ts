@@ -680,11 +680,19 @@ export function registerDriverAuthRoutes(app: Express) {
         user: { id: user.id, email: user.email, name: user.name }, 
         driver: { 
           id: driver.id, 
+          name: user.name,
+          email: user.email,
           status: driver.status,
           driverStatus: driver.driver_status || 'pending_review',
+          driver_status: driver.driver_status || 'pending_review',
           isActive: driver.is_active !== false,
+          is_active: driver.is_active !== false,
+          // camelCase (Android)
           firstName: driver.first_name,
           lastName: driver.last_name,
+          // snake_case (PWA)
+          first_name: driver.first_name,
+          last_name: driver.last_name,
           vehicleType: driver.vehicle_type,
           rejectionReason: driver.rejection_reason
         } 
@@ -911,10 +919,11 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      const { online } = req.body;
+      const { online, is_online } = req.body;
+      const isOnlineVal = online !== undefined ? online : is_online;
 
       // Check if driver is approved before allowing to go online
-      if (online) {
+      if (isOnlineVal) {
         const driverCheck = await pool.query(
           'SELECT driver_status, is_active FROM drivers WHERE id = $1',
           [decoded.driverId]
@@ -936,10 +945,10 @@ export function registerDriverAuthRoutes(app: Express) {
 
       await pool.query(
         'UPDATE drivers SET is_online = $1, updated_at = NOW() WHERE id = $2',
-        [!!online, decoded.driverId]
+        [!!isOnlineVal, decoded.driverId]
       );
 
-      res.json({ success: true, online: !!online });
+      res.json({ success: true, online: !!isOnlineVal });
     } catch (err: any) {
       console.error('Driver online toggle error:', err);
       res.status(500).json({ error: 'Failed to update status' });
@@ -1028,8 +1037,12 @@ export function registerDriverAuthRoutes(app: Express) {
         driver: {
           id: driver.id,
           name: driver.name,
+          // camelCase (Android app compat)
           firstName: driver.first_name,
           lastName: driver.last_name,
+          // snake_case (PWA compat)
+          first_name: driver.first_name,
+          last_name: driver.last_name,
           email: driver.email,
           phone: driver.phone,
           address: driver.address,
@@ -1038,11 +1051,15 @@ export function registerDriverAuthRoutes(app: Express) {
           zipCode: driver.zip_code,
           status: driver.status,
           driverStatus: driver.driver_status || 'pending_review',
+          driver_status: driver.driver_status || 'pending_review',
           isActive: driver.is_active !== false,
+          is_active: driver.is_active !== false,
           vehicleType: driver.vehicle_type,
           vehicleCapacity: driver.vehicle_capacity,
           isOnline: driver.is_online,
+          is_online: driver.is_online,
           selfieUrl: driver.selfie_url,
+          selfie_url: driver.selfie_url,
           licenseUrl: driver.license_url,
           vehicleRegistrationUrl: driver.vehicle_registration_url,
           insuranceUrl: driver.insurance_url,
