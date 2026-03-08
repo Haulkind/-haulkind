@@ -149,12 +149,17 @@ function statusColor(status: string): string {
 }
 
 function formatPayout(order: Order): string {
-  const cents = order.driver_earnings_cents || order.driver_earnings
-  if (cents && cents > 100) return (cents / 100).toFixed(2)
-  if (order.payout) return order.payout.toFixed(2)
-  if (order.driver_earnings) return order.driver_earnings.toFixed(2)
-  const price = order.price || order.total || 0
-  return (price * 0.7).toFixed(2)
+  if (order.driver_earnings && Number(order.driver_earnings) > 0) {
+    return Number(order.driver_earnings).toFixed(2)
+  }
+  if (order.payout && Number(order.payout) > 0) {
+    return Number(order.payout).toFixed(2)
+  }
+  const cents = order.driver_earnings_cents
+  if (cents && cents > 0) return (cents / 100).toFixed(2)
+  const price = order.price || order.total || (order as any).estimated_price || 0
+  if (Number(price) > 0) return (Number(price) * 0.7).toFixed(2)
+  return '0.00'
 }
 
 function formatDate(order: Order): string {

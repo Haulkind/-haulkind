@@ -64,9 +64,12 @@ export const driverLogin = async (req: Request, res: Response) => {
       driver: {
         id: driver.id,
         name: driver.name,
+        first_name: driver.firstName || '',
+        last_name: driver.lastName || '',
         email: driver.email,
         phone: driver.phone,
         status: driver.status,
+        selfie_url: driver.selfieUrl || null,
       },
     });
   } catch (error) {
@@ -197,10 +200,13 @@ export const getDriverProfile = async (req: AuthRequest, res: Response) => {
       driver: {
         id: driver.id,
         name: driver.name,
+        first_name: driver.firstName || '',
+        last_name: driver.lastName || '',
         email: driver.email,
         phone: driver.phone,
         status: driver.status,
-        isOnline: true,
+        selfie_url: driver.selfieUrl || null,
+        is_online: driver.status === 'available' || driver.status === 'active',
       },
     });
   } catch (error) {
@@ -265,6 +271,9 @@ function formatOrderForDriver(order: any) {
   const items = safeJsonParse(order.itemsJson);
   const fullAddress = [order.street, order.city, order.state, order.zip].filter(Boolean).join(', ');
 
+  const totalPrice = pricing.total || pricing.estimatedPrice || pricing.amount || 0;
+  const driverShare = Number(totalPrice) * 0.7;
+
   return {
     id: order.id,
     service_type: order.serviceType || 'HAUL_AWAY',
@@ -275,8 +284,12 @@ function formatOrderForDriver(order: any) {
     scheduled_for: order.pickupDate,
     pickup_time_window: order.pickupTimeWindow,
     status: order.status,
-    estimated_price: pricing.total || pricing.estimatedPrice || 0,
+    estimated_price: totalPrice,
     final_price: pricing.total || 0,
+    price: Number(totalPrice),
+    total: Number(totalPrice),
+    payout: driverShare,
+    driver_earnings: order.driverEarnings || driverShare,
     volume_tier: pricing.volumeTier || items.volumeTier || null,
     customer_name: order.customerName,
     customer_phone: order.phone,
@@ -494,8 +507,9 @@ export const setOnlineStatus = async (req: AuthRequest, res: Response) => {
     if (!driverId) return res.status(401).json({ error: 'Not authenticated' });
 
     const numericDriverId = Number(driverId);
-    const { online } = req.body;
-    const newStatus = online ? 'available' : 'offline';
+    const { online, is_online } = req.body;
+    const isOnline = online !== undefined ? online : is_online;
+    const newStatus = isOnline ? 'available' : 'offline';
 
     const [updated] = await db
       .update(drivers)
@@ -506,7 +520,7 @@ export const setOnlineStatus = async (req: AuthRequest, res: Response) => {
       .where(eq(drivers.id, numericDriverId))
       .returning();
 
-    res.json({ success: true, online: !!online, status: newStatus, driver: updated });
+    res.json({ success: true, online: !!isOnline, is_online: !!isOnline, status: newStatus, driver: updated });
   } catch (error) {
     console.error('Set online status error:', error);
     res.status(500).json({ error: 'Internal server error' });
