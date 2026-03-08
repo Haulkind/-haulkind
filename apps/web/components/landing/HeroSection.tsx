@@ -1,30 +1,23 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 
 export default function HeroSection() {
-  const router = useRouter()
-  const [zipCode, setZipCode] = useState('')
-
-  const handleGetQuote = () => {
-    if (zipCode.length >= 5) {
-      sessionStorage.setItem('hk_zip', zipCode)
-      router.push(`/quote?service=haul-away&zip=${zipCode}`)
-    }
-  }
-
   return (
     <section className="relative min-h-[600px] md:min-h-[700px] flex items-center">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/haulkind_hero_truck.webp)' }}
-      >
-        {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
-      </div>
+      {/* Background Image — optimized with next/image for LCP */}
+      <Image
+        src="/haulkind_hero_truck_optimized.webp"
+        alt="HaulKind professional junk removal truck"
+        fill
+        priority
+        quality={75}
+        sizes="100vw"
+        className="object-cover object-center"
+      />
+      {/* Overlay for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent z-[1]" />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4">
@@ -99,7 +92,7 @@ export default function HeroSection() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
         <svg className="w-6 h-6 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
         </svg>
