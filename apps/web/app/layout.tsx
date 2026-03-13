@@ -5,6 +5,7 @@ import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import StickyCTA from '@/components/StickyCTA'
+import PhoneBar from '@/components/PhoneBar'
 import RecruitBanner from '@/components/RecruitBanner'
 import { QuoteProvider } from '@/lib/QuoteContext'
 import { TRPCProvider } from '@/lib/trpc-provider'
@@ -86,15 +87,33 @@ export default function RootLayout({
     url: 'https://haulkind.com',
     logo: 'https://haulkind.com/haulkind_hero_truck.webp',
     image: 'https://haulkind.com/haulkind_hero_truck.webp',
+    telephone: '+1-609-456-8188',
     email: 'support@haulkind.com',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Philadelphia',
+      addressRegion: 'PA',
+      addressCountry: 'US',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 39.9526,
+      longitude: -75.1652,
+    },
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
       { '@type': 'State', name: 'New Jersey' },
     ],
-    serviceType: ['Junk Removal', 'Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal'],
-    priceRange: '$99 - $599',
+    serviceType: ['Junk Removal', 'Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal', 'Donation Pickup', 'Furniture Assembly'],
+    priceRange: '$79 - $599',
     openingHours: 'Mo-Su 07:00-19:00',
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '5.0',
+      reviewCount: '7',
+      bestRating: '5',
+    },
     sameAs: [],
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
@@ -127,6 +146,36 @@ export default function RootLayout({
             price: '79',
             priceCurrency: 'USD',
             unitText: 'HOUR',
+          },
+        },
+        {
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: 'Donation Pickup',
+            description: 'We pick up gently-used items and deliver them to local charities. Tax receipt available.',
+          },
+          priceSpecification: {
+            '@type': 'PriceSpecification',
+            price: '109',
+            priceCurrency: 'USD',
+            minPrice: '109',
+            maxPrice: '389',
+          },
+        },
+        {
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: 'Furniture Assembly',
+            description: 'Professional furniture assembly for IKEA, Wayfair, Amazon and more.',
+          },
+          priceSpecification: {
+            '@type': 'PriceSpecification',
+            price: '89',
+            priceCurrency: 'USD',
+            minPrice: '59',
+            maxPrice: '299',
           },
         },
       ],
@@ -186,6 +235,7 @@ export default function RootLayout({
       <body className={`${inter.className} pb-[72px] md:pb-0`}>
         <TRPCProvider>
           <QuoteProvider>
+            <PhoneBar />
             <Header />
             <main className="min-h-screen">
               {children}
