@@ -2,36 +2,43 @@ const features = [
   {
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    title: 'No Surprise Fees — Ever',
+    description: "Other companies quote low, then add fees for stairs, distance, disposal, and weight. Our price is locked in before we start. Guaranteed.",
+    gradient: 'from-green-500 to-green-600',
+  },
+  {
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     ),
-    title: 'Real-Time GPS Tracking',
-    description: 'Watch your driver arrive in real-time. Know exactly where they are and when they\'ll arrive.',
+    title: 'We Actually Show Up On Time',
+    description: "Track your driver in real-time with GPS. Know exactly when we'll arrive — no more waiting around for a 4-hour window.",
     gradient: 'from-blue-500 to-blue-600',
-    bgLight: 'bg-blue-50',
   },
   {
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    title: 'Instant Upfront Pricing',
-    description: 'Get guaranteed quotes in 30 seconds. No hidden fees, no surprises. What you see is what you pay.',
-    gradient: 'from-green-500 to-green-600',
-    bgLight: 'bg-green-50',
-  },
-  {
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-      </svg>
-    ),
-    title: 'Verified Drivers & Reviews',
-    description: 'All drivers are background-checked, licensed, and insured. Read real reviews from real customers.',
+    title: 'Same-Day Pickup Available',
+    description: "Book before noon and we can usually pick up today. Because when you want junk gone, you want it gone NOW.",
     gradient: 'from-orange-500 to-orange-600',
-    bgLight: 'bg-orange-50',
+  },
+  {
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+    title: 'Licensed, Insured & Background-Checked',
+    description: "Every crew member is vetted, insured, and professional. Your property and belongings are in safe hands.",
+    gradient: 'from-purple-500 to-purple-600',
   },
 ]
 
@@ -44,11 +51,11 @@ export default function WhyDifferent() {
             Why HaulKind is Different
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            More transparent, faster, and smarter than traditional companies
+            Built by a former driver who saw how the big companies treat customers and crews
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -66,18 +73,6 @@ export default function WhyDifferent() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Trust badge */}
-        <div className="flex justify-center mt-10">
-          <div className="inline-flex items-center gap-3 bg-white px-6 py-3 rounded-full shadow-md">
-            <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span className="text-gray-700 font-medium">Licensed & Insured</span>
-            <span className="text-gray-300">•</span>
-            <span className="text-gray-700 font-medium">100% Satisfaction</span>
-          </div>
         </div>
       </div>
     </section>

@@ -10,45 +10,26 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Haulkind</h3>
-            <p className="text-sm">
+            <p className="text-sm mb-4">
               Fast local junk removal with transparent pricing in Pennsylvania, New Jersey &amp; New York. No memberships. Track your driver live.
             </p>
+            <a href="tel:+16094568188" className="text-teal-400 hover:text-teal-300 font-semibold text-sm transition">
+              (609) 456-8188
+            </a>
           </div>
 
           {/* Services */}
           <div>
             <h4 className="text-white font-semibold mb-4">Services</h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/services/cleanout" className="hover:text-white transition">
-                  Property Cleanouts
-                </Link>
-              </li>
-              <li>
-                <Link href="/services/furniture" className="hover:text-white transition">
-                  Furniture Removal
-                </Link>
-              </li>
-              <li>
-                <Link href="/services/appliances" className="hover:text-white transition">
-                  Appliance Removal
-                </Link>
-              </li>
-              <li>
-                <Link href="/services/moving-labor" className="hover:text-white transition">
-                  Moving Labor
-                </Link>
-              </li>
-              <li>
-                <Link href="/services/commercial" className="hover:text-white transition">
-                  Commercial
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="hover:text-white transition">
-                  Pricing
-                </Link>
-              </li>
+              <li><Link href="/services/furniture" className="hover:text-white transition">Furniture Removal</Link></li>
+              <li><Link href="/services/appliances" className="hover:text-white transition">Appliance Removal</Link></li>
+              <li><Link href="/services/cleanout" className="hover:text-white transition">Property Cleanouts</Link></li>
+              <li><Link href="/services/commercial" className="hover:text-white transition">Commercial</Link></li>
+              <li><Link href="/donation-pickup" className="hover:text-white transition">Donation Pickup</Link></li>
+              <li><Link href="/assembly" className="hover:text-white transition">Furniture Assembly</Link></li>
+              <li><Link href="/services/moving-labor" className="hover:text-white transition">Moving Labor</Link></li>
+              <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
             </ul>
           </div>
 
@@ -56,31 +37,11 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/how-it-works" className="hover:text-white transition">
-                  How It Works
-                </Link>
-              </li>
-              <li>
-                <Link href="/service-areas" className="hover:text-white transition">
-                  Service Areas
-                </Link>
-              </li>
-              <li>
-                <Link href="/become-a-driver" className="hover:text-white transition">
-                  Become a Driver
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-white transition">
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="hover:text-white transition">
-                  FAQ
-                </Link>
-              </li>
+              <li><Link href="/how-it-works" className="hover:text-white transition">How It Works</Link></li>
+              <li><Link href="/service-areas" className="hover:text-white transition">Service Areas</Link></li>
+              <li><Link href="/become-a-driver" className="hover:text-white transition">Become a Driver</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
             </ul>
           </div>
 
@@ -88,16 +49,8 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/privacy" className="hover:text-white transition">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-white transition">
-                  Terms of Service
-                </Link>
-              </li>
+              <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

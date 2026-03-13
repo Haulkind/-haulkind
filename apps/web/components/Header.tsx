@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 export default function Header() {
-  const [servicesOpen, setServicesOpen] = useState(false)
+  const [junkOpen, setJunkOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -14,32 +14,36 @@ export default function Header() {
           Haulkind
         </Link>
         
-        <div className="hidden md:flex items-center space-x-8">
-          {/* Services dropdown */}
+        <div className="hidden md:flex items-center space-x-6">
+          {/* Junk Removal dropdown */}
           <div
             className="relative"
-            onMouseEnter={() => setServicesOpen(true)}
-            onMouseLeave={() => setServicesOpen(false)}
+            onMouseEnter={() => setJunkOpen(true)}
+            onMouseLeave={() => setJunkOpen(false)}
           >
-            <button aria-label="Services menu" aria-expanded={servicesOpen} className="text-gray-700 hover:text-primary-600 transition flex items-center gap-1">
-              Services
+            <button aria-label="Junk Removal menu" aria-expanded={junkOpen} className="text-gray-700 hover:text-primary-600 transition flex items-center gap-1">
+              Junk Removal
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
-            {servicesOpen && (
+            {junkOpen && (
               <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-xl border py-2 z-50">
-                <Link href="/services/cleanout" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Property Cleanouts</Link>
                 <Link href="/services/furniture" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Furniture Removal</Link>
                 <Link href="/services/appliances" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Appliance Removal</Link>
-                <Link href="/services/moving-labor" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Moving Labor</Link>
+                <Link href="/services/cleanout" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Property Cleanout</Link>
                 <Link href="/services/commercial" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Commercial</Link>
+                <Link href="/services/electronics" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Electronics Disposal</Link>
+                <Link href="/services/what-we-take" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">What We Take</Link>
               </div>
             )}
           </div>
+          <Link href="/donation-pickup" className="text-gray-700 hover:text-primary-600 transition">
+            Donation Pickup
+          </Link>
+          <Link href="/assembly" className="text-gray-700 hover:text-primary-600 transition">
+            Assembly
+          </Link>
           <Link href="/pricing" className="text-gray-700 hover:text-primary-600 transition">
             Pricing
-          </Link>
-          <Link href="/how-it-works" className="text-gray-700 hover:text-primary-600 transition">
-            How It Works
           </Link>
           <Link href="/service-areas" className="text-gray-700 hover:text-primary-600 transition">
             Service Areas
@@ -47,17 +51,10 @@ export default function Header() {
           <Link href="/contact" className="text-gray-700 hover:text-primary-600 transition">
             Contact
           </Link>
-          <a
-            href="sms:+18573229269"
-            className="inline-flex items-center gap-1.5 text-gray-700 hover:text-primary-600 transition"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-            Text Us
-          </a>
           <Link 
             href="/quote" 
             onClick={() => { if (typeof window !== 'undefined' && (window as any).gtag) (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition font-medium"
+            className="bg-orange-500 text-white px-6 py-2.5 rounded-lg hover:bg-orange-600 transition font-bold shadow-md animate-[pulse_3s_ease-in-out_infinite]"
           >
             Get a Quote
           </Link>
@@ -75,21 +72,21 @@ export default function Header() {
       {mobileOpen && (
         <div className="md:hidden bg-white border-t px-4 pb-4">
           <div className="space-y-1 py-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase px-2 pt-2">Services</p>
-            <Link href="/services/cleanout" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Property Cleanouts</Link>
-            <Link href="/services/furniture" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Furniture Removal</Link>
-            <Link href="/services/appliances" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Appliance Removal</Link>
-            <Link href="/services/moving-labor" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Moving Labor</Link>
-            <Link href="/services/commercial" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Commercial</Link>
+            <p className="text-xs font-semibold text-gray-400 uppercase px-2 pt-2">Our Services</p>
+            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Junk Removal</Link>
+            <Link href="/donation-pickup" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Donation Pickup</Link>
+            <Link href="/assembly" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Furniture Assembly</Link>
+            <Link href="/quote?service=labor-only" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Moving Labor</Link>
             <div className="border-t my-2" />
             <Link href="/pricing" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Pricing</Link>
-            <Link href="/how-it-works" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">How It Works</Link>
             <Link href="/service-areas" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Service Areas</Link>
             <Link href="/contact" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Contact</Link>
             <Link href="/become-a-driver" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Become a Driver</Link>
             <Link href="/faq" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">FAQ</Link>
             <div className="border-t my-2" />
-            <Link href="/quote" onClick={() => { setMobileOpen(false); if (typeof window !== 'undefined' && (window as any).gtag) (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }} className="block bg-primary-600 text-white text-center px-4 py-3 rounded-lg font-medium hover:bg-primary-700 transition">Get a Quote</Link>
+            <a href="tel:+16094568188" className="block px-2 py-2 text-teal-600 font-semibold">Call (609) 456-8188</a>
+            <div className="border-t my-2" />
+            <Link href="/quote" onClick={() => { setMobileOpen(false); if (typeof window !== 'undefined' && (window as any).gtag) (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }} className="block bg-orange-500 text-white text-center px-4 py-3 rounded-lg font-bold hover:bg-orange-600 transition">Get a Quote</Link>
           </div>
         </div>
       )}

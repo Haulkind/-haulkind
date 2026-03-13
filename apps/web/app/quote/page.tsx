@@ -1,82 +1,191 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function QuotePage() {
+const servicesList = [
+  {
+    id: 'haul-away',
+    title: 'Junk Removal',
+    desc: 'We haul it away and dispose of it. Furniture, appliances, yard waste, and general junk.',
+    price: 'Starting at $99',
+    priceNote: 'disposal included',
+    colorBg: 'bg-teal-50',
+    colorBorder: 'border-teal-500',
+    colorText: 'text-teal-600',
+    colorIconBg: 'bg-teal-100',
+    href: '/quote/haul-away/volume',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    ),
+  },
+  {
+    id: 'labor-only',
+    title: 'Moving Labor',
+    desc: 'Move items inside your home or load/unload a moving truck. Hourly help when you need muscle.',
+    price: 'Starting at $79/hr',
+    priceNote: 'equipment included',
+    colorBg: 'bg-blue-50',
+    colorBorder: 'border-blue-500',
+    colorText: 'text-blue-600',
+    colorIconBg: 'bg-blue-100',
+    href: '/quote/labor-only/hours',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'donation',
+    title: 'Donation Pickup',
+    desc: 'We pick up gently-used items and deliver them to local charities. Tax receipt available.',
+    price: 'Starting at $109',
+    priceNote: 'charity delivery included',
+    colorBg: 'bg-green-50',
+    colorBorder: 'border-green-500',
+    colorText: 'text-green-600',
+    colorIconBg: 'bg-green-100',
+    href: '/quote/haul-away/volume',
+    badge: 'New',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'assembly',
+    title: 'Furniture Assembly',
+    desc: 'Professional assembly for IKEA, Wayfair, Amazon furniture. We bring all tools needed.',
+    price: 'Starting at $89',
+    priceNote: 'tools & cleanup included',
+    colorBg: 'bg-orange-50',
+    colorBorder: 'border-orange-500',
+    colorText: 'text-orange-600',
+    colorIconBg: 'bg-orange-100',
+    href: '/quote/haul-away/volume',
+    badge: 'New',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+]
+
+function QuotePageInner() {
   const router = useRouter()
-  const [selectedService, setSelectedService] = useState<'HAUL_AWAY' | 'LABOR_ONLY' | null>(null)
+  const searchParams = useSearchParams()
+  const [selectedService, setSelectedService] = useState<string | null>(null)
 
-  const handleServiceSelect = (service: 'HAUL_AWAY' | 'LABOR_ONLY') => {
-    setSelectedService(service)
-    // Navigate to the appropriate flow
-    if (service === 'HAUL_AWAY') {
-      router.push('/quote/haul-away/volume')
-    } else {
-      router.push('/quote/labor-only/hours')
+  // Handle ?service= query param from service pages
+  useEffect(() => {
+    const serviceParam = searchParams.get('service')
+    if (serviceParam) {
+      const match = servicesList.find(s => s.id === serviceParam)
+      if (match) {
+        setSelectedService(match.id)
+        setTimeout(() => {
+          router.push(match.href)
+        }, 400)
+      }
     }
+  }, [searchParams, router])
+
+  const handleServiceSelect = (service: typeof servicesList[number]) => {
+    setSelectedService(service.id)
+    if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).gtag) {
+      ((window as unknown as Record<string, unknown>).gtag as (...args: unknown[]) => void)('event', 'ads_conversion_Solicitar_cota_o_1', {})
+    }
+    router.push(service.href)
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Get a Quote</h1>
-          <p className="text-xl text-gray-600">
-            Choose your service to get started
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Get Your Free Quote</h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Choose a service below to get an instant price estimate. No commitment required.
           </p>
         </div>
 
-        {/* Service Selection */}
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Haul Away */}
-          <button
-            onClick={() => handleServiceSelect('HAUL_AWAY')}
-            className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition text-left border-2 border-transparent hover:border-primary-600"
-          >
-            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold mb-4">Junk Removal (Haul Away)</h2>
-            <p className="text-gray-600 mb-6">
-              We haul it away and dispose of it. Perfect for furniture, appliances, yard waste, and general junk.
-            </p>
-            <div className="text-primary-600 font-semibold">
-              Starting at $99 — disposal included →
-            </div>
-          </button>
+        {/* Service Selection - 4 cards */}
+        <div className="grid sm:grid-cols-2 gap-6">
+          {servicesList.map((service) => {
+            const isSelected = selectedService === service.id
+            return (
+              <button
+                key={service.id}
+                onClick={() => handleServiceSelect(service)}
+                className={`relative bg-white rounded-xl shadow-md p-6 md:p-8 hover:shadow-xl transition-all text-left border-2 ${
+                  isSelected ? `${service.colorBorder} ${service.colorBg}` : 'border-transparent hover:border-gray-200'
+                }`}
+              >
+                {service.badge && (
+                  <span className={`absolute top-4 right-4 ${service.colorBg} ${service.colorText} px-2.5 py-0.5 rounded-full text-xs font-bold`}>
+                    {service.badge}
+                  </span>
+                )}
+                <div className={`w-14 h-14 ${service.colorIconBg} rounded-full flex items-center justify-center mb-4 ${service.colorText}`}>
+                  {service.icon}
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold mb-2">{service.title}</h2>
+                <p className="text-gray-600 text-sm mb-4">
+                  {service.desc}
+                </p>
+                <div className={`${service.colorText} font-semibold text-sm`}>
+                  {service.price} <span className="text-gray-400 font-normal">{' \u2014 '}{service.priceNote}</span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
 
-          {/* Labor Only */}
-          <button
-            onClick={() => handleServiceSelect('LABOR_ONLY')}
-            className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition text-left border-2 border-transparent hover:border-secondary-600"
+        {/* Phone fallback */}
+        <div className="mt-10 text-center">
+          <p className="text-gray-500 text-sm mb-3">Prefer to talk to a person?</p>
+          <a
+            href="tel:+16094568188"
+            className="inline-flex items-center gap-2 text-teal-600 font-semibold hover:text-teal-700 transition"
           >
-            <div className="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold mb-4">Labor Only (Help Moving)</h2>
-            <p className="text-gray-600 mb-6">
-              Move items inside your home or load/unload a moving truck. Hourly help when you need muscle, not removal.
-            </p>
-            <div className="text-secondary-600 font-semibold">
-              Starting at $79/hr →
-            </div>
-          </button>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+            Call (609) 456-8188
+          </a>
+        </div>
+
+        {/* Trust badges */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-gray-400 text-xs">
+          <span>No payment required</span>
+          <span className="hidden sm:inline">|</span>
+          <span>Free estimates</span>
+          <span className="hidden sm:inline">|</span>
+          <span>Same-day available</span>
+          <span className="hidden sm:inline">|</span>
+          <span>Licensed & insured</span>
         </div>
 
         {/* Back Link */}
-        <div className="text-center mt-12">
-          <Link href="/" className="text-gray-600 hover:text-gray-900 transition">
-            ← Back to Home
+        <div className="text-center mt-8">
+          <Link href="/" className="text-gray-500 hover:text-gray-700 transition text-sm">
+            {'← Back to Home'}
           </Link>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function QuotePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 py-12"><div className="container mx-auto px-4 text-center"><p className="text-gray-500">Loading...</p></div></div>}>
+      <QuotePageInner />
+    </Suspense>
   )
 }
