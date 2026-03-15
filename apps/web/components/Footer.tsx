@@ -9,8 +9,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company */}
           <div>
-            <Link href="/" className="inline-block mb-2">
-              <img src="/logo-full.svg" alt="HaulKind — Junk Removal & Hauling" className="h-8 w-auto brightness-0 invert" />
+            <Link href="/" className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 bg-teal-600 rounded-md flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-black text-xs tracking-tighter">HK</span>
+              </div>
+              <span className="text-lg font-extrabold tracking-tight">
+                <span className="text-white">Haul</span>
+                <span className="text-teal-400">Kind</span>
+              </span>
             </Link>
             <p className="text-sm mb-4">
               Fast local junk removal with transparent pricing in Pennsylvania, New Jersey &amp; New York. No memberships. Track your driver live.

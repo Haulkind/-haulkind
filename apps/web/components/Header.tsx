@@ -10,17 +10,18 @@ export default function Header() {
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/">
-          <img 
-            src="/logo-full.svg" 
-            alt="HaulKind — Junk Removal & Hauling" 
-            className="hidden md:block h-10 w-auto"
-          />
-          <img 
-            src="/favicon.svg" 
-            alt="HaulKind" 
-            className="block md:hidden h-8 w-8"
-          />
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-black text-sm tracking-tighter">HK</span>
+          </div>
+          <span className="hidden md:inline text-xl font-extrabold tracking-tight">
+            <span className="text-gray-900">Haul</span>
+            <span className="text-teal-600">Kind</span>
+          </span>
+          <span className="inline md:hidden text-lg font-extrabold tracking-tight">
+            <span className="text-gray-900">Haul</span>
+            <span className="text-teal-600">Kind</span>
+          </span>
         </Link>
         
         <div className="hidden md:flex items-center space-x-6">
