@@ -1,28 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <rect x="0" y="0" width="1024" height="1024" rx="200" fill="#FFFFFF"/>
-  <rect x="0" y="0" width="1024" height="1024" rx="200" fill="none" stroke="#E2E8F0" stroke-width="4"/>
-  <g transform="translate(55, 230) scale(5.6)">
-    <rect x="8" y="42" width="50" height="34" rx="3" fill="#0D9488"/>
-    <rect x="8" y="40" width="50" height="2.5" rx="1" fill="#F97316" opacity="0.7"/>
-    <circle cx="22" cy="80" r="7" fill="#1E293B"/>
-    <circle cx="22" cy="80" r="4" fill="#F97316" opacity="0.8"/>
-    <path d="M14 50 L30 50 L30 46 L40 59 L30 72 L30 68 L14 68 Z" fill="#F97316" opacity="0.88"/>
-    <rect x="58" y="66" width="14" height="3" rx="1.5" fill="#1E293B" opacity="0.3"/>
-    <rect x="72" y="48" width="30" height="28" rx="2" fill="#0D9488"/>
-    <rect x="72" y="45" width="30" height="4" rx="1.5" fill="#0D9488"/>
-    <text x="87" y="68" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="16" fill="#FFFFFF" opacity="0.95" letter-spacing="-1">HK</text>
-    <path d="M102 36 Q102 30 108 30 L130 30 Q136 30 138 36 L140 76 L102 76 Z" fill="#0D9488"/>
-    <path d="M106 38 Q106 34 110 34 L128 32 Q134 32 135 38 L136 50 L106 50 Z" fill="#FFFFFF" opacity="0.15"/>
-    <rect x="102" y="34" width="4" height="18" rx="1" fill="#0D9488"/>
-    <path d="M140 40 L154 38 Q158 38 158 44 L158 76 L140 76 Z" fill="#0D9488"/>
-    <rect x="154" y="40" width="5" height="24" rx="2" fill="#1E293B" opacity="0.25"/>
-    <rect x="155" y="41" width="4" height="4" rx="1.5" fill="#F97316" opacity="0.7"/>
-    <circle cx="86" cy="80" r="7" fill="#1E293B"/>
-    <circle cx="86" cy="80" r="4" fill="#F97316" opacity="0.8"/>
-    <circle cx="100" cy="80" r="7" fill="#1E293B"/>
-    <circle cx="100" cy="80" r="4" fill="#F97316" opacity="0.8"/>
-    <circle cx="148" cy="80" r="7" fill="#1E293B"/>
-    <circle cx="148" cy="80" r="4" fill="#F97316" opacity="0.8"/>
-    <rect x="20" y="95" width="110" height="2.5" rx="1.25" fill="#F97316" opacity="0.65"/>
-  </g>
+  <rect x="0" y="0" width="1024" height="1024" rx="200" fill="#0D9488"/>
+  <!-- 3D shadow layers -->
+  <text x="532" y="460" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="380" fill="#064E3B" opacity="0.4" letter-spacing="-30">HK</text>
+  <text x="526" y="454" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="380" fill="#065F46" opacity="0.3" letter-spacing="-30">HK</text>
+  <text x="520" y="448" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="380" fill="#047857" opacity="0.2" letter-spacing="-30">HK</text>
+  <!-- Black thin border -->
+  <text x="512" y="440" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="380" fill="#FFFFFF" stroke="#000000" stroke-width="12" letter-spacing="-30">HK</text>
+  <!-- White fill on top -->
+  <text x="512" y="440" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="380" fill="#FFFFFF" letter-spacing="-30">HK</text>
+  <!-- Arrow 3D shadow -->
+  <path d="M240 572 L510 572 L510 492 L800 692 L510 892 L510 812 L240 812 Z" fill="#064E3B" opacity="0.3"/>
+  <!-- Orange arrow -->
+  <path d="M230 560 L500 560 L500 480 L790 680 L500 880 L500 800 L230 800 Z" fill="#F97316"/>
+  <!-- Arrow highlight -->
+  <path d="M260 580 L480 580 L480 510 L730 670 L480 830 L480 760 L260 760 Z" fill="#FFA54F" opacity="0.2"/>
 </svg>
