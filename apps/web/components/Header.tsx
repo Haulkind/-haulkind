@@ -10,8 +10,17 @@ export default function Header() {
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold text-primary-600">
-          Haulkind
+        <Link href="/">
+          <img 
+            src="/logo-full.svg" 
+            alt="HaulKind — Junk Removal & Hauling" 
+            className="hidden md:block h-10 w-auto"
+          />
+          <img 
+            src="/favicon.svg" 
+            alt="HaulKind" 
+            className="block md:hidden h-8 w-8"
+          />
         </Link>
         
         <div className="hidden md:flex items-center space-x-6">

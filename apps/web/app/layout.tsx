@@ -39,22 +39,22 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haulkind.com',
     siteName: 'HaulKind',
-    title: 'HaulKind - Fast Local Junk Removal & Moving Help',
-    description: 'Affordable junk removal starting at $99, disposal included. Transparent pricing, live driver tracking, same-day service. Serving PA, NY & NJ. Get a free quote now!',
+    title: 'HaulKind — Fast, Fair Junk Removal',
+    description: 'Same-day junk removal, donation pickup & furniture assembly in PA, NJ & NY. Upfront pricing, GPS tracking, licensed & insured. Call (609) 456-8188',
     images: [
       {
-        url: '/haulkind_hero_truck.webp',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'HaulKind - Professional Junk Removal Service',
+        alt: 'HaulKind — Fast, Fair Junk Removal',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HaulKind - Fast Local Junk Removal & Moving Help',
-    description: 'Affordable junk removal starting at $99, disposal included. Transparent pricing, live driver tracking. Serving PA, NY & NJ.',
-    images: ['/haulkind_hero_truck.webp'],
+    title: 'HaulKind — Fast, Fair Junk Removal',
+    description: 'Same-day junk removal in PA, NJ & NY. Upfront pricing, GPS tracking.',
+    images: ['/og-image.png'],
   },
   robots: {
     index: true,
@@ -85,8 +85,8 @@ export default function RootLayout({
     name: 'HaulKind',
     description: 'Fast local junk removal and moving help with transparent pricing. Serving Pennsylvania, New York, and New Jersey.',
     url: 'https://haulkind.com',
-    logo: 'https://haulkind.com/haulkind_hero_truck.webp',
-    image: 'https://haulkind.com/haulkind_hero_truck.webp',
+    logo: 'https://haulkind.com/logo-full.svg',
+    image: 'https://haulkind.com/og-image.png',
     telephone: '+1-609-456-8188',
     email: 'support@haulkind.com',
     address: {
@@ -185,6 +185,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Favicon */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#0D9488" />
+        <link rel="manifest" href="/site.webmanifest" />
         {/* Preconnect to third-party domains for faster resource loading */}
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="preconnect" href="https://www.google-analytics.com" />
