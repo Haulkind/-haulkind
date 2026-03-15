@@ -511,7 +511,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const token = jwt.sign(
         { userId, email, role: 'driver', driverId },
         process.env.JWT_SECRET || 'secret',
-        { expiresIn: '7d' }
+        { expiresIn: '30d' }
       );
 
       console.log(`[DriversApply] New driver application: ${fullName} (${email}), status: ${driverStatus}, docs: ${hasDocuments ? 'yes' : 'no'}`);
@@ -613,7 +613,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const token = jwt.sign(
         { userId, email, role: 'driver', driverId },
         process.env.JWT_SECRET || 'secret',
-        { expiresIn: '7d' }
+        { expiresIn: '30d' }
       );
 
       res.json({ 
@@ -672,7 +672,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: 'driver', driverId: driver.id },
         process.env.JWT_SECRET || 'secret',
-        { expiresIn: '7d' }
+        { expiresIn: '30d' }
       );
 
       res.json({ 
@@ -925,17 +925,25 @@ export function registerDriverAuthRoutes(app: Express) {
       // Check if driver is approved before allowing to go online
       if (isOnlineVal) {
         const driverCheck = await pool.query(
-          'SELECT driver_status, is_active FROM drivers WHERE id = $1',
+          'SELECT status, driver_status, is_active FROM drivers WHERE id = $1',
           [decoded.driverId]
         );
         const driverData = driverCheck.rows[0];
-        if (driverData && driverData.driver_status !== 'approved') {
+        if (!driverData) {
+          return res.status(404).json({ error: 'Driver not found' });
+        }
+        // Accept if EITHER status or driver_status indicates approved/available/active
+        const mainStatus = (driverData.status || '').toLowerCase();
+        const drvStatus = (driverData.driver_status || '').toLowerCase();
+        const isApproved = ['approved', 'available', 'active'].includes(mainStatus) ||
+                           ['approved'].includes(drvStatus);
+        if (!isApproved) {
           return res.status(403).json({ 
             error: 'Your account is not yet approved. Please wait for admin approval before going online.',
-            driverStatus: driverData.driver_status || 'pending_review'
+            driverStatus: driverData.driver_status || driverData.status || 'pending_review'
           });
         }
-        if (driverData && driverData.is_active === false) {
+        if (driverData.is_active === false) {
           return res.status(403).json({ 
             error: 'Your account has been suspended. Please contact support.',
             driverStatus: 'suspended'

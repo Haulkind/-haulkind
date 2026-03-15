@@ -15,7 +15,7 @@ type OrderTab = 'today' | 'all' | 'new'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { token, driver, isLoading, updateDriver } = useAuth()
+  const { token, driver, isLoading, updateDriver, logout } = useAuth()
   const [isOnline, setIsOnline] = useState(false)
   const [statusLoaded, setStatusLoaded] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -68,7 +68,13 @@ export default function DashboardPage() {
         setIsOnline(online)
       }
       setStatusLoaded(true)
-    }).catch(() => setStatusLoaded(true))
+    }).catch((err: any) => {
+      if (err.status === 401) {
+        logout()
+        router.replace('/login')
+      }
+      setStatusLoaded(true)
+    })
   }, [token])
 
   // Poll for orders when online
@@ -133,8 +139,14 @@ export default function DashboardPage() {
       await setOnlineStatus(token, !isOnline, lat || undefined, lng || undefined)
       setIsOnline(!isOnline)
       if (isOnline) setAvailableOrders([])
-    } catch (err) {
-      alert('Failed to update status')
+    } catch (err: any) {
+      if (err.status === 401) {
+        alert('Session expired. Please log in again.')
+        logout()
+        router.replace('/login')
+      } else {
+        alert(err.message || 'Failed to update status')
+      }
     } finally {
       setToggling(false)
     }

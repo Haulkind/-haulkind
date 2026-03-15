@@ -39,7 +39,11 @@ export async function getProfile(token: string) {
   const res = await fetch(`${API_BASE}/driver/profile`, {
     headers: authHeaders(token),
   })
-  if (!res.ok) throw new Error('Failed to get profile')
+  if (!res.ok) {
+    const err = new Error('Failed to get profile') as Error & { status: number }
+    err.status = res.status
+    throw err
+  }
   return res.json() as Promise<{ driver: Driver }>
 }
 
@@ -60,7 +64,12 @@ export async function setOnlineStatus(token: string, online: boolean, lat?: numb
     headers: authHeaders(token),
     body: JSON.stringify({ is_online: online, lat, lng }),
   })
-  if (!res.ok) throw new Error('Failed to update status')
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    const err = new Error(data.error || 'Failed to update status') as Error & { status: number }
+    err.status = res.status
+    throw err
+  }
   return res.json()
 }
 
