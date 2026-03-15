@@ -9,7 +9,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company */}
           <div>
-            <h3 className="text-white font-bold text-lg mb-4">Haulkind</h3>
+            <Link href="/" className="inline-block mb-2">
+              <img src="/logo-full.svg" alt="HaulKind — Junk Removal & Hauling" className="h-8 w-auto brightness-0 invert" />
+            </Link>
             <p className="text-sm mb-4">
               Fast local junk removal with transparent pricing in Pennsylvania, New Jersey &amp; New York. No memberships. Track your driver live.
             </p>
