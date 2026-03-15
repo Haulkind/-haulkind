@@ -24,7 +24,7 @@ export default function Testimonials() {
 
         <div className="flex justify-center">
           <a
-            href="https://www.google.com/maps/place/HaulKind"
+            href="https://www.google.com/maps/place/HAULKIND/@40.4568002,-79.7494624,7z/data=!3m1!4b1!4m6!3m5!1s0x8845a863267654c7:0xefde381afa581531!8m2!3d40.4826448!4d-77.1100087!16s%2Fg%2F11n49qgx9f"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-blue-500 px-8 py-4 rounded-xl text-lg font-semibold text-gray-800 hover:text-blue-600 transition-all shadow-md hover:shadow-lg"
