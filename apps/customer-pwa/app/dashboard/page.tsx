@@ -50,7 +50,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-white">
           Hello, {customer?.name?.split(' ')[0] || 'there'}!
         </h1>
-        <p className="text-primary-200 mt-1">Welcome to Haulkind</p>
+        <p className="text-primary-200 mt-1">Welcome to HaulKind</p>
       </div>
 
       {/* Quick Actions */}

@@ -133,11 +133,9 @@ function TrackingContent() {
               {/* Install CTA */}
               <div className="p-6">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg">
-                    <span className="text-white text-2xl font-bold">H</span>
-                  </div>
+                  <img src="/app-icons/customer/app-icon-customer-192.png" alt="HaulKind" className="w-14 h-14 rounded-2xl shrink-0 shadow-lg" />
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">Install the Haulkind App</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Install the HaulKind App</h3>
                     <p className="text-sm text-gray-500">Track your order in real time</p>
                   </div>
                 </div>
@@ -264,11 +262,9 @@ function TrackingContent() {
           {/* PWA Install CTA (always visible) */}
           <div className="mt-8 p-6 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl text-white shadow-lg">
             <div className="flex items-start gap-4">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center shrink-0">
-                <span className="text-white text-2xl font-bold">H</span>
-              </div>
+              <img src="/app-icons/customer/app-icon-customer-192.png" alt="HaulKind" className="w-14 h-14 rounded-2xl shrink-0 shadow-lg" />
               <div className="flex-1">
-                <h3 className="font-bold text-lg mb-1">Download the Haulkind App</h3>
+                <h3 className="font-bold text-lg mb-1">Download the HaulKind App</h3>
                 <p className="text-sm text-blue-100 mb-4">
                   Track your driver in real time, get push notifications, and easily rebook. Free and instant — no app store needed!
                 </p>

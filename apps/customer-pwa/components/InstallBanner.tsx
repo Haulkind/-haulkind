@@ -65,11 +65,9 @@ export default function InstallBanner() {
       {/* Install Banner */}
       <div className="fixed bottom-20 left-4 right-4 bg-white rounded-2xl shadow-2xl p-4 z-50 border border-gray-200 animate-slide-up">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center shrink-0">
-            <span className="text-white text-xl font-bold">H</span>
-          </div>
+          <img src="/icons/icon-192.png" alt="HaulKind" className="w-12 h-12 rounded-xl shrink-0" />
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900">Install Haulkind</h3>
+            <h3 className="font-bold text-gray-900">Install HaulKind</h3>
             <p className="text-sm text-gray-500 mt-0.5">
               {isIOS
                 ? 'Add to your home screen for the best experience'
@@ -121,7 +119,7 @@ export default function InstallBanner() {
                 <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold shrink-0">3</div>
                 <div>
                   <p className="font-medium">Tap &quot;Add&quot;</p>
-                  <p className="text-sm text-gray-500">The Haulkind icon will appear on your home screen</p>
+                  <p className="text-sm text-gray-500">The HaulKind icon will appear on your home screen</p>
                 </div>
               </div>
             </div>
