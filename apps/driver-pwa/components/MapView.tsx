@@ -39,8 +39,9 @@ export default function MapView({ lat, lng }: MapViewProps) {
         attributionControl: false,
       }).setView([defaultLat, defaultLng], 11)
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
       }).addTo(map)
 
       // Blue dot for driver location
