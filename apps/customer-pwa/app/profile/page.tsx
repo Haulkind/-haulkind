@@ -142,7 +142,7 @@ export default function ProfilePage() {
 
         {/* App Info */}
         <div className="mt-8 text-center text-xs text-gray-400">
-          <p>Haulkind Customer App v1.0.0</p>
+          <p>HaulKind Customer App v1.0.0</p>
           <p className="mt-1">
             <a href="https://www.haulkind.com" target="_blank" rel="noopener noreferrer" className="underline">
               haulkind.com

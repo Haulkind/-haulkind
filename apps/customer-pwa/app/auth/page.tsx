@@ -76,10 +76,8 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-b from-primary-600 to-primary-800 flex flex-col items-center justify-center px-4">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <span className="text-3xl font-bold text-primary-600">H</span>
-        </div>
-        <h1 className="text-3xl font-bold text-white">Haulkind</h1>
+        <img src="/icons/icon-192.png" alt="HaulKind" className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-lg" />
+        <h1 className="text-3xl font-bold text-white">HaulKind</h1>
         <p className="text-primary-200 mt-1">Track your orders in real time</p>
       </div>
 

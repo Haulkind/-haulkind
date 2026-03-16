@@ -8,7 +8,7 @@ import InstallBanner from '@/components/InstallBanner'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Haulkind - Track Your Order',
+  title: 'HaulKind - Track Your Order',
   description: 'Track your junk removal order in real time, manage bookings, and get notifications.',
   manifest: '/manifest.json',
   robots: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Haulkind',
+    title: 'HaulKind',
   },
 }
 
@@ -27,7 +27,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#2563eb',
+  themeColor: '#0D9488',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
