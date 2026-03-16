@@ -295,7 +295,7 @@ function buildMapHtml(driverLat, driverLng, orders, radiusMiles) {
 <div id="map"></div>
 <script>
   var map = L.map('map', { zoomControl: false }).setView([${driverLat}, ${driverLng}], 10);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
 
   // Driver location
   L.circleMarker([${driverLat}, ${driverLng}], {
@@ -329,7 +329,7 @@ function buildDetailMapHtml(lat, lng) {
 <div id="map"></div>
 <script>
   var map = L.map('map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([${lat}, ${lng}], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
   L.marker([${lat}, ${lng}]).addTo(map);
 </script>
 </body></html>`;

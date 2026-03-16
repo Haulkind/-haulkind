@@ -37,7 +37,7 @@ export default function Pricing() {
             All-in pricing based on volume. Disposal included in every price.
           </p>
 
-          <div className="grid md:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
             {[
               { size: '1/8 Truck', items: '1–2 items', price: '$99', disposal: '$10' },
               { size: '1/4 Truck', items: '3–5 items', price: '$189', disposal: '$20' },
