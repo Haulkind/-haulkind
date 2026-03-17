@@ -197,6 +197,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="preconnect" href="https://www.google-analytics.com" />
         <link rel="preconnect" href="https://connect.facebook.net" />
+        <link rel="preconnect" href="https://www.clarity.ms" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="lazyOnload" />
@@ -235,6 +236,13 @@ export default function RootLayout({
         <noscript>
           <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=4348813218781671&ev=PageView&noscript=1" alt="Meta Pixel tracking" />
         </noscript>
+        <Script id="microsoft-clarity" strategy="afterInteractive">{`
+          (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window, document, "clarity", "script", "vx0i6awb5i");
+        `}</Script>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -102,6 +102,10 @@ function QuotePageInner() {
     if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).gtag) {
       ((window as unknown as Record<string, unknown>).gtag as (...args: unknown[]) => void)('event', 'ads_conversion_Solicitar_cota_o_1', {})
     }
+    if (typeof window !== 'undefined' && (window as any).clarity) {
+      (window as any).clarity('set', 'quote_submitted', 'true');
+      (window as any).clarity('set', 'service_type', service.id);
+    }
     router.push(service.href)
   }
 
