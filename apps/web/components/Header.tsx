@@ -58,11 +58,14 @@ export default function Header() {
           <Link href="/service-areas" className="text-gray-700 hover:text-primary-600 transition">
             Service Areas
           </Link>
+          <Link href="/blog" className="text-gray-700 hover:text-primary-600 transition">
+            Blog
+          </Link>
           <Link href="/contact" className="text-gray-700 hover:text-primary-600 transition">
             Contact
           </Link>
           <Link 
-            href="/quote" 
+            href="/quote"
             onClick={() => { if (typeof window !== 'undefined' && (window as any).gtag) (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {}); }}
             className="bg-orange-500 text-white px-6 py-2.5 rounded-lg hover:bg-orange-600 transition font-bold shadow-md animate-[pulse_3s_ease-in-out_infinite]"
           >
@@ -92,6 +95,7 @@ export default function Header() {
             <Link href="/service-areas" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Service Areas</Link>
             <Link href="/contact" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Contact</Link>
             <Link href="/become-a-driver" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Become a Driver</Link>
+            <Link href="/blog" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Blog</Link>
             <Link href="/faq" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">FAQ</Link>
             <div className="border-t my-2" />
             <a href="tel:+16094568188" className="block px-2 py-2 text-teal-600 font-semibold">Call (609) 456-8188</a>

@@ -9,6 +9,7 @@ import {
   CTASection,
   OurStory,
   ComparisonTable,
+  LatestBlog,
 } from '@/components/landing'
 
 export default function Home() {
@@ -52,6 +53,9 @@ export default function Home() {
 
       {/* Our Story - Founder narrative */}
       <OurStory />
+
+      {/* Latest from the Blog */}
+      <LatestBlog />
 
       {/* Final CTA */}
       <CTASection />

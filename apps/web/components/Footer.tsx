@@ -49,6 +49,7 @@ export default function Footer() {
               <li><Link href="/service-areas" className="hover:text-white transition">Service Areas</Link></li>
               <li><Link href="/become-a-driver" className="hover:text-white transition">Become a Driver</Link></li>
               <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition">Blog</Link></li>
               <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
             </ul>
           </div>

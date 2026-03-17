@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { SERVICES, CITIES } from '@/lib/seo-data'
+import { getAllPosts } from '@/lib/blog'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://haulkind.com'
@@ -105,5 +106,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
-  return [...corePages, ...localPages]
+  // Blog pages
+  const blogPosts = getAllPosts()
+  const blogIndex: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+  ]
+  const blogPostPages: MetadataRoute.Sitemap = blogPosts.map(post => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.updated || post.date),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }))
+
+  return [...corePages, ...blogIndex, ...blogPostPages, ...localPages]
 }
