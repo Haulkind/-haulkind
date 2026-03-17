@@ -34,6 +34,9 @@ function markdownToHtml(md: string): string {
     return `<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`
   })
 
+  // Horizontal rules
+  html = html.replace(/^---$/gm, '<hr />')
+
   // Headings
   html = html.replace(/^### (.+)$/gm, (_m, t: string) => `<h3 id="${slugify(t)}">${t}</h3>`)
   html = html.replace(/^## (.+)$/gm, (_m, t: string) => `<h2 id="${slugify(t)}">${t}</h2>`)

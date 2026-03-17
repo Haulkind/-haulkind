@@ -76,6 +76,27 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
     mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
   }
 
+  // FAQ JSON-LD — extract Q&A pairs from "Frequently Asked Questions" section
+  const faqRegex = /\*\*(.+?)\*\*\n\n([\s\S]*?)(?=\n\n\*\*|\n\n---)/g
+  const faqSection = post.content.split('## Frequently Asked Questions')[1] || ''
+  const faqs: { question: string; answer: string }[] = []
+  let faqMatch
+  while ((faqMatch = faqRegex.exec(faqSection)) !== null) {
+    faqs.push({ question: faqMatch[1].trim(), answer: faqMatch[2].trim() })
+  }
+  const faqJsonLd = faqs.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  } : null
+
   // Breadcrumb JSON-LD
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -91,6 +112,9 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {faqJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
 
       <article className="bg-gray-50 min-h-screen">
         {/* Featured image band */}
