@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const RAILWAY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 const TIMEOUT_MS = 8000;
@@ -7,6 +8,16 @@ const TIMEOUT_MS = 8000;
 const APPROVED_STATES = ['NJ', 'MA', 'PA', 'NY', 'CT'];
 
 export async function GET(request: NextRequest) {
+  // Rate limit: 30 lookups per minute per IP
+  const ip = getClientIp(request.headers);
+  const rl = checkRateLimit(`service-area:${ip}`, { limit: 30, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const lat = searchParams.get('lat');
   const lng = searchParams.get('lng');

@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const RAILWAY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 const TIMEOUT_MS = 15000;
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 job creations per minute per IP
+  const ip = getClientIp(request.headers);
+  const rl = checkRateLimit(`jobs:${ip}`, { limit: 10, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    );
+  }
+
   try {
     const body = await request.json();
     console.log('[JOBS_PROXY] Creating job:', JSON.stringify(body));

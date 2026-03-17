@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protection'
 
 type Step1Data = {
   firstName: string
@@ -36,6 +37,10 @@ export default function DriverApplicationPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const totalSteps = 3
+
+  // Bot protection: honeypot + timestamp
+  const [honeypot, setHoneypot] = useState('')
+  const formLoadedAt = useRef(getFormLoadTimestamp())
 
   // Step 1 data
   const [step1, setStep1] = useState<Step1Data>({
@@ -124,6 +129,16 @@ export default function DriverApplicationPage() {
   }
 
   const handleSubmitApplication = async () => {
+    // Bot protection check
+    const botError = validateBotProtection({
+      honeypotValue: honeypot,
+      formLoadedAt: formLoadedAt.current,
+    })
+    if (botError) {
+      setError(botError)
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -252,6 +267,20 @@ export default function DriverApplicationPage() {
                 {error}
               </div>
             )}
+
+            {/* Honeypot field — hidden from humans, bots auto-fill it */}
+            <div aria-hidden="true" tabIndex={-1} style={{ position: 'absolute', left: '-9999px', top: '-9999px', height: 0, overflow: 'hidden' }}>
+              <label htmlFor="hk_company">Leave this empty</label>
+              <input
+                type="text"
+                id="hk_company"
+                name="company"
+                autoComplete="off"
+                tabIndex={-1}
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
 
             {currentStep === 1 && (
               <div className="space-y-4">
