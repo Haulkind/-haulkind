@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
+import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protection'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
@@ -38,6 +39,10 @@ export default function HaulAwayLocationPage() {
   // TASK 3: Track if user has attempted to continue (for error display)
   const [hasAttemptedContinue, setHasAttemptedContinue] = useState(false)
   const [formIsValid, setFormIsValid] = useState(false)
+
+  // Bot protection: honeypot + timestamp
+  const [honeypot, setHoneypot] = useState('')
+  const formLoadedAt = useRef(getFormLoadTimestamp())
 
   // Force re-validation whenever form fields change
   useEffect(() => {
@@ -170,6 +175,16 @@ export default function HaulAwayLocationPage() {
     
     if (!asap && !serviceDate.trim()) {
       setError('Please select a service date or check ASAP')
+      return
+    }
+
+    // Bot protection check
+    const botError = validateBotProtection({
+      honeypotValue: honeypot,
+      formLoadedAt: formLoadedAt.current,
+    })
+    if (botError) {
+      setError(botError)
       return
     }
 
@@ -445,6 +460,20 @@ export default function HaulAwayLocationPage() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Honeypot field — hidden from humans, bots auto-fill it */}
+            <div aria-hidden="true" tabIndex={-1} style={{ position: 'absolute', left: '-9999px', top: '-9999px', height: 0, overflow: 'hidden' }}>
+              <label htmlFor="hk_website">Leave this empty</label>
+              <input
+                type="text"
+                id="hk_website"
+                name="website"
+                autoComplete="off"
+                tabIndex={-1}
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
             </div>
 
             {/* TASK 6: Continue button gated by form validation */}
