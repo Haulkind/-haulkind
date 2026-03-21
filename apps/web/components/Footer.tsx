@@ -35,6 +35,7 @@ export default function Footer() {
               <li><Link href="/services/cleanout" className="hover:text-white transition">Property Cleanouts</Link></li>
               <li><Link href="/services/commercial" className="hover:text-white transition">Commercial</Link></li>
               <li><Link href="/donation-pickup" className="hover:text-white transition">Donation Pickup</Link></li>
+              <li><Link href="/mattress-swap" className="hover:text-white transition">Mattress Swap</Link></li>
               <li><Link href="/assembly" className="hover:text-white transition">Furniture Assembly</Link></li>
               <li><Link href="/services/moving-labor" className="hover:text-white transition">Moving Labor</Link></li>
               <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
