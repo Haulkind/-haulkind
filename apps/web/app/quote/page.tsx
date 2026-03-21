@@ -58,16 +58,34 @@ const servicesList = [
     ),
   },
   {
+    id: 'mattress-swap',
+    title: 'Mattress Swap',
+    desc: 'We remove your old mattress and set up your new one in place. Heavy lifting done for you.',
+    price: 'Starting at $99',
+    priceNote: 'removal & setup included',
+    colorBg: 'bg-purple-50',
+    colorBorder: 'border-purple-500',
+    colorText: 'text-purple-600',
+    colorIconBg: 'bg-purple-100',
+    href: '/quote/mattress-swap',
+    badge: 'New',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
+  {
     id: 'assembly',
     title: 'Furniture Assembly',
     desc: 'Professional assembly for IKEA, Wayfair, Amazon furniture. We bring all tools needed.',
-    price: 'Starting at $89',
+    price: 'Starting at $87',
     priceNote: 'tools & cleanup included',
     colorBg: 'bg-orange-50',
     colorBorder: 'border-orange-500',
     colorText: 'text-orange-600',
     colorIconBg: 'bg-orange-100',
-    href: '/quote/haul-away/volume',
+    href: '/quote/assembly',
     badge: 'New',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

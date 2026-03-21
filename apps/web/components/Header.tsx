@@ -49,6 +49,9 @@ export default function Header() {
           <Link href="/donation-pickup" className="text-gray-700 hover:text-primary-600 transition">
             Donation Pickup
           </Link>
+          <Link href="/mattress-swap" className="text-gray-700 hover:text-primary-600 transition">
+            Mattress Swap
+          </Link>
           <Link href="/assembly" className="text-gray-700 hover:text-primary-600 transition">
             Assembly
           </Link>
@@ -89,6 +92,7 @@ export default function Header() {
             <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Junk Removal</Link>
             <Link href="/donation-pickup" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Donation Pickup</Link>
             <Link href="/assembly" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Furniture Assembly</Link>
+            <Link href="/mattress-swap" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Mattress Swap</Link>
             <Link href="/quote?service=labor-only" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Moving Labor</Link>
             <div className="border-t my-2" />
             <Link href="/pricing" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Pricing</Link>
