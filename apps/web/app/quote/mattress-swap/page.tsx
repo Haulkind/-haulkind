@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -26,8 +26,17 @@ export default function MattressSwapPage() {
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [selectedAddons, setSelectedAddons] = useState<string[]>([])
 
-  const servicePrice = services.find(s => s.id === selectedService)?.price || 0
-  const addonsTotal = addons.filter(a => selectedAddons.includes(a.id)).reduce((sum, a) => sum + a.price, 0)
+  const servicePrice = useMemo(() => {
+    const found = services.find(s => s.id === selectedService)
+    return found ? Number(found.price) : 0
+  }, [selectedService])
+
+  const addonsTotal = useMemo(() => {
+    return addons
+      .filter(a => selectedAddons.includes(a.id))
+      .reduce((sum, a) => sum + Number(a.price), 0)
+  }, [selectedAddons])
+
   const total = servicePrice + addonsTotal
 
   const toggleAddon = (id: string) => {
@@ -143,7 +152,7 @@ export default function MattressSwapPage() {
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Your estimated total</p>
-              <p className="text-2xl font-bold text-gray-900">${total}</p>
+              <p className="text-2xl font-bold text-gray-900">{'$'}{total}</p>
             </div>
             <div className="flex items-center gap-3">
               <a href="tel:+16094568188" className="text-sm text-gray-500 hover:text-gray-700 hidden sm:block">
