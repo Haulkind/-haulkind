@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { getOrderDetail } from '@/lib/api'
 import { getToken, isLoggedIn } from '@/lib/auth'
 import StatusTimeline from '@/components/StatusTimeline'
+import DriverTrackingMap from '@/components/DriverTrackingMap'
 
 export default function OrderDetailPage() {
   const router = useRouter()
@@ -140,27 +141,14 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* Driver Location Map Placeholder */}
-        {order.driver_location && (
-          <div className="bg-white rounded-xl p-4 shadow-sm">
-            <h2 className="font-bold text-gray-900 mb-3">Driver Location</h2>
-            <div className="bg-gray-100 rounded-lg h-48 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-3xl mb-2">📍</div>
-                <p className="text-sm text-gray-600">
-                  Last updated: {new Date(order.driver_location.updated_at).toLocaleTimeString()}
-                </p>
-                <a
-                  href={`https://www.google.com/maps?q=${order.driver_location.lat},${order.driver_location.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 text-sm font-medium mt-2 inline-block"
-                >
-                  View on Google Maps
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* Driver Location Map */}
+        {order.driver_location && order.pickup_lat && order.pickup_lng && (
+          <DriverTrackingMap
+            driverLocation={order.driver_location}
+            pickupLat={parseFloat(order.pickup_lat)}
+            pickupLng={parseFloat(order.pickup_lng)}
+            driverName={order.driver?.name}
+          />
         )}
 
         {/* Status Timeline */}
