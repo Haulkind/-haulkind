@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+/* Railway deploy trigger - snapshot timeout fix */
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
