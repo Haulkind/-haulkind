@@ -1309,14 +1309,16 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'lat and lng are required' });
       }
 
-      // Upsert: keep only latest location per driver (delete old + insert new)
-      await pool.query(
-        `DELETE FROM driver_locations WHERE driver_id = $1`,
-        [decoded.driverId]
-      );
+      // Upsert: keep only latest location per driver (atomic)
       await pool.query(
         `INSERT INTO driver_locations (driver_id, lat, lng, heading, speed, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (driver_id) DO UPDATE SET
+           lat = EXCLUDED.lat,
+           lng = EXCLUDED.lng,
+           heading = EXCLUDED.heading,
+           speed = EXCLUDED.speed,
+           updated_at = NOW()`,
         [decoded.driverId, lat, lng, heading || null, speed || null]
       );
 

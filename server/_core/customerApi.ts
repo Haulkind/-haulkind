@@ -143,6 +143,7 @@ export function registerCustomerApiRoutes(app: Express) {
         )
       `);
       try {
+        await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_driver_locations_driver_id ON driver_locations (driver_id, updated_at DESC)`);
       } catch (e) { /* ignore */ }
       console.log("[CustomerApi] driver_locations table ensured");

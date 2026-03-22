@@ -181,8 +181,6 @@ export default function DriverTrackingMap({
   useEffect(() => {
     if (!mapReady || !driverMarkerRef.current || !routeLineRef.current) return
 
-    const L = require('leaflet')
-
     // Animate marker to new position
     driverMarkerRef.current.setLatLng([driverLocation.lat, driverLocation.lng])
 
@@ -192,13 +190,15 @@ export default function DriverTrackingMap({
       [pickupLat, pickupLng],
     ])
 
-    // Optionally re-fit bounds if driver moved significantly
+    // Re-fit bounds to show both markers
     if (mapInstanceRef.current) {
-      const bounds = L.latLngBounds(
-        [driverLocation.lat, driverLocation.lng],
-        [pickupLat, pickupLng]
-      )
-      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], animate: true })
+      import('leaflet').then(({ default: L }) => {
+        const bounds = L.latLngBounds(
+          [driverLocation.lat, driverLocation.lng],
+          [pickupLat, pickupLng]
+        )
+        mapInstanceRef.current?.fitBounds(bounds, { padding: [50, 50], animate: true })
+      })
     }
   }, [driverLocation.lat, driverLocation.lng, pickupLat, pickupLng, mapReady])
 
