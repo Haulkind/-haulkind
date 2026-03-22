@@ -1296,6 +1296,37 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
+  // POST /driver/location - Update driver GPS location (persisted to DB)
+  app.post('/driver/location', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { lat, lng, heading, speed } = req.body;
+      if (lat == null || lng == null) {
+        return res.status(400).json({ error: 'lat and lng are required' });
+      }
+
+      // Upsert: keep only latest location per driver (delete old + insert new)
+      await pool.query(
+        `DELETE FROM driver_locations WHERE driver_id = $1`,
+        [decoded.driverId]
+      );
+      await pool.query(
+        `INSERT INTO driver_locations (driver_id, lat, lng, heading, speed, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [decoded.driverId, lat, lng, heading || null, speed || null]
+      );
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('Update driver location error:', err);
+      res.status(500).json({ error: 'Failed to update location' });
+    }
+  });
+
   // POST /driver/orders/:id/start-trip - Driver starts driving to pickup
   app.post('/driver/orders/:id/start-trip', async (req, res) => {
     try {

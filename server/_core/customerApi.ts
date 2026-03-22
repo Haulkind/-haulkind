@@ -45,6 +45,21 @@ function verifyCustomerToken(req: any): any {
   }
 }
 
+// Haversine formula to calculate distance between two GPS coordinates (in km)
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export function registerCustomerApiRoutes(app: Express) {
   // ================================================================
   // ENSURE TABLES EXIST
@@ -114,6 +129,23 @@ export function registerCustomerApiRoutes(app: Express) {
       } catch (e) {
         console.warn("[CustomerApi] Could not add tracking_token:", (e as any)?.message);
       }
+
+      // Ensure driver_locations table exists for real-time GPS tracking
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS driver_locations (
+          id SERIAL PRIMARY KEY,
+          driver_id TEXT NOT NULL,
+          lat DECIMAL(10,7) NOT NULL,
+          lng DECIMAL(10,7) NOT NULL,
+          heading DECIMAL(5,1),
+          speed DECIMAL(6,2),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      try {
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_driver_locations_driver_id ON driver_locations (driver_id, updated_at DESC)`);
+      } catch (e) { /* ignore */ }
+      console.log("[CustomerApi] driver_locations table ensured");
     } catch (e) {
       console.error("[CustomerApi] Table setup error:", (e as any)?.message);
     }
@@ -406,11 +438,28 @@ export function registerCustomerApiRoutes(app: Express) {
       ) {
         try {
           const locResult = await pool.query(
-            "SELECT lat, lng, updated_at FROM driver_locations WHERE driver_id = $1 ORDER BY updated_at DESC LIMIT 1",
+            "SELECT lat, lng, heading, speed, updated_at FROM driver_locations WHERE driver_id = $1 ORDER BY updated_at DESC LIMIT 1",
             [order.assigned_driver_id]
           );
           if (locResult.rows.length > 0) {
-            order.driver_location = locResult.rows[0];
+            const loc = locResult.rows[0];
+            const driverLat = parseFloat(loc.lat);
+            const driverLng = parseFloat(loc.lng);
+            const pickupLat = parseFloat(order.pickup_lat);
+            const pickupLng = parseFloat(order.pickup_lng);
+            const distanceKm = haversineDistance(driverLat, driverLng, pickupLat, pickupLng);
+            const distanceMiles = distanceKm * 0.621371;
+            const etaMinutes = Math.max(1, Math.round((distanceKm / 40) * 60));
+            order.driver_location = {
+              lat: driverLat,
+              lng: driverLng,
+              heading: loc.heading ? parseFloat(loc.heading) : null,
+              speed: loc.speed ? parseFloat(loc.speed) : null,
+              updated_at: loc.updated_at,
+              distance_km: Math.round(distanceKm * 10) / 10,
+              distance_miles: Math.round(distanceMiles * 10) / 10,
+              eta_minutes: etaMinutes,
+            };
           }
         } catch (e) {
           // driver_locations table may not exist yet
@@ -503,14 +552,31 @@ export function registerCustomerApiRoutes(app: Express) {
           // ignore
         }
 
-        // Get driver location
+        // Get driver location with distance + ETA
         try {
           const locResult = await pool.query(
-            "SELECT lat, lng, updated_at FROM driver_locations WHERE driver_id = $1 ORDER BY updated_at DESC LIMIT 1",
+            "SELECT lat, lng, heading, speed, updated_at FROM driver_locations WHERE driver_id = $1 ORDER BY updated_at DESC LIMIT 1",
             [order.assigned_driver_id]
           );
           if (locResult.rows.length > 0) {
-            order.driver_location = locResult.rows[0];
+            const loc = locResult.rows[0];
+            const driverLat = parseFloat(loc.lat);
+            const driverLng = parseFloat(loc.lng);
+            const pickupLat = parseFloat(order.pickup_lat);
+            const pickupLng = parseFloat(order.pickup_lng);
+            const distanceKm = haversineDistance(driverLat, driverLng, pickupLat, pickupLng);
+            const distanceMiles = distanceKm * 0.621371;
+            const etaMinutes = Math.max(1, Math.round((distanceKm / 40) * 60));
+            order.driver_location = {
+              lat: driverLat,
+              lng: driverLng,
+              heading: loc.heading ? parseFloat(loc.heading) : null,
+              speed: loc.speed ? parseFloat(loc.speed) : null,
+              updated_at: loc.updated_at,
+              distance_km: Math.round(distanceKm * 10) / 10,
+              distance_miles: Math.round(distanceMiles * 10) / 10,
+              eta_minutes: etaMinutes,
+            };
           }
         } catch (e) {
           // ignore
