@@ -65,7 +65,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-slide-up">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 max-w-md mx-auto">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 max-w-md mx-auto">
         {/* Close button */}
         <button
           onClick={handleDismiss}
