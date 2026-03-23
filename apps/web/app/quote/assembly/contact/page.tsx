@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createJob, createCheckoutSession } from '@/lib/api'
 
 export default function AssemblyContactPage() {
   const router = useRouter()
@@ -12,6 +13,7 @@ export default function AssemblyContactPage() {
   const [referral, setReferral] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [total, setTotal] = useState(87)
 
   useEffect(() => {
     const data = sessionStorage.getItem('assemblyData')
@@ -22,6 +24,9 @@ export default function AssemblyContactPage() {
     const parsed = JSON.parse(data)
     if (!parsed.schedule) {
       router.push('/quote/assembly/schedule')
+    }
+    if (parsed.total) {
+      setTotal(parsed.total)
     }
   }, [router])
 
@@ -57,31 +62,73 @@ export default function AssemblyContactPage() {
     }
     sessionStorage.setItem('assemblyData', JSON.stringify(finalData))
 
-    // Submit to backend
+    // Build description from selections
+    const itemLines = (existing.items || []).map((i: any) => `${i.label} x${i.qty}`).join(', ')
+    const customLine = existing.customItem ? `Custom: ${existing.customItem}` : ''
+    const scheduleLine = existing.schedule
+      ? `Date: ${existing.schedule.date}, Time: ${existing.schedule.time}, Floor: ${existing.schedule.floor}, ZIP: ${existing.schedule.zip}`
+      : ''
+    const storeLine = existing.schedule?.store ? `Store: ${existing.schedule.store}` : ''
+    const description = ['Furniture Assembly', itemLines, customLine, scheduleLine, storeLine].filter(Boolean).join(' | ')
+
+    // Build scheduledFor ISO from schedule data
+    let scheduledFor: string | undefined
+    if (existing.schedule?.date) {
+      const timeMap: Record<string, string> = {
+        morning: '09:00:00',
+        afternoon: '13:00:00',
+        evening: '17:00:00',
+        flexible: '10:00:00',
+      }
+      const timeStr = timeMap[existing.schedule.time] || '10:00:00'
+      scheduledFor = `${existing.schedule.date}T${timeStr}`
+    }
+
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'
-      await fetch(`${API_BASE_URL}/quotes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceType: 'assembly',
-          ...finalData,
-        }),
-      }).catch(() => {})
-    } catch {
-      // Silently continue to confirmation
-    }
+      // 1. Create the job in the database
+      const jobPayload: any = {
+        serviceType: 'HAUL_AWAY',
+        serviceAreaId: 1,
+        pickupLat: 0,
+        pickupLng: 0,
+        pickupAddress: existing.schedule?.zip ? `ZIP ${existing.schedule.zip}` : '',
+        scheduledFor: scheduledFor || new Date().toISOString(),
+        customerNotes: description,
+        customerName: fullName,
+        customerPhone: phone,
+        customerEmail: email,
+        timeWindow: existing.schedule?.time?.toUpperCase() || 'FLEXIBLE',
+        total: existing.total || 87,
+      }
+      const job = await createJob(jobPayload)
 
-    // Fire Google Ads conversion
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'conversion', {
-        send_to: 'AW-17988332947/ASSEMBLY',
-        value: existing.total || 87,
-        currency: 'USD',
-      })
-    }
+      // Fire Google Ads conversion
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          send_to: 'AW-17988332947/ASSEMBLY',
+          value: existing.total || 87,
+          currency: 'USD',
+        })
+      }
 
-    router.push('/quote/assembly/confirmation')
+      // 2. Create Stripe checkout session and redirect
+      const origin = window.location.origin
+      const checkout = await createCheckoutSession(
+        job.id,
+        `${origin}/quote/tracking?jobId=${job.id}&payment=success`,
+        `${origin}/quote/assembly/contact?payment=cancel`
+      )
+
+      if (checkout.url) {
+        window.location.href = checkout.url
+      } else {
+        throw new Error('No checkout URL returned')
+      }
+    } catch (err: any) {
+      console.error('[ASSEMBLY] Job/checkout failed:', err)
+      setError(err.message || 'Something went wrong. Please try again or call (609) 456-8188.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -171,7 +218,7 @@ export default function AssemblyContactPage() {
             disabled={loading}
             className="w-3/5 h-12 bg-orange-500 text-white rounded-lg font-bold text-lg hover:bg-orange-600 transition disabled:opacity-50"
           >
-            {loading ? 'Submitting...' : 'Get My Quote'}
+            {loading ? 'Processing...' : `Pay $${total}`}
           </button>
         </div>
       </div>
