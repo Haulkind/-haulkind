@@ -191,10 +191,8 @@ export default function DashboardPage() {
   // Get current tab orders
   // "All" tab = my assigned orders (today + scheduled), "New" = available unassigned, "Today" = today's assigned
   // Filter out orders that are already accepted/en_route/in_progress from "New" available tab
-  const filteredAvailable = availableOrders.filter(o => {
-    const s = o.status?.toLowerCase()
-    return s === 'pending' || s === 'dispatching'
-  })
+  // Show all available (unassigned) orders in "New" tab — including 'paid' status from Stripe checkout
+  const filteredAvailable = availableOrders
   const currentOrders = tab === 'today' ? todayOrders : tab === 'new' ? filteredAvailable : allOrders
 
   return (
