@@ -253,7 +253,7 @@ function isThisWeek(dateStr) {
   return orderDate >= startOfWeek && orderDate < endOfWeek;
 }
 
-function isNew(dateStr, hours = 4) {
+function isNew(dateStr, hours = 24) {
   if (!dateStr) return true;
   return (new Date() - new Date(dateStr)) / 3600000 < hours;
 }
@@ -650,7 +650,9 @@ export function HomeScreen({ navigation }) {
       // Today = only driver's own accepted/assigned orders for today
       setFilteredOrders([...myTodayOrders]);
     } else if (filter === "NEW") {
-      setFilteredOrders(orders.filter((o) => o.isNew));
+      // Show ALL available (unassigned) orders in NEW tab — same as ALL but labeled "New"
+      // This ensures cancelled orders that return to available always appear here
+      setFilteredOrders([...orders]);
     } else {
       // ALL = all available (unassigned) orders
       setFilteredOrders([...orders]);
