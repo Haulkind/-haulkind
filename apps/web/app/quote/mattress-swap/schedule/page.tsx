@@ -8,6 +8,9 @@ const PA_NJ_NY_ZIPS = /^(0[89]|1[0-4]|169|176|177|178|179|18[0-9]|19[0-5]|100|10
 
 export default function MattressSwapSchedulePage() {
   const router = useRouter()
+  const [street, setStreet] = useState('')
+  const [city, setCity] = useState('')
+  const [usState, setUsState] = useState('')
   const [zip, setZip] = useState('')
   const [zipError, setZipError] = useState('')
   const [date, setDate] = useState('')
@@ -45,8 +48,12 @@ export default function MattressSwapSchedulePage() {
   }
 
   const handleContinue = () => {
-    if (!zip || !date || !time || !floor || !mattressStatus) {
+    if (!street.trim() || !city.trim() || !usState.trim() || !zip || !date || !time || !floor || !mattressStatus) {
       setError('Please fill in all required fields.')
+      return
+    }
+    if (usState.length !== 2) {
+      setError('Please enter a valid 2-letter state code (e.g. PA, NJ, NY).')
       return
     }
     if (zip.length !== 5 || zipError) {
@@ -62,7 +69,7 @@ export default function MattressSwapSchedulePage() {
     const existing = JSON.parse(sessionStorage.getItem('mattressSwapData') || '{}')
     sessionStorage.setItem('mattressSwapData', JSON.stringify({
       ...existing,
-      schedule: { zip, date, time, floor, mattressStatus, arrivalDate, instructions },
+      schedule: { street: street.trim(), city: city.trim(), state: usState.trim().toUpperCase(), zip, date, time, floor, mattressStatus, arrivalDate, instructions },
     }))
     router.push('/quote/mattress-swap/contact')
   }
@@ -89,18 +96,53 @@ export default function MattressSwapSchedulePage() {
         )}
 
         <div className="bg-white rounded-xl shadow-md p-6 space-y-5">
-          {/* ZIP Code */}
+          {/* Street Address */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">ZIP Code *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Street Address *</label>
             <input
               type="text"
-              value={zip}
-              onChange={(e) => validateZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-              placeholder="19103"
-              maxLength={5}
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+              placeholder="123 Main St, Apt 4B"
               className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
-            {zipError && <p className="text-sm text-red-600 mt-1">{zipError}</p>}
+          </div>
+
+          {/* City, State, ZIP */}
+          <div className="grid grid-cols-10 gap-3">
+            <div className="col-span-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">City *</label>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Philadelphia"
+                className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">State *</label>
+              <input
+                type="text"
+                value={usState}
+                onChange={(e) => setUsState(e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="PA"
+                maxLength={2}
+                className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent uppercase"
+              />
+            </div>
+            <div className="col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">ZIP *</label>
+              <input
+                type="text"
+                value={zip}
+                onChange={(e) => validateZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                placeholder="19103"
+                maxLength={5}
+                className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              {zipError && <p className="text-sm text-red-600 mt-1">{zipError}</p>}
+            </div>
           </div>
 
           {/* Date */}

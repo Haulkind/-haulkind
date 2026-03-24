@@ -978,11 +978,12 @@ export function registerDriverAuthRoutes(app: Express) {
       }
 
       // Get pending orders from jobs table (primary)
+      // Include 'paid' status so Stripe-paid orders (mattress swap, assembly) are visible to drivers
       const jobsResult = await pool.query(
         `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                 pickup_address, pickup_lat, pickup_lng, description, estimated_price,
                 items_json, scheduled_for, pickup_time_window, photo_urls, created_at
-         FROM jobs WHERE status IN ('pending', 'dispatching') AND assigned_driver_id IS NULL
+         FROM jobs WHERE status IN ('pending', 'dispatching', 'paid') AND assigned_driver_id IS NULL
          ORDER BY created_at DESC LIMIT 20`
       );
 
@@ -996,7 +997,7 @@ export function registerDriverAuthRoutes(app: Express) {
                   '' as description,
                   COALESCE((pricing_json::jsonb->>'total')::numeric, 0) as estimated_price,
                   items_json::text, pickup_date as scheduled_for, created_at
-           FROM orders WHERE status IN ('pending', 'dispatching') AND assigned_driver_id IS NULL
+           FROM orders WHERE status IN ('pending', 'dispatching', 'paid') AND assigned_driver_id IS NULL
            ORDER BY created_at DESC LIMIT 20`
         );
         ordersRows = ordersResult.rows || [];
