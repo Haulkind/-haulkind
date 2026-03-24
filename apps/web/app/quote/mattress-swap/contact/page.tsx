@@ -62,13 +62,17 @@ export default function MattressSwapContactPage() {
     }
     sessionStorage.setItem('mattressSwapData', JSON.stringify(finalData))
 
+    // Build full address from schedule data
+    const sched = existing.schedule || {}
+    const fullAddress = sched.street
+      ? `${sched.street}, ${sched.city}, ${sched.state} ${sched.zip}`
+      : sched.zip ? `ZIP ${sched.zip}` : ''
+
     // Build description from selections
     const serviceLine = existing.service ? `${existing.service.label}` : 'Mattress Swap'
     const addonLines = (existing.addons || []).map((a: any) => a.label).join(', ')
-    const scheduleLine = existing.schedule
-      ? `Date: ${existing.schedule.date}, Time: ${existing.schedule.time}, Floor: ${existing.schedule.floor}, ZIP: ${existing.schedule.zip}`
-      : ''
-    const instructions = existing.schedule?.instructions || ''
+    const scheduleLine = `Date: ${sched.date}, Time: ${sched.time}, Floor: ${sched.floor}, Address: ${fullAddress}`
+    const instructions = sched.instructions || ''
     const description = [serviceLine, addonLines, scheduleLine, instructions].filter(Boolean).join(' | ')
 
     // Build scheduledFor ISO from schedule data
@@ -85,19 +89,38 @@ export default function MattressSwapContactPage() {
     }
 
     try {
+      // Geocode the address to get real coordinates for the driver
+      let pickupLat = 0
+      let pickupLng = 0
+      if (fullAddress && fullAddress !== `ZIP ${sched.zip}`) {
+        try {
+          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&countrycodes=us&limit=1`
+          const geocodeResp = await fetch(geocodeUrl, { headers: { 'User-Agent': 'Haulkind/1.0' } })
+          if (geocodeResp.ok) {
+            const geocodeData = await geocodeResp.json()
+            if (geocodeData && geocodeData.length > 0) {
+              pickupLat = parseFloat(geocodeData[0].lat)
+              pickupLng = parseFloat(geocodeData[0].lon)
+            }
+          }
+        } catch (geoErr) {
+          console.warn('[MATTRESS_SWAP] Geocoding failed, continuing without coords:', geoErr)
+        }
+      }
+
       // 1. Create the job in the database
       const jobPayload: any = {
         serviceType: 'HAUL_AWAY',
         serviceAreaId: 1,
-        pickupLat: 0,
-        pickupLng: 0,
-        pickupAddress: existing.schedule?.zip ? `ZIP ${existing.schedule.zip}` : '',
+        pickupLat,
+        pickupLng,
+        pickupAddress: fullAddress,
         scheduledFor: scheduledFor || new Date().toISOString(),
         customerNotes: description,
         customerName: fullName,
         customerPhone: phone,
         customerEmail: email,
-        timeWindow: existing.schedule?.time?.toUpperCase() || 'FLEXIBLE',
+        timeWindow: sched.time?.toUpperCase() || 'FLEXIBLE',
         total: existing.total || 99,
       }
       const job = await createJob(jobPayload)
