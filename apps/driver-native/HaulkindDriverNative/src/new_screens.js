@@ -9,7 +9,7 @@ import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-na
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import Geolocation from "@react-native-community/geolocation";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
@@ -494,7 +494,7 @@ export function SignupScreen({ navigation }) {
 // ============================================================================
 // HOME SCREEN - UBER/DOORDASH STYLE
 // ============================================================================
-export function HomeScreen({ navigation }) {
+export function HomeScreen({ navigation, route }) {
   const [isOnline, setIsOnline] = useState(false);
   const [orders, setOrders] = useState([]);
   const [myTodayOrders, setMyTodayOrders] = useState([]);
@@ -640,9 +640,21 @@ export function HomeScreen({ navigation }) {
   // Refresh immediately when screen gains focus (catches rescheduled/cancelled orders)
   useFocusEffect(
     useCallback(() => {
-      if (isOnline) fetchOrders();
-    }, [isOnline, driverLocation])
+      if (isOnline) {
+        // Small delay to ensure backend has committed the transaction
+        setTimeout(() => fetchOrders(), 300);
+      }
+    }, [isOnline, driverLocation, fetchOrders])
   );
+
+  // Force refresh when navigated back from cancel (ActiveOrderScreen passes refreshTs param)
+  useEffect(() => {
+    const refreshTs = route?.params?.refreshTs;
+    if (refreshTs && isOnline) {
+      console.log('[REFRESH] Force refresh triggered by cancel, ts:', refreshTs);
+      fetchOrders();
+    }
+  }, [route?.params?.refreshTs]);
 
   // Apply filter
   useEffect(() => {
@@ -1384,7 +1396,7 @@ export function ActiveOrderScreen({ route, navigation }) {
           try {
             await apiPostAuth(`/driver/orders/${orderId}/cancel`);
             Alert.alert("Cancelled", "Order has been cancelled.", [
-              { text: "OK", onPress: () => navigation.navigate("Home") }
+              { text: "OK", onPress: () => navigation.navigate("Home", { refreshTs: Date.now() }) }
             ]);
           } catch (e) {
             Alert.alert("Error", e.message || "Could not cancel order.");
