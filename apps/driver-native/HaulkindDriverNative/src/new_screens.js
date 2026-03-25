@@ -9,7 +9,7 @@ import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-na
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import Geolocation from "@react-native-community/geolocation";
-import { useFocusEffect, useRoute } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
@@ -513,6 +513,9 @@ export function HomeScreen({ navigation, route }) {
   const timerRef = useRef(null);
   const refreshRef = useRef(null);
   const watchIdRef = useRef(null);
+  const driverLocationRef = useRef(null);
+  const isOnlineRef = useRef(false);
+  const fetchOrdersRef = useRef(null);
 
   // Request location + start real-time tracking
   useEffect(() => {
@@ -565,8 +568,12 @@ export function HomeScreen({ navigation, route }) {
     })();
   }, []);
 
-  // Enrich orders with coords and distance
-  async function enrichOrders(rawOrders) {
+  // Keep refs in sync with state (avoids stale closures in setInterval/callbacks)
+  useEffect(() => { driverLocationRef.current = driverLocation; }, [driverLocation]);
+  useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
+
+  // Enrich orders with coords and distance (reads location from ref for freshness)
+  async function enrichOrdersWithLocation(rawOrders, loc) {
     return Promise.all(rawOrders.map(async (order) => {
       let coords = null;
       if (order.pickup_lat && order.pickup_lng) {
@@ -575,24 +582,29 @@ export function HomeScreen({ navigation, route }) {
         coords = await geocodeAddress(order.pickup_address);
       }
       let distance = null;
-      if (coords && driverLocation) {
-        distance = getDistanceMiles(driverLocation.latitude, driverLocation.longitude, coords.latitude, coords.longitude);
+      if (coords && loc) {
+        distance = getDistanceMiles(loc.latitude, loc.longitude, coords.latitude, coords.longitude);
       }
       return { ...order, coords, distance, isNew: isNew(order.created_at) };
     }));
   }
 
-  // Fetch orders (available + my orders for Today)
-  const fetchOrders = useCallback(async () => {
-    if (!isOnline) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); setLoading(false); return; }
+  // Fetch orders — reads latest state from refs, never stale
+  // This function is stored in fetchOrdersRef and updated every render
+  async function doFetchOrders() {
+    const online = isOnlineRef.current;
+    const loc = driverLocationRef.current;
+    if (!online) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); setLoading(false); return; }
     try {
       // Fetch available orders (unassigned) for ALL and NEW tabs
       const data = await apiGet("/driver/orders/available");
       const rawOrders = data?.orders || [];
-      const enriched = await enrichOrders(rawOrders);
+      console.log('[FETCH] Available orders from API:', rawOrders.length);
+      const enriched = await enrichOrdersWithLocation(rawOrders, loc);
 
       const withinRadius = enriched.filter((o) => o.distance === null || o.distance <= RADIUS_MILES);
       withinRadius.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+      console.log('[FETCH] After radius filter:', withinRadius.length, 'of', enriched.length);
 
       // Vibrate and show notification for new orders
       const currentIds = new Set(withinRadius.map((o) => o.id));
@@ -617,7 +629,7 @@ export function HomeScreen({ navigation, route }) {
       try {
         const myData = await apiGet("/driver/orders/my-orders");
         const myRaw = myData?.orders || [];
-        const myEnriched = await enrichOrders(myRaw);
+        const myEnriched = await enrichOrdersWithLocation(myRaw, loc);
         // Only keep today's orders for the TODAY tab
         const todayOnly = myEnriched.filter((o) => isToday(o.scheduled_for || o.created_at));
         todayOnly.sort((a, b) => (a.distance || 999) - (b.distance || 999));
@@ -629,30 +641,49 @@ export function HomeScreen({ navigation, route }) {
 
       setMapKey((k) => k + 1);
     } catch (e) { console.log("Fetch error:", e); } finally { setLoading(false); }
-  }, [isOnline, driverLocation]);
+  }
 
+  // Keep ref always pointing to latest doFetchOrders (captures latest closures)
+  fetchOrdersRef.current = doFetchOrders;
+
+  // Polling: only depends on isOnline — interval always calls latest ref
   useEffect(() => {
-    fetchOrders();
-    if (isOnline) refreshRef.current = setInterval(fetchOrders, REFRESH_INTERVAL);
-    return () => { if (refreshRef.current) clearInterval(refreshRef.current); };
-  }, [isOnline, driverLocation]);
+    if (isOnline) {
+      // Immediate fetch
+      fetchOrdersRef.current?.();
+      // Polling every REFRESH_INTERVAL
+      refreshRef.current = setInterval(() => {
+        fetchOrdersRef.current?.();
+      }, REFRESH_INTERVAL);
+    } else {
+      setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); setLoading(false);
+    }
+    return () => { if (refreshRef.current) { clearInterval(refreshRef.current); refreshRef.current = null; } };
+  }, [isOnline]);
+
+  // Also re-fetch when driverLocation first becomes available (for distance calc)
+  useEffect(() => {
+    if (driverLocation && isOnline) {
+      fetchOrdersRef.current?.();
+    }
+  }, [driverLocation]);
 
   // Refresh immediately when screen gains focus (catches rescheduled/cancelled orders)
   useFocusEffect(
     useCallback(() => {
-      if (isOnline) {
+      if (isOnlineRef.current) {
         // Small delay to ensure backend has committed the transaction
-        setTimeout(() => fetchOrders(), 300);
+        setTimeout(() => fetchOrdersRef.current?.(), 300);
       }
-    }, [isOnline, driverLocation, fetchOrders])
+    }, [])
   );
 
   // Force refresh when navigated back from cancel (ActiveOrderScreen passes refreshTs param)
   useEffect(() => {
     const refreshTs = route?.params?.refreshTs;
-    if (refreshTs && isOnline) {
+    if (refreshTs) {
       console.log('[REFRESH] Force refresh triggered by cancel, ts:', refreshTs);
-      fetchOrders();
+      setTimeout(() => fetchOrdersRef.current?.(), 500);
     }
   }, [route?.params?.refreshTs]);
 
@@ -674,7 +705,7 @@ export function HomeScreen({ navigation, route }) {
   // When switching to TODAY, refresh immediately (so rescheduled orders move right away)
   useEffect(() => {
     if (filter === "TODAY" && isOnline) {
-      fetchOrders();
+      fetchOrdersRef.current?.();
     }
   }, [filter, isOnline]);
 
