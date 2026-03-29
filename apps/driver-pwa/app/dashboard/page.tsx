@@ -320,21 +320,29 @@ export default function DashboardPage() {
 
                   {/* Action buttons for new/available orders */}
                   {tab === 'new' && (
-                    <div className="flex gap-3 mt-3">
+                    <div className="mt-3 space-y-2">
                       <button
-                        onClick={() => handleReject(String(order.id))}
-                        disabled={loading}
-                        className="flex-1 py-2.5 border-2 border-red-500 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition disabled:opacity-50"
+                        onClick={() => router.push(`/orders/${order.id}`)}
+                        className="w-full py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition border border-blue-200"
                       >
-                        Decline
+                        View Details
                       </button>
-                      <button
-                        onClick={() => handleAccept(String(order.id))}
-                        disabled={loading}
-                        className="flex-[2] py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50"
-                      >
-                        Accept Order
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleReject(String(order.id))}
+                          disabled={loading}
+                          className="flex-1 py-2.5 border-2 border-red-500 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition disabled:opacity-50"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          onClick={() => handleAccept(String(order.id))}
+                          disabled={loading}
+                          className="flex-[2] py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          Accept Order
+                        </button>
+                      </div>
                     </div>
                   )}
 
