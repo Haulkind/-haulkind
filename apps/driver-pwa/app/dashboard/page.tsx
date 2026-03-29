@@ -13,6 +13,24 @@ const POLL_INTERVAL = 10000
 
 type OrderTab = 'today' | 'all' | 'new'
 
+// Haversine distance in miles between two lat/lng pairs
+function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3958.8 // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// Check if a date string is today
+function isToday(dateStr: string | undefined | null): boolean {
+  if (!dateStr) return true
+  return new Date(dateStr).toDateString() === new Date().toDateString()
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const { token, driver, isLoading, updateDriver, logout } = useAuth()
@@ -157,9 +175,10 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       await acceptOrder(token, orderId)
+      // Remove from all lists immediately (optimistic update)
       setAvailableOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
+      setTodayOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
       setAllOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
-      await fetchAllData()
       router.push(`/orders/${orderId}`)
     } catch (err: any) {
       alert(err.message || 'Failed to accept order')
@@ -189,11 +208,18 @@ export default function DashboardPage() {
   const nearbyCount = availableOrders.length
 
   // Get current tab orders
-  // "All" tab = my assigned orders (today + scheduled), "New" = available unassigned, "Today" = today's assigned
-  // Filter out orders that are already accepted/en_route/in_progress from "New" available tab
-  // Show all available (unassigned) orders in "New" tab — including 'paid' status from Stripe checkout
+  // "New" tab = available unassigned orders
+  // "Today" tab = driver's accepted orders scheduled for TODAY only
+  // "All" tab = available unassigned orders (same pool as New, for browsing)
+  // Accepted/assigned orders disappear from All and Today — they go to My Orders / order detail
   const filteredAvailable = availableOrders
-  const currentOrders = tab === 'today' ? todayOrders : tab === 'new' ? filteredAvailable : allOrders
+  const todayFiltered = todayOrders.filter(o => {
+    // Only show today's orders
+    const scheduledFor = o.scheduled_for || o.scheduledFor
+    return isToday(scheduledFor)
+  })
+  // All tab shows available orders (unassigned), not the driver's accepted orders
+  const currentOrders = tab === 'today' ? todayFiltered : tab === 'new' ? filteredAvailable : availableOrders
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -201,7 +227,7 @@ export default function DashboardPage() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Map (full screen) */}
-      <MapView lat={lat} lng={lng} />
+      <MapView lat={lat} lng={lng} orders={currentOrders} />
 
       {/* Top bar overlay */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-primary-900/95 backdrop-blur-sm">
@@ -316,6 +342,12 @@ export default function DashboardPage() {
                     }
                     return null
                   })()}
+                  {/* Distance from driver */}
+                  {lat && lng && order.pickup_lat && order.pickup_lng && (
+                    <p className="text-xs text-blue-500 mt-1">
+                      📍 {getDistanceMiles(lat, lng, Number(order.pickup_lat), Number(order.pickup_lng)).toFixed(1)} mi away
+                    </p>
+                  )}
                   <p className="text-xs text-gray-400 mt-1">{formatTime(order)}</p>
 
                   {/* Action buttons for new/available orders */}

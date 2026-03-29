@@ -1,16 +1,48 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import type { Order } from '@/lib/api'
 
 interface MapViewProps {
   lat: number | null
   lng: number | null
+  orders?: Order[]
 }
 
-export default function MapView({ lat, lng }: MapViewProps) {
+// Haversine distance in miles
+function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3958.8
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function getOrderPrice(order: Order): string {
+  const ep = (order as any).estimated_price
+  if (ep && Number(ep) > 0) return Number(ep).toFixed(0)
+  if (order.driver_earnings && Number(order.driver_earnings) > 0) return Number(order.driver_earnings).toFixed(0)
+  if (order.payout && Number(order.payout) > 0) return Number(order.payout).toFixed(0)
+  if (order.driver_earnings_cents && order.driver_earnings_cents > 0) return (order.driver_earnings_cents / 100).toFixed(0)
+  const price = order.price || order.total || 0
+  if (Number(price) > 0) return Number(price).toFixed(0)
+  return '0'
+}
+
+function isNewOrder(dateStr?: string): boolean {
+  if (!dateStr) return true
+  return (Date.now() - new Date(dateStr).getTime()) / 3600000 < 24
+}
+
+export default function MapView({ lat, lng, orders = [] }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markerRef = useRef<any>(null)
+  const orderMarkersRef = useRef<any[]>([])
+  const leafletRef = useRef<any>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -19,6 +51,7 @@ export default function MapView({ lat, lng }: MapViewProps) {
     // Dynamically import leaflet
     const initMap = async () => {
       const L = (await import('leaflet')).default
+      leafletRef.current = L
 
       // Add leaflet CSS
       if (!document.getElementById('leaflet-css')) {
@@ -68,6 +101,8 @@ export default function MapView({ lat, lng }: MapViewProps) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
         markerRef.current = null
+        leafletRef.current = null
+        orderMarkersRef.current = []
       }
     }
   }, [])
@@ -79,6 +114,48 @@ export default function MapView({ lat, lng }: MapViewProps) {
     mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom())
   }, [lat, lng])
 
+  // Update order markers when orders change
+  useEffect(() => {
+    const L = leafletRef.current
+    const map = mapInstanceRef.current
+    if (!L || !map) return
+
+    // Remove existing order markers
+    orderMarkersRef.current.forEach(m => map.removeLayer(m))
+    orderMarkersRef.current = []
+
+    // Add markers for orders with coordinates
+    const bounds: [number, number][] = []
+    if (lat && lng) bounds.push([lat, lng])
+
+    orders.forEach(order => {
+      const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
+      const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
+      if (!oLat || !oLng) return
+
+      const price = getOrderPrice(order)
+      const dist = (lat && lng) ? getDistanceMiles(lat, lng, oLat, oLng).toFixed(1) + 'mi' : ''
+      const isNew = isNewOrder(order.created_at)
+      const bgColor = isNew ? '#ef4444' : '#1a56db'
+
+      const icon = L.divIcon({
+        className: 'order-pin',
+        html: `<div style="background:${bgColor};color:#fff;padding:4px 8px;border-radius:8px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">$${price} <span style="font-size:10px;font-weight:normal;">${dist}</span></div>`,
+        iconSize: [80, 30],
+        iconAnchor: [40, 30],
+      })
+
+      const marker = L.marker([oLat, oLng], { icon }).addTo(map)
+      orderMarkersRef.current.push(marker)
+      bounds.push([oLat, oLng])
+    })
+
+    // Fit bounds if we have order markers
+    if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [40, 40] })
+    }
+  }, [orders, lat, lng, loaded])
+
   return (
     <div ref={mapRef} className="absolute inset-0 z-0" style={{ background: '#e8e8e8' }}>
       {!loaded && (
@@ -86,6 +163,10 @@ export default function MapView({ lat, lng }: MapViewProps) {
           <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
+      <style jsx global>{`
+        .order-pin { background: none !important; border: none !important; }
+        .driver-marker { background: none !important; border: none !important; }
+      `}</style>
     </div>
   )
 }
