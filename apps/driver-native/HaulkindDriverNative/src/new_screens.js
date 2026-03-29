@@ -923,6 +923,7 @@ export function HomeScreen({ navigation, route }) {
     const isMyOrder = myTodayOrders.some((m) => m.id === o.id);
 
     return (
+      <>
       <Modal visible={showDetail} animationType="slide" transparent={false}>
         <View style={styles.detailContainer}>
           <StatusBar barStyle="dark-content" backgroundColor={C.white} />
@@ -1068,6 +1069,7 @@ export function HomeScreen({ navigation, route }) {
           </View>
         </Modal>
       )}
+      </>
     );
   }
 
