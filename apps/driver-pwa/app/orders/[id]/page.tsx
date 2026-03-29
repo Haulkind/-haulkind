@@ -100,6 +100,9 @@ export default function OrderDetailPage() {
         case 'cancel':
           if (confirm('Are you sure you want to cancel this order?')) {
             await cancelOrder(token, String(order.id))
+            // Navigate back to dashboard immediately so driver sees updated lists
+            router.replace('/dashboard')
+            return
           } else {
             setActing(false)
             return
