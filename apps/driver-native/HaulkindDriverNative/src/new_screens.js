@@ -1508,7 +1508,7 @@ export function OrderDetailScreen({ route, navigation }) {
           </View>
         </Modal>
       )}
-      {/* Bottom Buttons */
+      {/* Bottom Buttons */}
       <View style={{ flexDirection: "row", padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border, position: "absolute", bottom: 0, left: 0, right: 0 }}>
         <TouchableOpacity style={{ flex: 1, borderRadius: 12, paddingVertical: 16, alignItems: "center", borderWidth: 2, borderColor: C.danger, marginRight: 12 }} onPress={handleDecline} disabled={declining}>
           <Text style={{ color: C.danger, fontSize: 16, fontWeight: "bold" }}>Decline</Text>
