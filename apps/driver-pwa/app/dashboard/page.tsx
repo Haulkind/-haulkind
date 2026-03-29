@@ -13,13 +13,43 @@ const POLL_INTERVAL = 10000
 
 type OrderTab = 'today' | 'all' | 'new'
 
+// Shared AudioContext — created on first user interaction to comply with browser autoplay policy
+let _audioCtx: AudioContext | null = null
+function getAudioContext(): AudioContext | null {
+  try {
+    if (!_audioCtx) {
+      _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    // Resume if suspended (browser suspends until user gesture)
+    if (_audioCtx.state === 'suspended') {
+      _audioCtx.resume()
+    }
+    return _audioCtx
+  } catch (e) {
+    console.log('[PWA Sound] AudioContext error:', e)
+    return null
+  }
+}
+
+// Warm up AudioContext on first user interaction (click/touch)
+if (typeof window !== 'undefined') {
+  const warmUp = () => {
+    getAudioContext()
+    window.removeEventListener('click', warmUp)
+    window.removeEventListener('touchstart', warmUp)
+  }
+  window.addEventListener('click', warmUp, { once: true })
+  window.addEventListener('touchstart', warmUp, { once: true })
+}
+
 // Play a notification beep using Web Audio API (works on all browsers, no sound file needed)
 function playNotificationBeep() {
   try {
     const settings = JSON.parse(localStorage.getItem('driver_settings') || '{}')
     if (settings.sound === false) return
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    // Play two quick beeps
+    const ctx = getAudioContext()
+    if (!ctx) return
+    // Play three quick ascending beeps
     const playTone = (startTime: number, freq: number, duration: number) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -27,14 +57,15 @@ function playNotificationBeep() {
       gain.connect(ctx.destination)
       osc.frequency.value = freq
       osc.type = 'sine'
-      gain.gain.setValueAtTime(0.5, startTime)
+      gain.gain.setValueAtTime(0.6, startTime)
       gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration)
       osc.start(startTime)
       osc.stop(startTime + duration)
     }
     playTone(ctx.currentTime, 880, 0.15)
     playTone(ctx.currentTime + 0.2, 1100, 0.15)
-    playTone(ctx.currentTime + 0.4, 880, 0.15)
+    playTone(ctx.currentTime + 0.4, 1320, 0.2)
+    console.log('[PWA Sound] Beep played')
   } catch (e) {
     console.log('[PWA Sound] Error:', e)
   }

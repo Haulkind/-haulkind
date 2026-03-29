@@ -35,20 +35,23 @@ async function ensureNotificationChannel() {
   try {
     await notifee.deleteChannel('haulkind_orders');
     await notifee.deleteChannel('haulkind_orders_v2');
+    await notifee.deleteChannel('haulkind_orders_v3');
   } catch (_) {}
-  // Create fresh channel with default system sound (guaranteed to work)
+  // Create fresh channel with custom sound from res/raw/notification_sound.wav
+  // Android notification channels are immutable once created — must delete+recreate to change sound
   notifChannelId = await notifee.createChannel({
-    id: 'haulkind_orders_v3',
+    id: 'haulkind_orders_v4',
     name: 'New Orders',
     description: 'Notifications for new available orders',
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: 'default',
+    sound: 'notification_sound',
     vibration: true,
     vibrationPattern: [0, 500, 200, 500],
     lights: true,
     badge: true,
   });
+  console.log('[NOTIF] Channel created:', notifChannelId);
   return notifChannelId;
 }
 
@@ -75,25 +78,48 @@ async function requestNotificationPermission() {
 
 // Play the custom notification sound in-app (works even when app is in foreground)
 function playNotificationSound() {
+  console.log('[SOUND] Attempting to play notification sound...');
   try {
     // Android res/raw files must be referenced WITHOUT extension
-    const sound = new Sound('notification_sound', Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        console.log('[SOUND] Failed to load notification_sound, trying default', error);
-        // Fallback: try default system sound
-        const fallback = new Sound('default', Sound.MAIN_BUNDLE, (err2) => {
-          if (!err2) { fallback.setVolume(1.0); fallback.play(() => fallback.release()); }
-        });
-        return;
-      }
-      sound.setVolume(1.0);
-      sound.play((success) => {
-        sound.release();
-        console.log('[SOUND] Sound played:', success);
+    // Try with Sound.MAIN_BUNDLE first, then with null (both map to res/raw on Android)
+    const tryPlay = (basePath, label) => {
+      return new Promise((resolve) => {
+        try {
+          const s = new Sound('notification_sound', basePath, (error) => {
+            if (error) {
+              console.log(`[SOUND] ${label} failed:`, error?.message || error);
+              resolve(false);
+              return;
+            }
+            console.log(`[SOUND] ${label} loaded, duration:`, s.getDuration());
+            s.setVolume(1.0);
+            s.play((success) => {
+              console.log(`[SOUND] ${label} play result:`, success);
+              s.release();
+              resolve(success);
+            });
+          });
+        } catch (e) {
+          console.log(`[SOUND] ${label} constructor error:`, e);
+          resolve(false);
+        }
       });
+    };
+    // Try MAIN_BUNDLE first, then null as fallback
+    tryPlay(Sound.MAIN_BUNDLE, 'MAIN_BUNDLE').then((ok) => {
+      if (!ok) {
+        console.log('[SOUND] Trying null basePath...');
+        tryPlay(null, 'null-basePath').then((ok2) => {
+          if (!ok2) {
+            console.log('[SOUND] All attempts failed, using Vibration as last resort');
+            Vibration.vibrate([0, 300, 150, 300, 150, 300]);
+          }
+        });
+      }
     });
   } catch (e) {
     console.log('[SOUND] Sound play error:', e);
+    Vibration.vibrate([0, 300, 150, 300, 150, 300]);
   }
 }
 
@@ -113,12 +139,14 @@ async function showNewOrderNotification(orderCount, firstOrder) {
 
     // Play in-app sound explicitly (notification channel sound may not play when app is in foreground)
     const soundEnabled = await AsyncStorage.getItem('notif_sound');
+    console.log('[NOTIF] Sound enabled:', soundEnabled, '(null=default=true)');
     if (soundEnabled !== 'false') {
       playNotificationSound();
     }
 
     // Check vibration preference and vibrate explicitly
     const vibrationEnabled = await AsyncStorage.getItem('notif_vibration');
+    console.log('[NOTIF] Vibration enabled:', vibrationEnabled, '(null=default=true)');
     if (vibrationEnabled !== 'false') {
       Vibration.vibrate([0, 500, 200, 500, 200, 500]);
     }
@@ -130,10 +158,10 @@ async function showNewOrderNotification(orderCount, firstOrder) {
         channelId,
         importance: AndroidImportance.HIGH,
         visibility: AndroidVisibility.PUBLIC,
-        sound: soundEnabled !== 'false' ? 'notification_sound' : undefined,
+        sound: 'notification_sound',
         pressAction: { id: 'default' },
         smallIcon: 'ic_launcher',
-        vibrationPattern: vibrationEnabled !== 'false' ? [0, 500, 200, 500] : undefined,
+        vibrationPattern: [0, 500, 200, 500],
         lights: ["#1a56db", 300, 600],
         timestamp: Date.now(),
         showTimestamp: true,
@@ -686,8 +714,9 @@ export function HomeScreen({ navigation, route }) {
       console.log('[FETCH] After radius filter:', withinRadius.length, 'of', enriched.length);
 
       // Vibrate and show notification for new orders
-      const currentIds = new Set(withinRadius.map((o) => o.id));
-      const brandNew = withinRadius.filter((o) => !previousOrderIdsRef.current.has(o.id));
+      // Coerce IDs to string to avoid Set type mismatch (API may return number or string)
+      const currentIds = new Set(withinRadius.map((o) => String(o.id)));
+      const brandNew = withinRadius.filter((o) => !previousOrderIdsRef.current.has(String(o.id)));
       if (brandNew.length > 0 && hasCompletedFirstFetchRef.current) {
         console.log('[NOTIF] New orders detected:', brandNew.length, 'IDs:', brandNew.map(o => o.id));
         // Vibrate explicitly (backup — notifee channel also vibrates)
@@ -695,10 +724,16 @@ export function HomeScreen({ navigation, route }) {
         if (vibEnabled !== 'false') {
           Vibration.vibrate([0, 500, 200, 500]);
         }
-        // Show system notification with sound (notifee handles sound via channel)
-        showNewOrderNotification(brandNew.length, brandNew[0]);
+        // Show system notification with sound — await to catch errors
+        try {
+          await showNewOrderNotification(brandNew.length, brandNew[0]);
+        } catch (notifErr) {
+          console.log('[NOTIF] Notification error:', notifErr);
+        }
       } else if (!hasCompletedFirstFetchRef.current) {
         console.log('[NOTIF] First fetch, populating', currentIds.size, 'order IDs');
+      } else {
+        console.log('[NOTIF] No new orders this poll. Current:', currentIds.size, 'Previous:', previousOrderIdsRef.current.size);
       }
       hasCompletedFirstFetchRef.current = true;
       previousOrderIdsRef.current = currentIds;
