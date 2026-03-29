@@ -28,7 +28,7 @@ export default function OrdersPage() {
   const [actionSuccess, setActionSuccess] = useState('');
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
   const [mediaModalOrder, setMediaModalOrder] = useState<Order | null>(null);
-  const [mediaTab, setMediaTab] = useState<'photos' | 'signature'>('photos');
+  const [mediaTab, setMediaTab] = useState<'photos' | 'completion' | 'signature'>('photos');
   const [mediaData, setMediaData] = useState<{ completion_photos: string | null; signature_data: string | null; photo_urls: string | null } | null>(null);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
@@ -463,56 +463,60 @@ export default function OrdersPage() {
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {order.status !== 'cancelled' && order.status !== 'completed' && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleAssignClick(order)}
-                          className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
-                          title="Assign to a driver"
-                        >
-                          Assign
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleClick(order)}
-                          className="px-2 py-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded hover:bg-amber-100"
-                          title="Change date/time"
-                        >
-                          Reschedule
-                        </button>
-                        <button
-                          onClick={() => handleCancelClick(order)}
-                          className="px-2 py-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
-                          title="Cancel this order"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                    {order.status === 'completed' && (
-                      <div className="flex gap-1">
-                        {(order.has_completion_photos || order.has_photo_urls) && (
+                    <div className="flex gap-1 flex-wrap">
+                      {order.status !== 'cancelled' && order.status !== 'completed' && (
+                        <>
                           <button
-                            onClick={async () => { setMediaModalOrder(order); setMediaTab('photos'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
-                            className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100"
-                            title="View completion photos"
+                            onClick={() => handleAssignClick(order)}
+                            className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100"
+                            title="Assign to a driver"
                           >
-                            Photos
+                            Assign
                           </button>
-                        )}
-                        {order.has_signature && (
                           <button
-                            onClick={async () => { setMediaModalOrder(order); setMediaTab('signature'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
-                            className="px-2 py-1 text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded hover:bg-violet-100"
-                            title="View customer signature"
+                            onClick={() => handleRescheduleClick(order)}
+                            className="px-2 py-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded hover:bg-amber-100"
+                            title="Change date/time"
                           >
-                            Signature
+                            Reschedule
                           </button>
-                        )}
-                        {!order.has_completion_photos && !order.has_photo_urls && !order.has_signature && (
-                          <span className="text-xs text-gray-400">No media</span>
-                        )}
-                      </div>
-                    )}
+                          <button
+                            onClick={() => handleCancelClick(order)}
+                            className="px-2 py-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                            title="Cancel this order"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {order.has_photo_urls && (
+                        <button
+                          onClick={async () => { setMediaModalOrder(order); setMediaTab('photos'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
+                          className="px-2 py-1 text-xs bg-sky-50 text-sky-700 border border-sky-200 rounded hover:bg-sky-100"
+                          title="View customer photos"
+                        >
+                          Customer Photos
+                        </button>
+                      )}
+                      {order.status === 'completed' && order.has_completion_photos && (
+                        <button
+                          onClick={async () => { setMediaModalOrder(order); setMediaTab('completion'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
+                          className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100"
+                          title="View completion photos"
+                        >
+                          Completion Photos
+                        </button>
+                      )}
+                      {order.status === 'completed' && order.has_signature && (
+                        <button
+                          onClick={async () => { setMediaModalOrder(order); setMediaTab('signature'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
+                          className="px-2 py-1 text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded hover:bg-violet-100"
+                          title="View customer signature"
+                        >
+                          Signature
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -632,6 +636,16 @@ export default function OrdersPage() {
                 onClick={() => setMediaTab('photos')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 ${
                   mediaTab === 'photos'
+                    ? 'border-sky-500 text-sky-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Customer Photos
+              </button>
+              <button
+                onClick={() => setMediaTab('completion')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  mediaTab === 'completion'
                     ? 'border-emerald-500 text-emerald-700'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
@@ -650,18 +664,13 @@ export default function OrdersPage() {
               </button>
             </div>
 
-            {/* Photos Tab */}
+            {/* Customer Photos Tab */}
             {mediaTab === 'photos' && (
               <div>
                 {mediaLoading ? (
                   <p className="text-gray-500 text-sm">Loading photos...</p>
                 ) : (() => {
                   const photos: string[] = [];
-                  if (mediaData?.completion_photos) {
-                    mediaData.completion_photos.split('|||').forEach((p: string) => {
-                      if (p.trim()) photos.push(p.trim());
-                    });
-                  }
                   if (mediaData?.photo_urls) {
                     try {
                       const parsed = JSON.parse(mediaData.photo_urls);
@@ -675,19 +684,56 @@ export default function OrdersPage() {
                     }
                   }
                   if (photos.length === 0) {
+                    return <p className="text-gray-500 text-sm">No customer photos available for this order.</p>;
+                  }
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {photos.map((photo, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => window.open(photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`), '_blank')}>
+                          <img
+                            src={photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`)}
+                            alt={`Customer photo ${idx + 1}`}
+                            className="w-full h-auto object-contain max-h-80"
+                          />
+                          <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
+                            <span>Photo {idx + 1} of {photos.length}</span>
+                            <span className="text-sky-600">Click to enlarge</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Completion Photos Tab */}
+            {mediaTab === 'completion' && (
+              <div>
+                {mediaLoading ? (
+                  <p className="text-gray-500 text-sm">Loading photos...</p>
+                ) : (() => {
+                  const photos: string[] = [];
+                  if (mediaData?.completion_photos) {
+                    mediaData.completion_photos.split('|||').forEach((p: string) => {
+                      if (p.trim()) photos.push(p.trim());
+                    });
+                  }
+                  if (photos.length === 0) {
                     return <p className="text-gray-500 text-sm">No completion photos available for this order.</p>;
                   }
                   return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {photos.map((photo, idx) => (
-                        <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => window.open(photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`), '_blank')}>
                           <img
                             src={photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`)}
                             alt={`Completion photo ${idx + 1}`}
                             className="w-full h-auto object-contain max-h-80"
                           />
-                          <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500">
-                            Photo {idx + 1} of {photos.length}
+                          <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
+                            <span>Photo {idx + 1} of {photos.length}</span>
+                            <span className="text-emerald-600">Click to enlarge</span>
                           </div>
                         </div>
                       ))}
