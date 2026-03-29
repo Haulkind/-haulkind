@@ -509,6 +509,7 @@ export function HomeScreen({ navigation, route }) {
   const previousOrderIdsRef = useRef(new Set());
   const hasCompletedFirstFetchRef = useRef(false);
   const [mapKey, setMapKey] = useState(0);
+  const [fullScreenPhoto, setFullScreenPhoto] = useState(null);
 
   const timerRef = useRef(null);
   const refreshRef = useRef(null);
@@ -915,15 +916,36 @@ export function HomeScreen({ navigation, route }) {
               if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
               return (
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>CUSTOMER PHOTOS ({photoArr.length})</Text>
+                  <Text style={styles.detailSectionTitle}>CUSTOMER PHOTOS ({photoArr.length}) — Tap to enlarge</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
                     {photoArr.map((url, idx) => (
-                      <Image key={idx} source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                      <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(url)} activeOpacity={0.8}>
+                        <Image source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                      </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
               );
             })() : null}
+
+            {/* Fullscreen Photo Viewer */}
+            {fullScreenPhoto && (
+              <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
+                <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
+                  <TouchableOpacity
+                    style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 20, width: 40, height: 40, justifyContent: "center", alignItems: "center" }}
+                    onPress={() => setFullScreenPhoto(null)}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>✕</Text>
+                  </TouchableOpacity>
+                  <Image
+                    source={{ uri: fullScreenPhoto }}
+                    style={{ width: SCREEN_WIDTH - 20, height: SCREEN_WIDTH - 20, borderRadius: 12 }}
+                    resizeMode="contain"
+                  />
+                </View>
+              </Modal>
+            )}
 
             <View style={styles.detailSection}>
               <Text style={styles.detailSectionTitle}>PICKUP LOCATION</Text>
