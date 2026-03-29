@@ -259,6 +259,28 @@ function isNew(dateStr, hours = 24) {
 }
 
 // ============================================================================
+// PHOTO HELPERS
+// ============================================================================
+function normalizePhotoUri(url) {
+  if (!url || typeof url !== "string") return null;
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("data:")) return url;
+  return "data:image/jpeg;base64," + url;
+}
+
+function parsePhotoUrls(raw) {
+  if (!raw) return [];
+  let arr = [];
+  try {
+    arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch (e) {
+    if (typeof raw === "string") arr = raw.split("|||").filter(Boolean);
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr.map(normalizePhotoUri).filter(Boolean);
+}
+
+// ============================================================================
 // LEAFLET MAP HTML
 // ============================================================================
 function buildMapHtml(driverLat, driverLng, orders, radiusMiles) {
@@ -910,23 +932,22 @@ export function HomeScreen({ navigation, route }) {
             ) : null}
 
             {/* Customer Photos */}
-            {o.photo_urls ? (() => {
-              let photoArr = [];
-              try { photoArr = typeof o.photo_urls === "string" ? JSON.parse(o.photo_urls) : o.photo_urls; } catch (e) {}
-              if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
+            {(() => {
+              const photoArr = parsePhotoUrls(o.photo_urls);
+              if (photoArr.length === 0) return null;
               return (
                 <View style={styles.detailSection}>
                   <Text style={styles.detailSectionTitle}>CUSTOMER PHOTOS ({photoArr.length}) — Tap to enlarge</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                    {photoArr.map((url, idx) => (
-                      <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(url)} activeOpacity={0.8}>
-                        <Image source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                    {photoArr.map((uri, idx) => (
+                      <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(uri)} activeOpacity={0.8}>
+                        <Image source={{ uri }} style={{ width: 100, height: 100, borderRadius: 10, marginRight: 8 }} resizeMode="cover" />
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
               );
-            })() : null}
+            })()}
 
             {/* Fullscreen Photo Viewer */}
             {fullScreenPhoto && (
@@ -1394,23 +1415,22 @@ export function OrderDetailScreen({ route, navigation }) {
         </View>
 
         {/* Customer Photos */}
-        {order?.photo_urls ? (() => {
-          let photoArr = [];
-          try { photoArr = typeof order.photo_urls === "string" ? JSON.parse(order.photo_urls) : order.photo_urls; } catch (e) {}
-          if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
+        {(() => {
+          const photoArr = parsePhotoUrls(order?.photo_urls);
+          if (photoArr.length === 0) return null;
           return (
             <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
               <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 8 }}>CUSTOMER PHOTOS ({photoArr.length}) — Tap to enlarge</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {photoArr.map((url, idx) => (
-                  <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(url)} activeOpacity={0.8}>
-                    <Image source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                {photoArr.map((uri, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(uri)} activeOpacity={0.8}>
+                    <Image source={{ uri }} style={{ width: 100, height: 100, borderRadius: 10, marginRight: 8 }} resizeMode="cover" />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
           );
-        })() : null}
+        })()}
       </ScrollView>
 
       {/* Fullscreen Photo Viewer */}
@@ -1747,23 +1767,22 @@ export function ActiveOrderScreen({ route, navigation }) {
         </View>
 
         {/* Customer Photos */}
-        {order?.photo_urls ? (() => {
-          let photoArr = [];
-          try { photoArr = typeof order.photo_urls === "string" ? JSON.parse(order.photo_urls) : order.photo_urls; } catch (e) {}
-          if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
+        {(() => {
+          const photoArr = parsePhotoUrls(order?.photo_urls);
+          if (photoArr.length === 0) return null;
           return (
             <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
               <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 8 }}>CUSTOMER PHOTOS ({photoArr.length}) — Tap to enlarge</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {photoArr.map((url, idx) => (
-                  <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(url)} activeOpacity={0.8}>
-                    <Image source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                {photoArr.map((uri, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(uri)} activeOpacity={0.8}>
+                    <Image source={{ uri }} style={{ width: 100, height: 100, borderRadius: 10, marginRight: 8 }} resizeMode="cover" />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
           );
-        })() : null}
+        })()}
 
         {/* Photo preview */}
         {photoUri ? (
@@ -1971,14 +1990,13 @@ export function MyOrdersScreen({ navigation }) {
               <Text style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>📍 {o.pickup_address || "Address pending"}</Text>
               <Text style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>📅 {formatDate(o.scheduled_for || o.created_at)} • {formatTimeWindow(o)}</Text>
               {o.customer_name && <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>👤 {o.customer_name}</Text>}
-              {o.photo_urls ? (() => {
-                let pArr = [];
-                try { pArr = typeof o.photo_urls === "string" ? JSON.parse(o.photo_urls) : o.photo_urls; } catch (e) {}
-                if (Array.isArray(pArr) && pArr.length > 0) {
+              {(() => {
+                const pArr = parsePhotoUrls(o.photo_urls);
+                if (pArr.length > 0) {
                   return <Text style={{ fontSize: 12, color: C.primary, marginTop: 2 }}>📷 {pArr.length} customer photo{pArr.length > 1 ? "s" : ""}</Text>;
                 }
                 return null;
-              })() : null}
+              })()}
               <View style={{ flexDirection: "row", marginTop: 12, gap: 8 }}>
                 <TouchableOpacity
                   style={{ flex: 2, backgroundColor: C.primary, borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
