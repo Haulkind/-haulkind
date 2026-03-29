@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
-const POLL_INTERVAL = 10000
+const POLL_INTERVAL = 5000
 
 type OrderTab = 'today' | 'all' | 'new'
 
@@ -126,6 +126,7 @@ export default function DashboardPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const previousOrderIdsRef = useRef<Set<string>>(new Set())
   const hasCompletedFirstFetchRef = useRef(false)
+  const fetchAllDataRef = useRef<(() => Promise<void>) | null>(null)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
@@ -193,23 +194,32 @@ export default function DashboardPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [isOnline, token])
 
-  // Fetch orders on mount
+  // Re-fetch immediately when page/tab becomes visible (handles returning from cancel, app switch, etc.)
   useEffect(() => {
-    if (token) {
-      fetchTodayOrders()
-      fetchAllOrders()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && isOnline && token) {
+        fetchAllDataRef.current?.()
+      }
     }
-  }, [token])
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [isOnline, token])
 
   const fetchAllData = useCallback(async () => {
     if (!token) return
     try {
-      const [available, today, all] = await Promise.all([
+      // Only 2 API calls: available orders + driver's own orders
+      // Backend ignores filter param, so one call to getMyOrders is enough
+      const [available, myOrders] = await Promise.all([
         getAvailableOrders(token).catch(() => ({ orders: [] as Order[] })),
-        getMyOrders(token, 'today').catch(() => ({ orders: [] as Order[] })),
         getMyOrders(token, 'all').catch(() => ({ orders: [] as Order[] })),
       ])
       const newAvailable = available.orders || []
+      const myOrdersList = myOrders.orders || []
       // Detect brand-new orders and notify
       const currentIds = new Set(newAvailable.map((o: Order) => String(o.id)))
       if (hasCompletedFirstFetchRef.current) {
@@ -222,32 +232,16 @@ export default function DashboardPage() {
       hasCompletedFirstFetchRef.current = true
       previousOrderIdsRef.current = currentIds
       setAvailableOrders(newAvailable)
-      setTodayOrders(today.orders || [])
-      setAllOrders(all.orders || [])
+      // Driver's own active orders (assigned/accepted, not completed/cancelled)
+      setAllOrders(myOrdersList)
+      setTodayOrders(myOrdersList)
     } catch (err) {
       console.error('Fetch orders error:', err)
     }
   }, [token])
 
-  const fetchTodayOrders = useCallback(async () => {
-    if (!token) return
-    try {
-      const data = await getMyOrders(token, 'today')
-      setTodayOrders(data.orders || [])
-    } catch (err) {
-      console.error('Fetch today orders error:', err)
-    }
-  }, [token])
-
-  const fetchAllOrders = useCallback(async () => {
-    if (!token) return
-    try {
-      const data = await getMyOrders(token, 'all')
-      setAllOrders(data.orders || [])
-    } catch (err) {
-      console.error('Fetch all orders error:', err)
-    }
-  }, [token])
+  // Keep ref in sync so visibility/focus listeners can call latest version
+  fetchAllDataRef.current = fetchAllData
 
   const toggleOnline = async () => {
     if (!token) return
@@ -274,10 +268,10 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       await acceptOrder(token, orderId)
-      // Remove from all lists immediately (optimistic update)
+      // Remove from available immediately (optimistic update)
       setAvailableOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
-      setTodayOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
-      setAllOrders(prev => prev.filter(o => String(o.id) !== String(orderId)))
+      // Force refresh to pick up the order in my-orders lists
+      fetchAllData()
       router.push(`/orders/${orderId}`)
     } catch (err: any) {
       alert(err.message || 'Failed to accept order')
@@ -306,19 +300,17 @@ export default function DashboardPage() {
 
   const nearbyCount = availableOrders.length
 
-  // Get current tab orders
-  // "New" tab = available unassigned orders
-  // "Today" tab = driver's accepted orders scheduled for TODAY only
-  // "All" tab = available unassigned orders (same pool as New, for browsing)
-  // Accepted/assigned orders disappear from All and Today — they go to My Orders / order detail
-  const filteredAvailable = availableOrders
+  // Tab logic (matches native app behavior):
+  // "New" tab = available unassigned orders (pending, no driver assigned)
+  // "Today" tab = driver's OWN accepted orders scheduled for TODAY only
+  // "All" tab = driver's OWN active orders (all dates, assigned/accepted)
+  // After cancel: order disappears from All/Today, appears in New
+  // After accept: order disappears from New, appears in All/Today
   const todayFiltered = todayOrders.filter(o => {
-    // Only show today's orders
     const scheduledFor = o.scheduled_for || o.scheduledFor
     return isToday(scheduledFor)
   })
-  // All tab shows available orders (unassigned), not the driver's accepted orders
-  const currentOrders = tab === 'today' ? todayFiltered : tab === 'new' ? filteredAvailable : availableOrders
+  const currentOrders = tab === 'today' ? todayFiltered : tab === 'new' ? availableOrders : allOrders
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -401,9 +393,9 @@ export default function DashboardPage() {
               <p className="text-lg font-bold text-gray-900">
                 {tab === 'new' && !isOnline ? 'Go online to see new orders' : 'No orders nearby'}
               </p>
-              <p className="text-sm text-gray-400 mt-1">
-                {tab === 'new' ? 'Orders within 80 miles will appear here' : 'Check back soon'}
-              </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {tab === 'new' ? 'Orders within 80 miles will appear here' : tab === 'today' ? 'No accepted orders for today' : tab === 'all' ? 'Accept orders from the New tab' : 'Check back soon'}
+                </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -449,43 +441,43 @@ export default function DashboardPage() {
                   )}
                   <p className="text-xs text-gray-400 mt-1">{formatTime(order)}</p>
 
-                  {/* Action buttons for new/available orders */}
-                  {tab === 'new' && (
-                    <div className="mt-3 space-y-2">
-                      <button
-                        onClick={() => router.push(`/orders/${order.id}`)}
-                        className="w-full py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition border border-blue-200"
-                      >
-                        View Details
-                      </button>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => handleReject(String(order.id))}
-                          disabled={loading}
-                          className="flex-1 py-2.5 border-2 border-red-500 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition disabled:opacity-50"
-                        >
-                          Decline
-                        </button>
-                        <button
-                          onClick={() => handleAccept(String(order.id))}
-                          disabled={loading}
-                          className="flex-[2] py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          Accept Order
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                          {/* Action buttons for new/available orders */}
+                          {tab === 'new' && (
+                            <div className="mt-3 space-y-2">
+                              <button
+                                onClick={() => router.push(`/orders/${order.id}`)}
+                                className="w-full py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition border border-blue-200"
+                              >
+                                View Details
+                              </button>
+                              <div className="flex gap-3">
+                                <button
+                                  onClick={() => handleReject(String(order.id))}
+                                  disabled={loading}
+                                  className="flex-1 py-2.5 border-2 border-red-500 text-red-500 rounded-xl font-bold text-sm hover:bg-red-50 transition disabled:opacity-50"
+                                >
+                                  Decline
+                                </button>
+                                <button
+                                  onClick={() => handleAccept(String(order.id))}
+                                  disabled={loading}
+                                  className="flex-[2] py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition disabled:opacity-50"
+                                >
+                                  Accept Order
+                                </button>
+                              </div>
+                            </div>
+                          )}
 
-                  {/* Tap to view for today/all orders */}
-                  {tab !== 'new' && (
-                    <button
-                      onClick={() => router.push(`/orders/${order.id}`)}
-                      className="w-full mt-3 py-2 text-sm text-primary-600 font-semibold hover:bg-primary-50 rounded-lg transition"
-                    >
-                      View Details
-                    </button>
-                  )}
+                          {/* View details / manage for today/all (driver's own orders) */}
+                          {tab !== 'new' && (
+                            <button
+                              onClick={() => router.push(`/orders/${order.id}`)}
+                              className="w-full mt-3 py-2 text-sm text-primary-600 font-semibold hover:bg-primary-50 rounded-lg transition"
+                            >
+                              {tab === 'all' || tab === 'today' ? 'Manage Order' : 'View Details'}
+                            </button>
+                          )}
                 </div>
               ))}
             </div>
