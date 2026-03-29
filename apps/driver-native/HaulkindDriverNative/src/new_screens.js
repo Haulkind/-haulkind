@@ -14,8 +14,12 @@ import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
 import { launchCamera } from "react-native-image-picker";
+import Sound from "react-native-sound";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+// Configure Sound to play even in silent mode
+Sound.setCategory("Playback");
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const RADIUS_MILES = 80;
 const REFRESH_INTERVAL = 15000;
 const ACCEPT_TIMER_SECONDS = 60;
@@ -69,6 +73,29 @@ async function requestNotificationPermission() {
   }
 }
 
+// Play the custom notification sound in-app (works even when app is in foreground)
+function playNotificationSound() {
+  try {
+    const sound = new Sound('notification_sound.wav', Sound.MAIN_BUNDLE, (error) => {
+      if (error) {
+        console.log('[SOUND] Failed to load sound, trying default', error);
+        // Fallback: try default system sound
+        const fallback = new Sound('default', Sound.MAIN_BUNDLE, (err2) => {
+          if (!err2) { fallback.setVolume(1.0); fallback.play(() => fallback.release()); }
+        });
+        return;
+      }
+      sound.setVolume(1.0);
+      sound.play((success) => {
+        sound.release();
+        console.log('[SOUND] Sound played:', success);
+      });
+    });
+  } catch (e) {
+    console.log('[SOUND] Sound play error:', e);
+  }
+}
+
 async function showNewOrderNotification(orderCount, firstOrder) {
   try {
     // Check user preferences
@@ -83,6 +110,18 @@ async function showNewOrderNotification(orderCount, firstOrder) {
       ? `$${price} — ${address}`
       : `$${price} and ${orderCount - 1} more order${orderCount > 2 ? 's' : ''}`;
 
+    // Play in-app sound explicitly (notification channel sound may not play when app is in foreground)
+    const soundEnabled = await AsyncStorage.getItem('notif_sound');
+    if (soundEnabled !== 'false') {
+      playNotificationSound();
+    }
+
+    // Check vibration preference and vibrate explicitly
+    const vibrationEnabled = await AsyncStorage.getItem('notif_vibration');
+    if (vibrationEnabled !== 'false') {
+      Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+    }
+
     await notifee.displayNotification({
       title,
       body,
@@ -90,13 +129,14 @@ async function showNewOrderNotification(orderCount, firstOrder) {
         channelId,
         importance: AndroidImportance.HIGH,
         visibility: AndroidVisibility.PUBLIC,
-        sound: 'default',
+        sound: soundEnabled !== 'false' ? 'notification_sound' : undefined,
         pressAction: { id: 'default' },
         smallIcon: 'ic_launcher',
-        vibrationPattern: [0, 500, 200, 500],
+        vibrationPattern: vibrationEnabled !== 'false' ? [0, 500, 200, 500] : undefined,
         lights: ["#1a56db", 300, 600],
         timestamp: Date.now(),
         showTimestamp: true,
+        fullScreenAction: { id: 'default' },
       },
     });
     console.log('[NOTIF] Notification displayed successfully:', title);
@@ -883,6 +923,7 @@ export function HomeScreen({ navigation, route }) {
     const isMyOrder = myTodayOrders.some((m) => m.id === o.id);
 
     return (
+      <>
       <Modal visible={showDetail} animationType="slide" transparent={false}>
         <View style={styles.detailContainer}>
           <StatusBar barStyle="dark-content" backgroundColor={C.white} />
@@ -949,25 +990,6 @@ export function HomeScreen({ navigation, route }) {
               );
             })()}
 
-            {/* Fullscreen Photo Viewer */}
-            {fullScreenPhoto && (
-              <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
-                <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
-                  <TouchableOpacity
-                    style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 20, width: 40, height: 40, justifyContent: "center", alignItems: "center" }}
-                    onPress={() => setFullScreenPhoto(null)}
-                  >
-                    <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>✕</Text>
-                  </TouchableOpacity>
-                  <Image
-                    source={{ uri: fullScreenPhoto }}
-                    style={{ width: SCREEN_WIDTH - 20, height: SCREEN_WIDTH - 20, borderRadius: 12 }}
-                    resizeMode="contain"
-                  />
-                </View>
-              </Modal>
-            )}
-
             <View style={styles.detailSection}>
               <Text style={styles.detailSectionTitle}>PICKUP LOCATION</Text>
               <Text style={styles.detailSectionValue}>{o.pickup_address || "Address pending"}</Text>
@@ -1027,6 +1049,27 @@ export function HomeScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Fullscreen Photo Viewer — rendered outside detail modal's ScrollView to avoid Android rendering issues */}
+      {fullScreenPhoto && (
+        <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)", justifyContent: "center", alignItems: "center" }}>
+            <TouchableOpacity
+              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 20, width: 44, height: 44, justifyContent: "center", alignItems: "center" }}
+              onPress={() => setFullScreenPhoto(null)}
+            >
+              <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>✕</Text>
+            </TouchableOpacity>
+            <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
+            <Image
+              source={{ uri: fullScreenPhoto }}
+              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_HEIGHT * 0.7, borderRadius: 8 }}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+      )}
+      </>
     );
   }
 
@@ -1436,16 +1479,17 @@ export function OrderDetailScreen({ route, navigation }) {
       {/* Fullscreen Photo Viewer */}
       {fullScreenPhoto && (
         <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)", justifyContent: "center", alignItems: "center" }}>
             <TouchableOpacity
-              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 20, width: 40, height: 40, justifyContent: "center", alignItems: "center" }}
+              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 20, width: 44, height: 44, justifyContent: "center", alignItems: "center" }}
               onPress={() => setFullScreenPhoto(null)}
             >
-              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>✕</Text>
+              <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>✕</Text>
             </TouchableOpacity>
+            <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
             <Image
               source={{ uri: fullScreenPhoto }}
-              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_WIDTH - 20, borderRadius: 12 }}
+              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_HEIGHT * 0.7, borderRadius: 8 }}
               resizeMode="contain"
             />
           </View>
@@ -1803,16 +1847,17 @@ export function ActiveOrderScreen({ route, navigation }) {
       {/* Fullscreen Photo Viewer */}
       {fullScreenPhoto && (
         <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)", justifyContent: "center", alignItems: "center" }}>
             <TouchableOpacity
-              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 20, width: 40, height: 40, justifyContent: "center", alignItems: "center" }}
+              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 20, width: 44, height: 44, justifyContent: "center", alignItems: "center" }}
               onPress={() => setFullScreenPhoto(null)}
             >
-              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>✕</Text>
+              <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>✕</Text>
             </TouchableOpacity>
+            <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
             <Image
               source={{ uri: fullScreenPhoto }}
-              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_WIDTH - 20, borderRadius: 12 }}
+              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_HEIGHT * 0.7, borderRadius: 8 }}
               resizeMode="contain"
             />
           </View>
