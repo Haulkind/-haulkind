@@ -865,7 +865,7 @@ export function HomeScreen({ navigation, route }) {
         <View style={styles.detailContainer}>
           <StatusBar barStyle="dark-content" backgroundColor={C.white} />
           <View style={styles.detailHeader}>
-            <TouchableOpacity onPress={() => setShowDetail(false)} style={styles.detailBackBtn}>
+            <TouchableOpacity onPress={() => { setFullScreenPhoto(null); setShowDetail(false); }} style={styles.detailBackBtn}>
               <Text style={styles.detailBackText}>✕</Text>
             </TouchableOpacity>
             <Text style={styles.detailHeaderTitle}>Order Details</Text>
