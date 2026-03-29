@@ -923,7 +923,7 @@ export function HomeScreen({ navigation, route }) {
     const isMyOrder = myTodayOrders.some((m) => m.id === o.id);
 
     return (
-      <Modal visible={showDetail} animationType="slide" transparent={false} onRequestClose={() => { setFullScreenPhoto(null); setShowDetail(false); }}>
+      <Modal visible={showDetail} animationType="slide" transparent={false} onRequestClose={() => { if (fullScreenPhoto) { setFullScreenPhoto(null); } else { setShowDetail(false); } }}>
         <View style={styles.detailContainer}>
           <StatusBar barStyle="dark-content" backgroundColor={C.white} />
           <View style={styles.detailHeader}>
