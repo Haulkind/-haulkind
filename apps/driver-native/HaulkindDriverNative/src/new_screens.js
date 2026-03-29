@@ -1298,6 +1298,7 @@ export function OrderDetailScreen({ route, navigation }) {
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const [timer, setTimer] = useState(ACCEPT_TIMER_SECONDS);
+  const [fullScreenPhoto, setFullScreenPhoto] = useState(null);
 
   useEffect(() => {
     if (timer <= 0) return;
@@ -1391,7 +1392,45 @@ export function OrderDetailScreen({ route, navigation }) {
           <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{customerName}</Text>
           {customerPhone ? <Text style={{ fontSize: 14, color: C.primary, marginTop: 4, fontWeight: "600" }}>{customerPhone}</Text> : null}
         </View>
+
+        {/* Customer Photos */}
+        {order?.photo_urls ? (() => {
+          let photoArr = [];
+          try { photoArr = typeof order.photo_urls === "string" ? JSON.parse(order.photo_urls) : order.photo_urls; } catch (e) {}
+          if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
+          return (
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 8 }}>CUSTOMER PHOTOS ({photoArr.length}) — Tap to enlarge</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {photoArr.map((url, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(url)} activeOpacity={0.8}>
+                    <Image source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          );
+        })() : null}
       </ScrollView>
+
+      {/* Fullscreen Photo Viewer */}
+      {fullScreenPhoto && (
+        <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
+            <TouchableOpacity
+              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 20, width: 40, height: 40, justifyContent: "center", alignItems: "center" }}
+              onPress={() => setFullScreenPhoto(null)}
+            >
+              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>✕</Text>
+            </TouchableOpacity>
+            <Image
+              source={{ uri: fullScreenPhoto }}
+              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_WIDTH - 20, borderRadius: 12 }}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+      )}
       {/* Bottom Buttons */}
       <View style={{ flexDirection: "row", padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border, position: "absolute", bottom: 0, left: 0, right: 0 }}>
         <TouchableOpacity style={{ flex: 1, borderRadius: 12, paddingVertical: 16, alignItems: "center", borderWidth: 2, borderColor: C.danger, marginRight: 12 }} onPress={handleDecline} disabled={declining}>
@@ -1427,6 +1466,7 @@ export function ActiveOrderScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState(null);
   const [showSignature, setShowSignature] = useState(false);
+  const [fullScreenPhoto, setFullScreenPhoto] = useState(null);
   const [signaturePaths, setSignaturePaths] = useState([]);
   const [currentPath, setCurrentPath] = useState([]);
   const currentPathRef = useRef([]);
@@ -1706,6 +1746,25 @@ export function ActiveOrderScreen({ route, navigation }) {
           ) : null}
         </View>
 
+        {/* Customer Photos */}
+        {order?.photo_urls ? (() => {
+          let photoArr = [];
+          try { photoArr = typeof order.photo_urls === "string" ? JSON.parse(order.photo_urls) : order.photo_urls; } catch (e) {}
+          if (!Array.isArray(photoArr) || photoArr.length === 0) return null;
+          return (
+            <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 8 }}>CUSTOMER PHOTOS ({photoArr.length}) — Tap to enlarge</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {photoArr.map((url, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => setFullScreenPhoto(url)} activeOpacity={0.8}>
+                    <Image source={{ uri: url }} style={{ width: 140, height: 140, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          );
+        })() : null}
+
         {/* Photo preview */}
         {photoUri ? (
           <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
@@ -1721,6 +1780,25 @@ export function ActiveOrderScreen({ route, navigation }) {
           </View>
         ) : null}
       </ScrollView>
+
+      {/* Fullscreen Photo Viewer */}
+      {fullScreenPhoto && (
+        <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" }}>
+            <TouchableOpacity
+              style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 20, width: 40, height: 40, justifyContent: "center", alignItems: "center" }}
+              onPress={() => setFullScreenPhoto(null)}
+            >
+              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>✕</Text>
+            </TouchableOpacity>
+            <Image
+              source={{ uri: fullScreenPhoto }}
+              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_WIDTH - 20, borderRadius: 12 }}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+      )}
 
       {/* Action button */}
       {stepInfo.action ? (
@@ -1893,6 +1971,14 @@ export function MyOrdersScreen({ navigation }) {
               <Text style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>📍 {o.pickup_address || "Address pending"}</Text>
               <Text style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>📅 {formatDate(o.scheduled_for || o.created_at)} • {formatTimeWindow(o)}</Text>
               {o.customer_name && <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>👤 {o.customer_name}</Text>}
+              {o.photo_urls ? (() => {
+                let pArr = [];
+                try { pArr = typeof o.photo_urls === "string" ? JSON.parse(o.photo_urls) : o.photo_urls; } catch (e) {}
+                if (Array.isArray(pArr) && pArr.length > 0) {
+                  return <Text style={{ fontSize: 12, color: C.primary, marginTop: 2 }}>📷 {pArr.length} customer photo{pArr.length > 1 ? "s" : ""}</Text>;
+                }
+                return null;
+              })() : null}
               <View style={{ flexDirection: "row", marginTop: 12, gap: 8 }}>
                 <TouchableOpacity
                   style={{ flex: 2, backgroundColor: C.primary, borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
