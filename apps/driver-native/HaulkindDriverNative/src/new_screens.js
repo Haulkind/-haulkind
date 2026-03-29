@@ -774,7 +774,7 @@ export function HomeScreen({ navigation, route }) {
             await apiPostAuth(`/driver/orders/${order.id}/cancel`);
             Alert.alert("Cancelled", "Order has been cancelled.");
             setShowDetail(false);
-            fetchOrders();
+            fetchOrdersRef.current?.();
           } catch (e) {
             Alert.alert("Error", e.message || "Could not cancel order.");
           }
