@@ -13,6 +13,53 @@ const POLL_INTERVAL = 10000
 
 type OrderTab = 'today' | 'all' | 'new'
 
+// Play a notification beep using Web Audio API (works on all browsers, no sound file needed)
+function playNotificationBeep() {
+  try {
+    const settings = JSON.parse(localStorage.getItem('driver_settings') || '{}')
+    if (settings.sound === false) return
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    // Play two quick beeps
+    const playTone = (startTime: number, freq: number, duration: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = freq
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.5, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration)
+      osc.start(startTime)
+      osc.stop(startTime + duration)
+    }
+    playTone(ctx.currentTime, 880, 0.15)
+    playTone(ctx.currentTime + 0.2, 1100, 0.15)
+    playTone(ctx.currentTime + 0.4, 880, 0.15)
+  } catch (e) {
+    console.log('[PWA Sound] Error:', e)
+  }
+}
+
+// Show browser notification for new orders
+function showBrowserNotification(count: number, firstOrder: Order | undefined) {
+  try {
+    const settings = JSON.parse(localStorage.getItem('driver_settings') || '{}')
+    if (settings.notifications === false) return
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    const price = parseFloat(String(firstOrder?.estimated_price || firstOrder?.final_price || 0)).toFixed(0)
+    const address = firstOrder?.pickup_address || 'Nearby'
+    const title = count === 1 ? '\uD83D\uDE9B New Order Available!' : `\uD83D\uDE9B ${count} New Orders!`
+    const body = count === 1 ? `$${price} \u2014 ${address}` : `$${price} and ${count - 1} more`
+    new Notification(title, { body, icon: '/icon-192x192.png', tag: 'new-order', renotify: true })
+    // Vibrate if supported
+    if (settings.vibration !== false && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 200])
+    }
+  } catch (e) {
+    console.log('[PWA Notification] Error:', e)
+  }
+}
+
 // Haversine distance in miles between two lat/lng pairs
 function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3958.8 // Earth radius in miles
@@ -46,6 +93,8 @@ export default function DashboardPage() {
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const previousOrderIdsRef = useRef<Set<string>>(new Set())
+  const hasCompletedFirstFetchRef = useRef(false)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
@@ -95,6 +144,13 @@ export default function DashboardPage() {
     })
   }, [token])
 
+  // Request browser notification permission when going online
+  useEffect(() => {
+    if (isOnline && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [isOnline])
+
   // Poll for orders when online
   useEffect(() => {
     if (isOnline && token) {
@@ -122,7 +178,19 @@ export default function DashboardPage() {
         getMyOrders(token, 'today').catch(() => ({ orders: [] as Order[] })),
         getMyOrders(token, 'all').catch(() => ({ orders: [] as Order[] })),
       ])
-      setAvailableOrders(available.orders || [])
+      const newAvailable = available.orders || []
+      // Detect brand-new orders and notify
+      const currentIds = new Set(newAvailable.map((o: Order) => String(o.id)))
+      if (hasCompletedFirstFetchRef.current) {
+        const brandNew = newAvailable.filter((o: Order) => !previousOrderIdsRef.current.has(String(o.id)))
+        if (brandNew.length > 0) {
+          playNotificationBeep()
+          showBrowserNotification(brandNew.length, brandNew[0])
+        }
+      }
+      hasCompletedFirstFetchRef.current = true
+      previousOrderIdsRef.current = currentIds
+      setAvailableOrders(newAvailable)
       setTodayOrders(today.orders || [])
       setAllOrders(all.orders || [])
     } catch (err) {

@@ -76,9 +76,10 @@ async function requestNotificationPermission() {
 // Play the custom notification sound in-app (works even when app is in foreground)
 function playNotificationSound() {
   try {
-    const sound = new Sound('notification_sound.wav', Sound.MAIN_BUNDLE, (error) => {
+    // Android res/raw files must be referenced WITHOUT extension
+    const sound = new Sound('notification_sound', Sound.MAIN_BUNDLE, (error) => {
       if (error) {
-        console.log('[SOUND] Failed to load sound, trying default', error);
+        console.log('[SOUND] Failed to load notification_sound, trying default', error);
         // Fallback: try default system sound
         const fallback = new Sound('default', Sound.MAIN_BUNDLE, (err2) => {
           if (!err2) { fallback.setVolume(1.0); fallback.play(() => fallback.release()); }
@@ -377,6 +378,21 @@ function buildMapHtml(driverLat, driverLng, orders, radiusMiles) {
   ${orders.filter((o) => o.coords).map((o) => `bounds.push([${o.coords.latitude}, ${o.coords.longitude}]);`).join("\n  ")}
   if (bounds.length > 1) { map.fitBounds(bounds, { padding: [40, 40] }); }
 </script>
+</body></html>`;
+}
+
+// Render a photo inside a WebView — bypasses React Native Image/Fresco data-URI size limits on Android
+function buildPhotoViewerHtml(uri) {
+  return `<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+img { max-width: 100%; max-height: 100%; object-fit: contain; }
+</style>
+</head><body>
+<img src="${uri}" />
 </body></html>`;
 }
 
@@ -1047,21 +1063,21 @@ export function HomeScreen({ navigation, route }) {
             )}
           </View>
 
-          {/* Fullscreen Photo Viewer — absolute overlay INSIDE the Modal (not a separate Modal) */}
-          {/* Android cannot render Image inside a second stacked Modal — this overlay avoids that issue */}
+          {/* Fullscreen Photo Viewer — uses WebView to render base64 images reliably on Android */}
+          {/* React Native Image/Fresco silently fails on large base64 data URIs — WebView handles them natively */}
           {fullScreenPhoto && (
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.97)", justifyContent: "center", alignItems: "center", zIndex: 999 }}>
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#000", zIndex: 999 }}>
               <TouchableOpacity
                 style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 20, width: 44, height: 44, justifyContent: "center", alignItems: "center" }}
                 onPress={() => setFullScreenPhoto(null)}
               >
                 <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>✕</Text>
               </TouchableOpacity>
-              <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
-              <Image
-                source={{ uri: fullScreenPhoto }}
-                style={{ width: SCREEN_WIDTH - 20, height: SCREEN_HEIGHT * 0.7, borderRadius: 8 }}
-                resizeMode="contain"
+              <WebView
+                source={{ html: buildPhotoViewerHtml(fullScreenPhoto) }}
+                style={{ flex: 1, backgroundColor: "#000" }}
+                scrollEnabled={false}
+                javaScriptEnabled={false}
               />
             </View>
           )}
@@ -1473,26 +1489,26 @@ export function OrderDetailScreen({ route, navigation }) {
         })()}
       </ScrollView>
 
-      {/* Fullscreen Photo Viewer */}
+      {/* Fullscreen Photo Viewer — WebView renders base64 reliably on Android */}
       {fullScreenPhoto && (
         <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)", justifyContent: "center", alignItems: "center" }}>
+          <View style={{ flex: 1, backgroundColor: "#000" }}>
             <TouchableOpacity
               style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 20, width: 44, height: 44, justifyContent: "center", alignItems: "center" }}
               onPress={() => setFullScreenPhoto(null)}
             >
               <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>✕</Text>
             </TouchableOpacity>
-            <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
-            <Image
-              source={{ uri: fullScreenPhoto }}
-              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_HEIGHT * 0.7, borderRadius: 8 }}
-              resizeMode="contain"
+            <WebView
+              source={{ html: buildPhotoViewerHtml(fullScreenPhoto) }}
+              style={{ flex: 1, backgroundColor: "#000" }}
+              scrollEnabled={false}
+              javaScriptEnabled={false}
             />
           </View>
         </Modal>
       )}
-      {/* Bottom Buttons */}
+      {/* Bottom Buttons */
       <View style={{ flexDirection: "row", padding: 16, paddingBottom: 28, backgroundColor: C.white, borderTopWidth: 1, borderTopColor: C.border, position: "absolute", bottom: 0, left: 0, right: 0 }}>
         <TouchableOpacity style={{ flex: 1, borderRadius: 12, paddingVertical: 16, alignItems: "center", borderWidth: 2, borderColor: C.danger, marginRight: 12 }} onPress={handleDecline} disabled={declining}>
           <Text style={{ color: C.danger, fontSize: 16, fontWeight: "bold" }}>Decline</Text>
@@ -1841,21 +1857,21 @@ export function ActiveOrderScreen({ route, navigation }) {
         ) : null}
       </ScrollView>
 
-      {/* Fullscreen Photo Viewer */}
+      {/* Fullscreen Photo Viewer — WebView renders base64 reliably on Android */}
       {fullScreenPhoto && (
         <Modal visible={true} transparent={true} animationType="fade" onRequestClose={() => setFullScreenPhoto(null)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)", justifyContent: "center", alignItems: "center" }}>
+          <View style={{ flex: 1, backgroundColor: "#000" }}>
             <TouchableOpacity
               style={{ position: "absolute", top: 50, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 20, width: 44, height: 44, justifyContent: "center", alignItems: "center" }}
               onPress={() => setFullScreenPhoto(null)}
             >
               <Text style={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}>✕</Text>
             </TouchableOpacity>
-            <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
-            <Image
-              source={{ uri: fullScreenPhoto }}
-              style={{ width: SCREEN_WIDTH - 20, height: SCREEN_HEIGHT * 0.7, borderRadius: 8 }}
-              resizeMode="contain"
+            <WebView
+              source={{ html: buildPhotoViewerHtml(fullScreenPhoto) }}
+              style={{ flex: 1, backgroundColor: "#000" }}
+              scrollEnabled={false}
+              javaScriptEnabled={false}
             />
           </View>
         </Modal>
