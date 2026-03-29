@@ -23,6 +23,7 @@ export default function OrderDetailPage() {
   const locationRef = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [photoType, setPhotoType] = useState<'before' | 'after'>('before')
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
@@ -244,6 +245,42 @@ export default function OrderDetailPage() {
           )}
         </div>
 
+        {/* Customer Photos Section */}
+        {(() => {
+          const photoUrls = order.photo_urls || order.photos
+          if (!photoUrls) return null
+          let photoArr: string[] = []
+          try {
+            photoArr = typeof photoUrls === 'string' ? JSON.parse(photoUrls) : photoUrls
+          } catch {
+            if (typeof photoUrls === 'string') photoArr = photoUrls.split('|||').filter(Boolean)
+          }
+          if (!Array.isArray(photoArr) || photoArr.length === 0) return null
+          return (
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Customer Photos ({photoArr.length})</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {photoArr.map((url, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setLightboxPhoto(url)}
+                    className="relative rounded-lg overflow-hidden border border-gray-200 active:opacity-80"
+                  >
+                    <img
+                      src={url.startsWith('data:') ? url : (url.startsWith('http') ? url : `data:image/jpeg;base64,${url}`)}
+                      alt={`Customer photo ${idx + 1}`}
+                      className="w-full h-32 object-cover"
+                    />
+                    <span className="absolute bottom-1 right-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">
+                      Tap to enlarge
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Photos Section */}
         {!isFinished && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -340,6 +377,27 @@ export default function OrderDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Lightbox Photo Viewer */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <button
+            onClick={() => setLightboxPhoto(null)}
+            className="absolute top-12 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-xl font-bold z-10"
+          >
+            ✕
+          </button>
+          <img
+            src={lightboxPhoto.startsWith('data:') ? lightboxPhoto : (lightboxPhoto.startsWith('http') ? lightboxPhoto : `data:image/jpeg;base64,${lightboxPhoto}`)}
+            alt="Customer photo fullscreen"
+            className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

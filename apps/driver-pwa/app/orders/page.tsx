@@ -116,6 +116,16 @@ export default function OrdersPage() {
                 {order.customer_name && (
                   <p className="text-xs text-gray-500 mt-1">Customer: {order.customer_name}</p>
                 )}
+                {(() => {
+                  const pu = (order as any).photo_urls || (order as any).photos
+                  if (!pu) return null
+                  let arr: string[] = []
+                  try { arr = typeof pu === 'string' ? JSON.parse(pu) : pu } catch {}
+                  if (Array.isArray(arr) && arr.length > 0) {
+                    return <p className="text-xs text-blue-600 mt-1">📷 {arr.length} customer photo{arr.length > 1 ? 's' : ''}</p>
+                  }
+                  return null
+                })()}
                 <p className="text-xs text-gray-400 mt-1">{formatDate(order)}</p>
               </button>
             ))}
