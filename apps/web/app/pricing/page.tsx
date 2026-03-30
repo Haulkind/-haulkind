@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Junk Removal Pricing - All-In Rates from $99 | HaulKind',
-  description: 'See exact junk removal and moving labor prices. Haul Away from $99 (1/8 truck) to $599 (full truck). Disposal included. Labor help from $79/hr. No hidden fees.',
+  description: 'See exact junk removal and moving labor prices. Haul Away from $99 (1/8 truck) to $529 (full truck). Disposal included. Labor help from $79/hr. No hidden fees.',
   alternates: { canonical: '/pricing' },
   openGraph: {
     title: 'Junk Removal Pricing - All-In Rates from $99 | HaulKind',
@@ -39,11 +39,11 @@ export default function Pricing() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
             {[
-              { size: '1/8 Truck', items: '1–2 items', price: '$99', disposal: '$10' },
-              { size: '1/4 Truck', items: '3–5 items', price: '$189', disposal: '$20' },
-              { size: '1/2 Truck', items: '6–10 items', price: '$314', disposal: '$35' },
-              { size: '3/4 Truck', items: '11–15 items', price: '$439', disposal: '$50' },
-              { size: 'Full Truck', items: '16+ items', price: '$599', disposal: '$70' },
+                            { size: '1/8 Truck', items: '1–2 items', price: '$99', disposal: '$10' },
+                            { size: '1/4 Truck', items: '3–8 items', price: '$169', disposal: '$20' },
+                            { size: '1/2 Truck', items: '10–15 items', price: '$279', disposal: '$35' },
+                            { size: '3/4 Truck', items: '15–20 items', price: '$389', disposal: '$50' },
+                            { size: 'Full Truck', items: '20+ items', price: '$529', disposal: '$70' },
             ].map((tier) => (
               <div key={tier.size} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
                 <div className="text-4xl font-bold text-primary-600 mb-2">{tier.price}</div>
@@ -139,7 +139,7 @@ export default function Pricing() {
                 <tbody>
                   <tr className="border-b border-gray-100">
                     <td className="py-3 px-3 text-gray-700">Half truck price</td>
-                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-primary-700">$314</td>
+                    <td className="py-3 px-3 text-center bg-primary-50 font-bold text-primary-700">$279</td>
                     <td className="py-3 px-3 text-center text-gray-600">$400–600</td>
                     <td className="py-3 px-3 text-center text-gray-600">$200–300</td>
                   </tr>

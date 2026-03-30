@@ -35,7 +35,7 @@ export default function FAQ() {
       questions: [
         {
           q: 'How does pricing work?',
-          a: 'For Junk Removal (Haul Away), pricing is all-in based on volume: $99 (1/8 truck) to $599 (full truck). Disposal is already included. For Labor Only, it is $79/hr for 1 helper or $129/hr for 2 helpers (2 hour minimum). You see your total price before booking — no hidden fees.',
+          a: 'For Junk Removal (Haul Away), pricing is all-in based on volume: $99 (1/8 truck) to $529 (full truck). Disposal is already included. For Labor Only, it is $79/hr for 1 helper or $129/hr for 2 helpers (2 hour minimum). You see your total price before booking — no hidden fees.',
         },
         {
           q: 'Are disposal fees included in the price?',
@@ -59,7 +59,7 @@ export default function FAQ() {
           },
           {
             q: 'How does HaulKind compare to other junk removal services?',
-            a: 'Many traditional junk companies don\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $314 all-in vs $400-600 with traditional companies. Online-only platforms may offer similar pricing but don\'t provide GPS tracking or local driver verification.',
+            a: 'Many traditional junk companies don\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $279 all-in vs $400-600 with traditional companies. Online-only platforms may offer similar pricing but don\'t provide GPS tracking or local driver verification.',
           },
       ],
     },
@@ -244,8 +244,8 @@ export default function FAQ() {
               </div>
               <div>
                 <h3 className="font-bold text-xl mb-3">Call Us</h3>
-                <a href="tel:+18573229269" className="text-primary-600 font-semibold hover:underline text-lg">
-                  (857) 322-9269
+                <a                 href="tel:+16094568188" className="text-primary-600 font-semibold hover:underline text-lg">
+                                  (609) 456-8188
                 </a>
                 <p className="text-gray-600 mt-2">Mon-Fri 9am-6pm EST</p>
               </div>

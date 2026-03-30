@@ -227,7 +227,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                   Call (609) 456-8188
                 </a>
               </div>
-              <p className="text-xs text-teal-200 mt-3">Half a truck starting at $314 — disposal included. Same-day pickup available.</p>
+              <p className="text-xs text-teal-200 mt-3">Half a truck starting at $279 — disposal included. Same-day pickup available.</p>
             </div>
           </div>
         </div>

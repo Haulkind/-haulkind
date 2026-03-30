@@ -227,10 +227,10 @@ export default function WhatWeTakePage() {
           <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
             <div className="grid md:grid-cols-2 gap-4">
               {[
-                { size: 'Minimum Pickup (few items)', price: 'From $89' },
-                { size: 'Quarter Truck', price: 'From $179' },
-                { size: 'Half Truck', price: 'From $314' },
-                { size: 'Full Truck', price: 'From $648' },
+                                { size: 'Minimum Pickup (1-2 items)', price: 'From $99' },
+                                { size: 'Quarter Truck (3-8 items)', price: 'From $169' },
+                                { size: 'Half Truck (10-15 items)', price: 'From $279' },
+                                { size: 'Full Truck (20+ items)', price: 'From $529' },
               ].map((tier) => (
                 <div key={tier.size} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700 font-medium">{tier.size}</span>

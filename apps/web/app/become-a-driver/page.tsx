@@ -280,20 +280,20 @@ export default function BecomeADriver() {
                     <span className="font-bold">$59 + $10 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>1/4 Truck ($189)</span>
-                    <span className="font-bold">$113 + $20 disposal</span>
+                    <span>1/4 Truck ($169)</span>
+                    <span className="font-bold">$101 + $20 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>1/2 Truck ($314)</span>
-                    <span className="font-bold">$188 + $35 disposal</span>
+                    <span>1/2 Truck ($279)</span>
+                    <span className="font-bold">$167 + $35 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>3/4 Truck ($439)</span>
-                    <span className="font-bold">$263 + $50 disposal</span>
+                    <span>3/4 Truck ($389)</span>
+                    <span className="font-bold">$233 + $50 disposal</span>
                   </li>
                   <li className="flex justify-between">
-                    <span>Full Truck ($599)</span>
-                    <span className="font-bold">$359 + $70 disposal</span>
+                    <span>Full Truck ($529)</span>
+                    <span className="font-bold">$317 + $70 disposal</span>
                   </li>
                 </ul>
               </div>

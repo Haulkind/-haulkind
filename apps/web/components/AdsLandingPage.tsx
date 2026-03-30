@@ -33,7 +33,7 @@ export default function AdsLandingPage({ city, state, h1, subtitle, neighborhood
             </svg>
           </Link>
           <p className="mt-3 text-[13px] text-white/70">
-            or <a href="sms:+18573229269" className="underline hover:text-white">text us directly</a>
+            or <a href="sms:+16094568188" className="underline hover:text-white">text us directly</a>
           </p>
         </div>
       </section>
@@ -156,7 +156,7 @@ export default function AdsLandingPage({ city, state, h1, subtitle, neighborhood
             Get Your Free Quote Now
           </Link>
           <p className="mt-3 text-[12px] text-gray-400">
-            or <a href="sms:+18573229269" className="underline hover:text-gray-300">text us directly</a>
+            or <a href="sms:+16094568188" className="underline hover:text-gray-300">text us directly</a>
           </p>
         </div>
       </section>

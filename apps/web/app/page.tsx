@@ -22,7 +22,7 @@ export default function Home() {
       <div className="py-4 bg-primary-50 border-b border-primary-100">
         <div className="container mx-auto px-4 text-center">
           <p className="text-[15px] font-semibold text-primary-800">
-            Half a truck starting at $314 — disposal included, no hidden fees.
+            Half a truck starting at $279 — disposal included, no hidden fees.
           </p>
           <p className="text-[11px] text-gray-500 mt-1">
             Licensed & insured drivers · GPS tracking · Price guaranteed before you book
