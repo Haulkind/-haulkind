@@ -106,7 +106,7 @@ export default function RootLayout({
       { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: ['Junk Removal', 'Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal', 'Donation Pickup', 'Furniture Assembly'],
-    priceRange: '$79 - $599',
+    priceRange: '$79 - $529',
     openingHours: 'Mo-Su 07:00-19:00',
     aggregateRating: {
       '@type': 'AggregateRating',
@@ -131,7 +131,7 @@ export default function RootLayout({
             price: '99',
             priceCurrency: 'USD',
             minPrice: '99',
-            maxPrice: '599',
+            maxPrice: '529',
           },
         },
         {
@@ -159,8 +159,8 @@ export default function RootLayout({
             '@type': 'PriceSpecification',
             price: '109',
             priceCurrency: 'USD',
-            minPrice: '109',
-            maxPrice: '389',
+                        minPrice: '99',
+                        maxPrice: '389',
           },
         },
         {
