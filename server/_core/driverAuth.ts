@@ -660,13 +660,17 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // Use user_id to find driver (not email) to prevent loading wrong driver profile
-      const driverResult = await pool.query(
-        'SELECT id, status, first_name, last_name, vehicle_type, driver_status, is_active, rejection_reason FROM drivers WHERE user_id = $1 LIMIT 1',
-        [user.id]
-      );
-      let driver = driverResult.rows[0];
-      // Fallback to email lookup if user_id column doesn't exist or no match found
+      // Try user_id first (safer), fall back to email if column doesn't exist
+      let driver: any = null;
+      try {
+        const driverResult = await pool.query(
+          'SELECT id, status, first_name, last_name, vehicle_type, driver_status, is_active, rejection_reason FROM drivers WHERE user_id = $1 LIMIT 1',
+          [user.id]
+        );
+        driver = driverResult.rows[0] || null;
+      } catch (_e) {
+        // user_id column may not exist — ignore and fall back to email
+      }
       if (!driver) {
         const fallbackResult = await pool.query(
           'SELECT id, status, first_name, last_name, vehicle_type, driver_status, is_active, rejection_reason FROM drivers WHERE email = $1 LIMIT 1',
