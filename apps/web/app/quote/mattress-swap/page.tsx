@@ -23,13 +23,39 @@ const addons = [
 
 export default function MattressSwapPage() {
   const router = useRouter()
-  const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [selectedAddons, setSelectedAddons] = useState<string[]>([])
 
-  const servicePrice = useMemo(() => {
-    const found = services.find(s => s.id === selectedService)
-    return found ? Number(found.price) : 0
-  }, [selectedService])
+  const updateQuantity = (id: string, delta: number) => {
+    setQuantities(prev => {
+      const current = prev[id] || 0
+      const next = Math.max(0, current + delta)
+      if (next === 0) {
+        const { [id]: removed, ...rest } = prev
+        void removed
+        return rest
+      }
+      return { ...prev, [id]: next }
+    })
+  }
+
+  const totalMattresses = useMemo(() => {
+    return Object.values(quantities).reduce((sum, qty) => sum + qty, 0)
+  }, [quantities])
+
+  const hasDiscount = totalMattresses >= 2
+
+  const servicesSubtotal = useMemo(() => {
+    return services.reduce((sum, s) => {
+      const qty = quantities[s.id] || 0
+      return sum + s.price * qty
+    }, 0)
+  }, [quantities])
+
+  const discountAmount = useMemo(() => {
+    if (!hasDiscount) return 0
+    return Math.round(servicesSubtotal * 0.10)
+  }, [hasDiscount, servicesSubtotal])
 
   const addonsTotal = useMemo(() => {
     return addons
@@ -37,19 +63,26 @@ export default function MattressSwapPage() {
       .reduce((sum, a) => sum + Number(a.price), 0)
   }, [selectedAddons])
 
-  const total = servicePrice + addonsTotal
+  const total = servicesSubtotal - discountAmount + addonsTotal
 
   const toggleAddon = (id: string) => {
     setSelectedAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id])
   }
 
   const handleContinue = () => {
-    if (!selectedService) return
-    const service = services.find(s => s.id === selectedService)
+    if (totalMattresses === 0) return
+    const selectedServices = services
+      .filter(s => (quantities[s.id] || 0) > 0)
+      .map(s => ({ id: s.id, label: s.label, price: s.price, quantity: quantities[s.id] }))
     const selectedAddonsList = addons.filter(a => selectedAddons.includes(a.id))
     sessionStorage.setItem('mattressSwapData', JSON.stringify({
-      service: { id: selectedService, label: service?.label, price: service?.price },
+      service: selectedServices[0] ? { id: selectedServices[0].id, label: selectedServices[0].label, price: selectedServices[0].price } : null,
+      services: selectedServices,
       addons: selectedAddonsList.map(a => ({ id: a.id, label: a.label, price: a.price })),
+      subtotal: servicesSubtotal,
+      discount: discountAmount,
+      discountPercent: hasDiscount ? 10 : 0,
+      totalMattresses,
       total,
     }))
     router.push('/quote/mattress-swap/schedule')
@@ -75,33 +108,64 @@ export default function MattressSwapPage() {
         {/* Service Options */}
         <div className="space-y-3 mb-8">
           <h2 className="text-lg font-semibold text-gray-900">Choose your service</h2>
-          {services.map(s => (
-            <button
-              key={s.id}
-              onClick={() => setSelectedService(s.id)}
-              className={`w-full text-left p-4 rounded-xl border-2 transition ${
-                selectedService === s.id
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedService === s.id ? 'border-purple-500' : 'border-gray-300'
-                  }`}>
-                    {selectedService === s.id && <div className="w-3 h-3 rounded-full bg-purple-500" />}
-                  </div>
-                  <div>
+          <p className="text-sm text-gray-500">Need multiple mattresses? Add quantities below — <span className="font-semibold text-green-600">10% off when you book 2 or more!</span></p>
+          {services.map(s => {
+            const qty = quantities[s.id] || 0
+            return (
+              <div
+                key={s.id}
+                className={`w-full text-left p-4 rounded-xl border-2 transition ${
+                  qty > 0
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900">{s.label}</p>
                     <p className="text-sm text-gray-500">{s.desc}</p>
                   </div>
+                  <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+                    <span className="text-lg font-bold text-purple-600">${s.price}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateQuantity(s.id, -1)}
+                        disabled={qty === 0}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-600 hover:border-purple-500 hover:text-purple-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label={`Decrease ${s.label} quantity`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="w-8 text-center font-bold text-gray-900">{qty}</span>
+                      <button
+                        onClick={() => updateQuantity(s.id, 1)}
+                        className="w-8 h-8 rounded-full border-2 border-purple-500 bg-purple-500 flex items-center justify-center text-white hover:bg-purple-600 transition"
+                        aria-label={`Increase ${s.label} quantity`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-lg font-bold text-purple-600">${s.price}</span>
               </div>
-            </button>
-          ))}
+            )
+          })}
         </div>
+
+        {/* Discount banner */}
+        {hasDiscount && (
+          <div className="bg-green-50 border border-green-300 rounded-xl p-4 mb-4 flex items-center gap-3">
+            <span className="text-2xl" role="img" aria-label="celebration">&#127881;</span>
+            <div>
+              <p className="font-semibold text-green-800">10% multi-mattress discount applied!</p>
+              <p className="text-sm text-green-700">You&apos;re saving ${discountAmount} on {totalMattresses} mattresses.</p>
+            </div>
+          </div>
+        )}
 
         {/* Add-ons */}
         <div className="space-y-3 mb-8">
@@ -152,7 +216,15 @@ export default function MattressSwapPage() {
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Your estimated total</p>
-              <p className="text-2xl font-bold text-gray-900">{'$'}{total}</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl font-bold text-gray-900">${total}</p>
+                {hasDiscount && (
+                  <span className="text-sm text-green-600 font-semibold line-through">${servicesSubtotal + addonsTotal}</span>
+                )}
+              </div>
+              {hasDiscount && (
+                <p className="text-xs text-green-600 font-medium">10% discount: -${discountAmount}</p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <a href="tel:+16094568188" className="text-sm text-gray-500 hover:text-gray-700 hidden sm:block">
@@ -160,7 +232,7 @@ export default function MattressSwapPage() {
               </a>
               <button
                 onClick={handleContinue}
-                disabled={!selectedService}
+                disabled={totalMattresses === 0}
                 className="px-8 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue
