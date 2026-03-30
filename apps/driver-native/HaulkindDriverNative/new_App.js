@@ -109,7 +109,7 @@ function SideMenu({ visible, onClose, navigation }) {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out', style: 'destructive', onPress: async () => {
-            await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data']);
+            await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data', 'driver_isOnline']);
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           }
         },
@@ -283,18 +283,45 @@ export default function App() {
         setInitialRoute('Login');
         return;
       }
-      const driverData = await AsyncStorage.getItem('driver_data');
-      if (driverData) {
-        const driver = JSON.parse(driverData);
-        if (driver.status === 'pending') {
-          setInitialRoute('Pending');
-        } else if (driver.status === 'approved' || driver.status === 'active') {
-          setInitialRoute('Home');
+      // Validate token by fetching fresh profile from API
+      try {
+        const API_URL = 'https://haulkind-production-285b.up.railway.app';
+        const res = await fetch(`${API_URL}/driver/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const driver = data?.driver || data;
+          // Update stored driver_data with fresh data from API
+          await AsyncStorage.setItem('driver_data', JSON.stringify(driver));
+          const ds = driver.driverStatus || driver.driver_status || driver.status;
+          if (ds === 'pending' || ds === 'pending_review') {
+            setInitialRoute('Pending');
+          } else if (ds === 'approved' || ds === 'active') {
+            setInitialRoute('Home');
+          } else {
+            setInitialRoute('Login');
+          }
         } else {
+          // Token is invalid/expired — clear everything and go to login
+          await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data', 'driver_isOnline']);
           setInitialRoute('Login');
         }
-      } else {
-        setInitialRoute('Home');
+      } catch (fetchErr) {
+        // Network error — fall back to cached driver_data
+        const driverData = await AsyncStorage.getItem('driver_data');
+        if (driverData) {
+          const driver = JSON.parse(driverData);
+          if (driver.status === 'pending') {
+            setInitialRoute('Pending');
+          } else if (driver.status === 'approved' || driver.status === 'active') {
+            setInitialRoute('Home');
+          } else {
+            setInitialRoute('Login');
+          }
+        } else {
+          setInitialRoute('Home');
+        }
       }
     } catch (e) {
       setInitialRoute('Login');
