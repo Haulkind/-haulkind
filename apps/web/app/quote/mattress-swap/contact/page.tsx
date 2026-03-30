@@ -69,7 +69,20 @@ export default function MattressSwapContactPage() {
       : sched.zip ? `ZIP ${sched.zip}` : ''
 
     // Build description from selections
-    const serviceLine = existing.service ? `${existing.service.label}` : 'Mattress Swap'
+    const serviceLines: string[] = []
+    if (existing.services && existing.services.length > 0) {
+      existing.services.forEach((s: any) => {
+        serviceLines.push(`${s.label} x${s.quantity}`)
+      })
+    } else if (existing.service) {
+      serviceLines.push(existing.service.label)
+    } else {
+      serviceLines.push('Mattress Swap')
+    }
+    const serviceLine = serviceLines.join(', ')
+    if (existing.discount && existing.discount > 0) {
+      serviceLines.push(`10% multi-mattress discount: -$${existing.discount}`)
+    }
     const addonLines = (existing.addons || []).map((a: any) => a.label).join(', ')
     const scheduleLine = `Date: ${sched.date}, Time: ${sched.time}, Floor: ${sched.floor}, Address: ${fullAddress}`
     const instructions = sched.instructions || ''
