@@ -481,9 +481,15 @@ export function LoginScreen({ navigation }) {
   async function onLogin() {
     setErr(""); setLoading(true);
     try {
+      // Clear ALL old auth data before logging in as new driver
+      await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data", "driver_isOnline"]);
       const data = await apiPost("/driver/auth/login", { email, password });
       const token = data?.token || data?.accessToken;
-      if (token) await AsyncStorage.setItem("driver_token", token);
+      if (!token) throw new Error("No token received from server");
+      await AsyncStorage.setItem("driver_token", token);
+      // Store driver and user data so all screens show the correct driver
+      if (data?.driver) await AsyncStorage.setItem("driver_data", JSON.stringify(data.driver));
+      if (data?.user) await AsyncStorage.setItem("user_data", JSON.stringify(data.user));
       navigation.reset({ index: 0, routes: [{ name: "Home" }] });
     } catch (e) { setErr(String(e.message || e)); } finally { setLoading(false); }
   }
@@ -904,8 +910,7 @@ export function HomeScreen({ navigation, route }) {
   }
 
   async function logout() {
-    await AsyncStorage.removeItem("driver_token");
-    await AsyncStorage.removeItem("driver_isOnline");
+    await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data", "driver_isOnline"]);
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   }
 

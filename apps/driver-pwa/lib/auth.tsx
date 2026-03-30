@@ -35,6 +35,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback((newToken: string, newDriver: Driver) => {
+    // Clear all old auth data first to prevent stale driver profile from persisting
+    localStorage.removeItem('driver_token')
+    localStorage.removeItem('driver_data')
+    // Store new auth data
     localStorage.setItem('driver_token', newToken)
     localStorage.setItem('driver_data', JSON.stringify(newDriver))
     setToken(newToken)
