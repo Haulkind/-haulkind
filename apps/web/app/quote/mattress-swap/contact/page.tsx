@@ -79,10 +79,10 @@ export default function MattressSwapContactPage() {
     } else {
       serviceLines.push('Mattress Swap')
     }
-    const serviceLine = serviceLines.join(', ')
     if (existing.discount && existing.discount > 0) {
       serviceLines.push(`10% multi-mattress discount: -$${existing.discount}`)
     }
+    const serviceLine = serviceLines.join(', ')
     const addonLines = (existing.addons || []).map((a: any) => a.label).join(', ')
     const scheduleLine = `Date: ${sched.date}, Time: ${sched.time}, Floor: ${sched.floor}, Address: ${fullAddress}`
     const instructions = sched.instructions || ''
