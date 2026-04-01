@@ -1311,6 +1311,34 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // POST /driver/location - Update driver GPS location (persisted to DB)
+  // Ensure driver_locations table exists on first call
+  let driverLocationsTableReady = false;
+  async function ensureDriverLocationsTable(pool: any) {
+    if (driverLocationsTableReady) return;
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS driver_locations (
+          id SERIAL PRIMARY KEY,
+          driver_id TEXT NOT NULL UNIQUE,
+          lat DECIMAL(10,7) NOT NULL,
+          lng DECIMAL(10,7) NOT NULL,
+          heading DECIMAL(5,1),
+          speed DECIMAL(6,2),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      driverLocationsTableReady = true;
+      console.log('[DriverAuth] driver_locations table ready');
+    } catch (e: any) {
+      // Table might already exist with slightly different schema — try to add unique constraint
+      try {
+        await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id ON driver_locations (driver_id)`);
+      } catch (_e2) { /* index may already exist */ }
+      driverLocationsTableReady = true;
+      console.warn('[DriverAuth] driver_locations table setup warning:', e?.message);
+    }
+  }
+
   app.post('/driver/location', async (req, res) => {
     try {
       const decoded = verifyToken(req);
@@ -1323,23 +1351,30 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(400).json({ error: 'lat and lng are required' });
       }
 
+      // Ensure table exists before inserting
+      await ensureDriverLocationsTable(pool);
+
+      const driverId = String(decoded.driverId);
+      console.log(`[DriverAuth] POST /driver/location - driverId=${driverId}, lat=${lat}, lng=${lng}`);
+
       // Upsert: keep only latest location per driver (atomic)
+      // Use text cast to ensure consistent driver_id type matching
       await pool.query(
         `INSERT INTO driver_locations (driver_id, lat, lng, heading, speed, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
+         VALUES ($1::text, $2, $3, $4, $5, NOW())
          ON CONFLICT (driver_id) DO UPDATE SET
            lat = EXCLUDED.lat,
            lng = EXCLUDED.lng,
            heading = EXCLUDED.heading,
            speed = EXCLUDED.speed,
            updated_at = NOW()`,
-        [decoded.driverId, lat, lng, heading || null, speed || null]
+        [driverId, lat, lng, heading ?? null, speed ?? null]
       );
 
       res.json({ success: true });
     } catch (err: any) {
-      console.error('Update driver location error:', err);
-      res.status(500).json({ error: 'Failed to update location' });
+      console.error('[DriverAuth] Update driver location error:', err);
+      res.status(500).json({ error: 'Failed to update location', details: err?.message });
     }
   });
 

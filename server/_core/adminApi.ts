@@ -942,8 +942,11 @@ export function registerAdminApiRoutes(app: Express) {
            FROM driver_locations`
         );
         for (const row of locResult.rows) {
-          locationMap.set(row.driver_id, row);
+          // Store under both raw and stringified key for flexible matching
+          locationMap.set(String(row.driver_id), row);
         }
+        console.log(`[Admin] driver_locations rows: ${locResult.rows.length}, keys: [${Array.from(locationMap.keys()).join(', ')}]`);
+        console.log(`[Admin] driver IDs: [${driversRows.map((d: any) => String(d.id)).join(', ')}]`);
       } catch (locErr: any) {
         console.warn('[Admin] Could not fetch driver locations:', locErr.message);
       }
@@ -977,6 +980,54 @@ export function registerAdminApiRoutes(app: Express) {
     } catch (err: any) {
       console.error('Get driver locations error:', err);
       res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+  });
+
+  // Debug endpoint: Check driver_locations table contents directly
+  app.get('/admin/debug/driver-locations', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Check if table exists
+      const tableCheck = await pool.query(
+        `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'driver_locations') as table_exists`
+      );
+
+      if (!tableCheck.rows[0]?.table_exists) {
+        return res.json({ table_exists: false, rows: [], message: 'driver_locations table does not exist' });
+      }
+
+      // Get all rows from driver_locations
+      const locResult = await pool.query(`SELECT * FROM driver_locations ORDER BY updated_at DESC`);
+
+      // Get driver IDs for comparison
+      const driversResult = await pool.query(`SELECT id, name, email FROM drivers WHERE status = 'approved'`);
+
+      // Check table schema
+      const schemaResult = await pool.query(
+        `SELECT column_name, data_type, is_nullable 
+         FROM information_schema.columns 
+         WHERE table_name = 'driver_locations' 
+         ORDER BY ordinal_position`
+      );
+
+      // Check indexes
+      const indexResult = await pool.query(
+        `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'driver_locations'`
+      );
+
+      res.json({
+        table_exists: true,
+        location_rows: locResult.rows,
+        location_count: locResult.rows.length,
+        approved_drivers: driversResult.rows.map((d: any) => ({ id: d.id, id_type: typeof d.id, name: d.name, email: d.email })),
+        table_schema: schemaResult.rows,
+        indexes: indexResult.rows,
+      });
+    } catch (err: any) {
+      console.error('Debug driver locations error:', err);
+      res.status(500).json({ error: err.message });
     }
   });
 }
