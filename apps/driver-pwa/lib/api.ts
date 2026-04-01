@@ -229,7 +229,7 @@ export async function sendDriverLocation(token: string, lat: number, lng: number
   const res = await fetch(`${API_BASE}/driver/location`, {
     method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({ lat, lng, heading: heading || null, speed: speed || null }),
+    body: JSON.stringify({ lat, lng, heading: heading ?? null, speed: speed ?? null }),
   })
   if (!res.ok) throw new Error('Failed to send location')
   return res.json()

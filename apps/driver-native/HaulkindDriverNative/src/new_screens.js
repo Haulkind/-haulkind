@@ -649,8 +649,11 @@ export function HomeScreen({ navigation, route }) {
       // Send GPS to backend for admin map tracking
       async function sendLocationToServer(lat, lng, heading, speed) {
         try {
-          await apiPostAuth("/driver/location", { lat, lng, heading: heading || null, speed: speed || null });
-        } catch (e) { /* silently fail - don't break app if server is down */ }
+          const result = await apiPostAuth("/driver/location", { lat, lng, heading: heading ?? null, speed: speed ?? null });
+          console.log("[GPS] Sent to server:", lat, lng, "result:", JSON.stringify(result));
+        } catch (e) {
+          console.warn("[GPS] Failed to send:", e?.message);
+        }
       }
       // Get initial position fast
       Geolocation.getCurrentPosition(
