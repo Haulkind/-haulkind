@@ -62,7 +62,32 @@ export default function MapPage() {
       setLastRefresh(new Date());
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load driver locations');
+      console.warn('[Map] getDriverLocations failed, falling back to getDrivers:', err.message);
+      // Fallback: use the existing /admin/drivers endpoint which is known to work
+      try {
+        const fallbackData = await api.getDrivers({ status: 'approved', limit: 200 });
+        const mappedDrivers: DriverLocation[] = (fallbackData.drivers || []).map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          display_name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.name || 'Unknown',
+          phone: d.phone,
+          email: d.email,
+          status: d.status,
+          driver_status: d.driver_status || d.status,
+          is_online: d.is_online || false,
+          vehicle_type: d.vehicle_type || null,
+          lat: null,
+          lng: null,
+          heading: null,
+          speed: null,
+          location_updated_at: null,
+        }));
+        setDrivers(mappedDrivers);
+        setLastRefresh(new Date());
+        setError('');
+      } catch (fallbackErr: any) {
+        setError(fallbackErr.message || 'Failed to load drivers');
+      }
     } finally {
       setLoading(false);
     }
