@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOrder, getProfile, type Order } from '@/lib/api'
+import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOrder, getProfile, sendDriverLocation, type Order } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import Sidebar from '@/components/Sidebar'
 
@@ -132,19 +132,37 @@ export default function DashboardPage() {
     if (!isLoading && !token) router.replace('/login')
   }, [token, isLoading, router])
 
-  // Start GPS tracking
+  // Start GPS tracking + send location to backend for admin map
+  const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const latRef = useRef<number | null>(null)
+  const lngRef = useRef<number | null>(null)
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setLat(pos.coords.latitude)
         setLng(pos.coords.longitude)
+        latRef.current = pos.coords.latitude
+        lngRef.current = pos.coords.longitude
+        // Send to backend immediately on position change
+        if (token) {
+          sendDriverLocation(token, pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed).catch(() => {})
+        }
       },
       (err) => console.warn('GPS error:', err),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     )
-    return () => navigator.geolocation.clearWatch(watchId)
-  }, [])
+    // Also send every 30 seconds as a heartbeat (even if position hasn't changed)
+    gpsIntervalRef.current = setInterval(() => {
+      if (token && latRef.current != null && lngRef.current != null) {
+        sendDriverLocation(token, latRef.current, lngRef.current).catch(() => {})
+      }
+    }, 30000)
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+      if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current)
+    }
+  }, [token])
 
   // Fetch profile on mount to get real name, selfie, and online status
   useEffect(() => {

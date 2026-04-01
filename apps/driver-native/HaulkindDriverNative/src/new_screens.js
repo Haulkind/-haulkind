@@ -626,6 +626,7 @@ export function HomeScreen({ navigation, route }) {
   const timerRef = useRef(null);
   const refreshRef = useRef(null);
   const watchIdRef = useRef(null);
+  const gpsIntervalRef = useRef(null);
   const driverLocationRef = useRef(null);
   const isOnlineRef = useRef(false);
   const fetchOrdersRef = useRef(null);
@@ -645,24 +646,45 @@ export function HomeScreen({ navigation, route }) {
       } else startTracking();
     }
     function startTracking() {
+      // Send GPS to backend for admin map tracking
+      async function sendLocationToServer(lat, lng, heading, speed) {
+        try {
+          await apiPostAuth("/driver/location", { lat, lng, heading: heading || null, speed: speed || null });
+        } catch (e) { /* silently fail - don't break app if server is down */ }
+      }
       // Get initial position fast
       Geolocation.getCurrentPosition(
-        (pos) => setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        (pos) => {
+          setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          sendLocationToServer(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed);
+        },
         () => setDriverLocation({ latitude: 39.9526, longitude: -75.1652 }),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
       );
       // Watch position for real-time tracking (updates when driver moves 50+ meters)
       watchIdRef.current = Geolocation.watchPosition(
-        (pos) => setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        (pos) => {
+          setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          sendLocationToServer(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed);
+        },
         (err) => console.log("Watch position error:", err),
         { enableHighAccuracy: true, distanceFilter: 50, maximumAge: 5000, timeout: 15000 }
       );
+      // Also send location every 30 seconds as a heartbeat (even if driver hasn't moved)
+      gpsIntervalRef.current = setInterval(() => {
+        const loc = driverLocationRef.current;
+        if (loc) sendLocationToServer(loc.latitude, loc.longitude, null, null);
+      }, 30000);
     }
     requestLoc();
     return () => {
       if (watchIdRef.current !== null) {
         Geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
+      }
+      if (gpsIntervalRef.current !== null) {
+        clearInterval(gpsIntervalRef.current);
+        gpsIntervalRef.current = null;
       }
     };
   }, []);
