@@ -32,6 +32,8 @@ export default function MapPage() {
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [leafletReady, setLeafletReady] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -93,12 +95,22 @@ export default function MapPage() {
     }
   }, []);
 
-  // Initial fetch + polling every 10 seconds
+  // Initial fetch + polling every 10 seconds with visible countdown
   useEffect(() => {
     fetchDrivers();
-    const interval = setInterval(fetchDrivers, 10000);
-    return () => clearInterval(interval);
-  }, [fetchDrivers]);
+    if (!autoRefresh) return;
+    setCountdown(10);
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          fetchDrivers();
+          return 10;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countdownInterval);
+  }, [fetchDrivers, autoRefresh]);
 
   // Initialize map once Leaflet is ready
   useEffect(() => {
@@ -195,12 +207,24 @@ export default function MapPage() {
             {lastRefresh && <span className="ml-2">(updated {lastRefresh.toLocaleTimeString()})</span>}
           </p>
         </div>
-        <button
-          onClick={fetchDrivers}
-          className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+              autoRefresh
+                ? 'bg-green-100 text-green-700 border border-green-300'
+                : 'bg-gray-100 text-gray-500 border border-gray-300'
+            }`}
+          >
+            Auto-Refresh: {autoRefresh ? `ON (${countdown}s)` : 'OFF'}
+          </button>
+          <button
+            onClick={() => { fetchDrivers(); setCountdown(10); }}
+            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+          >
+            Refresh Now
+          </button>
+        </div>
       </div>
 
       {error && (
