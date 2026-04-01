@@ -225,6 +225,16 @@ export async function streamLocation(token: string, jobId: string, lat: number, 
   return res.json()
 }
 
+export async function sendDriverLocation(token: string, lat: number, lng: number, heading?: number | null, speed?: number | null) {
+  const res = await fetch(`${API_BASE}/driver/location`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ lat, lng, heading: heading || null, speed: speed || null }),
+  })
+  if (!res.ok) throw new Error('Failed to send location')
+  return res.json()
+}
+
 // ── Types ─────────────────────────────────────────────
 export interface Driver {
   id: number | string
