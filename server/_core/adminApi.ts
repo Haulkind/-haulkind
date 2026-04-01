@@ -906,65 +906,76 @@ export function registerAdminApiRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
-      // Use SELECT * like the working /admin/drivers/:id endpoint does
-      // This avoids column-not-found errors from specifying columns that may not exist
-      const driversResult = await pool.query(
-        `SELECT * FROM drivers WHERE status = 'approved' ORDER BY created_at DESC`
-      );
-      const driversRows = driversResult.rows;
-
-      // Ensure driver_locations table exists (same as customerApi.ts startup)
+      // Step 1: Get approved drivers using explicit column list (same as /admin/drivers)
+      let driversRows: any[] = [];
       try {
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS driver_locations (
-            id SERIAL PRIMARY KEY,
-            driver_id TEXT NOT NULL,
-            lat DECIMAL(10,7) NOT NULL,
-            lng DECIMAL(10,7) NOT NULL,
-            heading DECIMAL(5,1),
-            speed DECIMAL(6,2),
-            updated_at TIMESTAMP DEFAULT NOW()
-          )
-        `);
+        const driversResult = await pool.query(
+          `SELECT id, name, phone, email, status, first_name, last_name,
+                  vehicle_type, is_online, driver_status, is_active
+           FROM drivers WHERE status = 'approved' ORDER BY created_at DESC`
+        );
+        driversRows = driversResult.rows;
+        console.log(`[Admin] Step 1: ${driversRows.length} approved drivers found`);
+      } catch (e: any) {
+        console.error('[Admin] Step 1 failed (drivers query):', e?.message || String(e));
+        // Fallback: try simpler query
         try {
-          await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
-        } catch (e) { /* index may already exist */ }
-      } catch (e) {
-        console.warn('[Admin] Could not ensure driver_locations table:', (e as any)?.message);
+          const fallback = await pool.query(`SELECT id, name, phone, email, status FROM drivers WHERE status = 'approved'`);
+          driversRows = fallback.rows;
+          console.log(`[Admin] Step 1 fallback: ${driversRows.length} drivers`);
+        } catch (e2: any) {
+          console.error('[Admin] Step 1 fallback also failed:', e2?.message || String(e2));
+          return res.status(500).json({ error: 'Failed to query drivers', details: e2?.message || String(e2) });
+        }
       }
 
-      // Get locations from driver_locations table
+      // Step 2: Get locations from driver_locations table
       const locationMap = new Map<string, any>();
       try {
-        const locResult = await pool.query(
-          `SELECT driver_id, lat::double precision, lng::double precision,
-                  heading::double precision, speed::double precision, updated_at as location_updated_at
-           FROM driver_locations`
+        // Check if table exists first
+        const tableCheck = await pool.query(
+          `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'driver_locations') as exists`
         );
-        for (const row of locResult.rows) {
-          // Store under both raw and stringified key for flexible matching
-          locationMap.set(String(row.driver_id), row);
+        if (tableCheck.rows[0]?.exists) {
+          const locResult = await pool.query(
+            `SELECT driver_id, lat, lng, heading, speed, updated_at as location_updated_at
+             FROM driver_locations`
+          );
+          for (const row of locResult.rows) {
+            locationMap.set(String(row.driver_id), {
+              lat: row.lat != null ? parseFloat(String(row.lat)) : null,
+              lng: row.lng != null ? parseFloat(String(row.lng)) : null,
+              heading: row.heading != null ? parseFloat(String(row.heading)) : null,
+              speed: row.speed != null ? parseFloat(String(row.speed)) : null,
+              location_updated_at: row.location_updated_at,
+            });
+          }
+          console.log(`[Admin] Step 2: ${locResult.rows.length} location rows, keys: [${Array.from(locationMap.keys()).join(', ')}]`);
+        } else {
+          console.log('[Admin] Step 2: driver_locations table does not exist yet');
         }
-        console.log(`[Admin] driver_locations rows: ${locResult.rows.length}, keys: [${Array.from(locationMap.keys()).join(', ')}]`);
-        console.log(`[Admin] driver IDs: [${driversRows.map((d: any) => String(d.id)).join(', ')}]`);
       } catch (locErr: any) {
-        console.warn('[Admin] Could not fetch driver locations:', locErr.message);
+        console.warn('[Admin] Step 2 warning (locations query):', locErr?.message || String(locErr));
+        // Continue without locations — drivers will show as "No GPS"
       }
 
-      // Merge drivers with their locations
+      // Step 3: Merge drivers with their locations
       const drivers = driversRows.map((d: any) => {
         const loc = locationMap.get(String(d.id));
-        const displayName = (d.first_name && d.last_name)
-          ? `${d.first_name} ${d.last_name}`
-          : d.name || 'Unknown';
+        let displayName = 'Unknown';
+        try {
+          displayName = (d.first_name && d.last_name)
+            ? `${d.first_name} ${d.last_name}`
+            : d.name || 'Unknown';
+        } catch (_e) { /* safe fallback */ }
         return {
           id: d.id,
-          name: d.name,
+          name: d.name || null,
           display_name: displayName,
-          phone: d.phone,
-          email: d.email,
-          status: d.status,
-          driver_status: d.driver_status || d.status,
+          phone: d.phone || null,
+          email: d.email || null,
+          status: d.status || null,
+          driver_status: d.driver_status || d.status || null,
           is_online: d.is_online || false,
           vehicle_type: d.vehicle_type || null,
           lat: loc?.lat ?? null,
@@ -979,7 +990,7 @@ export function registerAdminApiRoutes(app: Express) {
       res.json({ drivers });
     } catch (err: any) {
       console.error('Get driver locations error:', err);
-      res.status(500).json({ error: 'Internal server error', details: err.message });
+      res.status(500).json({ error: 'Internal server error', details: err?.message || String(err) });
     }
   });
 
