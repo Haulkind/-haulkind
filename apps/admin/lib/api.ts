@@ -262,6 +262,54 @@ class ApiClient {
     });
   }
 
+  async createOrder(data: {
+    customer_name: string;
+    customer_phone: string;
+    customer_email?: string;
+    service_type?: string;
+    pickup_address?: string;
+    description?: string;
+    estimated_price?: string;
+    scheduled_for?: string;
+    pickup_time_window?: string;
+    photo_urls?: string;
+    signature_data?: string;
+    assign_driver_id?: string;
+    mark_completed?: boolean;
+    mark_paid?: boolean;
+  }): Promise<{ order: Order }> {
+    return this.request('/admin/orders/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async completeAndPayOrder(id: string, price_total: string): Promise<{ order: Order }> {
+    return this.request(`/admin/orders/${id}/complete-paid`, {
+      method: 'PUT',
+      body: JSON.stringify({ price_total }),
+    });
+  }
+
+  async getDriverLocations(): Promise<{ drivers: Array<{
+    id: string;
+    name: string;
+    display_name: string;
+    phone: string;
+    email: string;
+    status: string;
+    driver_status: string;
+    is_online: boolean;
+    vehicle_type: string;
+    lat: number | null;
+    lng: number | null;
+    heading: number | null;
+    speed: number | null;
+    location_updated_at: string | null;
+  }> }> {
+    return this.request('/admin/drivers/locations');
+  }
+
   // Payouts
   async getPayouts(params?: { status?: string; limit?: number; offset?: number }): Promise<{ payouts: any[]; total: number }> {
     const query = new URLSearchParams(params as any).toString();

@@ -773,4 +773,155 @@ export function registerAdminApiRoutes(app: Express) {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // ============================================================================
+  // CREATE ORDER MANUALLY (admin)
+  // ============================================================================
+  app.post('/admin/orders/create', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const {
+        customer_name, customer_phone, customer_email,
+        service_type, pickup_address, description,
+        estimated_price, scheduled_for, pickup_time_window,
+        photo_urls, signature_data,
+        assign_driver_id, mark_completed, mark_paid
+      } = req.body;
+
+      if (!customer_name || !customer_phone) {
+        return res.status(400).json({ error: 'Customer name and phone are required' });
+      }
+
+      // Determine initial status
+      let status = 'pending';
+      if (mark_completed) status = 'completed';
+      else if (assign_driver_id) status = 'assigned';
+
+      // Calculate payment fields if marking as paid
+      const priceTotalCents = mark_paid && estimated_price ? Math.round(parseFloat(estimated_price) * 100) : null;
+      const platformFeeCents = priceTotalCents ? Math.round(priceTotalCents * 0.30) : null;
+      const driverEarningsCents = priceTotalCents ? priceTotalCents - platformFeeCents! : null;
+      const paidAt = mark_paid ? new Date().toISOString() : null;
+
+      const result = await pool.query(
+        `INSERT INTO jobs (
+          customer_name, customer_phone, customer_email,
+          service_type, pickup_address, description,
+          estimated_price, scheduled_for, pickup_time_window,
+          photo_urls, signature_data,
+          assigned_driver_id, status,
+          price_total_cents, platform_fee_cents, driver_earnings_cents, paid_at,
+          created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+        ) RETURNING *`,
+        [
+          customer_name, customer_phone, customer_email || null,
+          service_type || 'HAUL_AWAY', pickup_address || null, description || null,
+          estimated_price || '0', scheduled_for || null, pickup_time_window || null,
+          photo_urls || null, signature_data || null,
+          assign_driver_id || null, status,
+          priceTotalCents, platformFeeCents, driverEarningsCents, paidAt
+        ]
+      );
+
+      // Create job_assignment if driver assigned
+      if (assign_driver_id && result.rows[0]) {
+        try {
+          await pool.query(
+            'INSERT INTO job_assignments (job_id, driver_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [result.rows[0].id, assign_driver_id]
+          );
+        } catch (e) { /* ignore */ }
+      }
+
+      console.log(`[Admin] Manual order created: ${result.rows[0].id} for ${customer_name}`);
+      res.json({ order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Create order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============================================================================
+  // COMPLETE & MARK PAID (admin)
+  // ============================================================================
+  app.put('/admin/orders/:id/complete-paid', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { price_total } = req.body;
+      if (!price_total || isNaN(parseFloat(price_total))) {
+        return res.status(400).json({ error: 'price_total is required (in dollars)' });
+      }
+
+      const priceTotalCents = Math.round(parseFloat(price_total) * 100);
+      const platformFeeCents = Math.round(priceTotalCents * 0.30);
+      const driverEarningsCents = priceTotalCents - platformFeeCents;
+
+      // Try jobs table first
+      let result = await pool.query(
+        `UPDATE jobs SET
+          status = 'completed',
+          price_total_cents = $1,
+          platform_fee_cents = $2,
+          driver_earnings_cents = $3,
+          paid_at = NOW(),
+          updated_at = NOW()
+        WHERE id = $4 RETURNING *`,
+        [priceTotalCents, platformFeeCents, driverEarningsCents, req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        // Try orders table (legacy)
+        result = await pool.query(
+          `UPDATE orders SET
+            status = 'completed',
+            updated_at = NOW()
+          WHERE id::text = $1 RETURNING *`,
+          [req.params.id]
+        );
+      }
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      console.log(`[Admin] Order ${req.params.id} COMPLETED & PAID: $${price_total} (${priceTotalCents}c)`);
+      res.json({ order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Complete & pay order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============================================================================
+  // DRIVER LOCATIONS (admin) - Get all drivers with their latest GPS location
+  // ============================================================================
+  app.get('/admin/drivers/locations', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const result = await pool.query(`
+        SELECT
+          d.id, d.name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as display_name,
+          d.phone, d.email, d.status, d.driver_status, d.is_online, d.vehicle_type,
+          dl.lat::double precision, dl.lng::double precision, dl.heading::double precision,
+          dl.speed::double precision, dl.updated_at as location_updated_at
+        FROM drivers d
+        LEFT JOIN driver_locations dl ON d.id::text = dl.driver_id
+        WHERE d.driver_status = 'approved' OR d.status = 'approved'
+        ORDER BY d.is_online DESC NULLS LAST, dl.updated_at DESC NULLS LAST
+      `);
+
+      res.json({ drivers: result.rows });
+    } catch (err: any) {
+      console.error('Get driver locations error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 }

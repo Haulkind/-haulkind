@@ -42,6 +42,7 @@ export default function RootLayout({
     { href: '/customers', label: 'Customers', icon: '👥' },
     { href: '/orders', label: 'Orders', icon: '📦' },
     { href: '/payouts', label: 'Payouts', icon: '💰' },
+    { href: '/map', label: 'Driver Map', icon: '📍' },
     { href: '/settings', label: 'Settings', icon: '🔒' },
   ];
 

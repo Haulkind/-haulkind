@@ -33,6 +33,22 @@ export default function OrdersPage() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
 
+  // Create Order modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    customer_name: '', customer_phone: '', customer_email: '',
+    service_type: 'HAUL_AWAY', pickup_address: '', description: '',
+    estimated_price: '', scheduled_for: '', pickup_time_window: '',
+    assign_driver_id: '', mark_completed: false, mark_paid: false,
+  });
+  const [createPhotos, setCreatePhotos] = useState<string[]>([]);
+  const [createSignature, setCreateSignature] = useState('');
+  const [createDrivers, setCreateDrivers] = useState<Driver[]>([]);
+
+  // Complete & Pay modal
+  const [completePaidOrder, setCompletePaidOrder] = useState<Order | null>(null);
+  const [completePaidAmount, setCompletePaidAmount] = useState('');
+
   const loadOrders= useCallback(async () => {
     try {
       const params: any = {};
@@ -256,6 +272,98 @@ export default function OrdersPage() {
     }
   };
 
+  // ---- CREATE ORDER ----
+  const handleOpenCreate = async () => {
+    setCreateForm({
+      customer_name: '', customer_phone: '', customer_email: '',
+      service_type: 'HAUL_AWAY', pickup_address: '', description: '',
+      estimated_price: '', scheduled_for: '', pickup_time_window: '',
+      assign_driver_id: '', mark_completed: false, mark_paid: false,
+    });
+    setCreatePhotos([]);
+    setCreateSignature('');
+    setActionError('');
+    setShowCreateModal(true);
+    try {
+      const data = await api.getDrivers({ status: 'approved', limit: 100 });
+      setCreateDrivers(data.drivers);
+    } catch { setCreateDrivers([]); }
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) setCreatePhotos(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) setCreateSignature(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmCreateOrder = async () => {
+    if (!createForm.customer_name || !createForm.customer_phone) {
+      setActionError('Customer name and phone are required');
+      return;
+    }
+    setActionLoading(true);
+    setActionError('');
+    try {
+      const photoUrlsStr = createPhotos.length > 0 ? JSON.stringify(createPhotos) : undefined;
+      await api.createOrder({
+        ...createForm,
+        estimated_price: createForm.estimated_price || '0',
+        photo_urls: photoUrlsStr,
+        signature_data: createSignature || undefined,
+        assign_driver_id: createForm.assign_driver_id || undefined,
+        scheduled_for: createForm.scheduled_for || undefined,
+        pickup_time_window: createForm.pickup_time_window || undefined,
+      });
+      setActionSuccess('Order created successfully!');
+      setShowCreateModal(false);
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to create order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ---- COMPLETE & PAY ----
+  const handleCompletePaidClick = (order: Order) => {
+    setActionError('');
+    setCompletePaidAmount(formatPrice(order.pricing_json).replace('$', ''));
+    setCompletePaidOrder(order);
+  };
+
+  const confirmCompletePaid = async () => {
+    if (!completePaidOrder || !completePaidAmount) return;
+    setActionLoading(true);
+    setActionError('');
+    try {
+      await api.completeAndPayOrder(completePaidOrder.id, completePaidAmount);
+      setActionSuccess(`Order marked as completed & paid ($${completePaidAmount})`);
+      setCompletePaidOrder(null);
+      setCompletePaidAmount('');
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to complete order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -284,6 +392,12 @@ export default function OrdersPage() {
               {lastUpdated.toLocaleTimeString()}
             </span>
           )}
+          <button
+            onClick={handleOpenCreate}
+            className="px-2 sm:px-3 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs sm:text-sm font-medium"
+          >
+            + Create Order
+          </button>
           <button
             onClick={loadOrders}
             className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs sm:text-sm"
@@ -505,6 +619,15 @@ export default function OrdersPage() {
                           title="View completion photos"
                         >
                           Completion Photos
+                        </button>
+                      )}
+                      {order.status !== 'cancelled' && order.status !== 'completed' && (
+                        <button
+                          onClick={() => handleCompletePaidClick(order)}
+                          className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
+                          title="Mark as completed and paid"
+                        >
+                          Complete & Pay
                         </button>
                       )}
                       {order.status === 'completed' && order.has_signature && (
@@ -773,6 +896,176 @@ export default function OrdersPage() {
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE ORDER MODAL */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Create Order Manually</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            {actionError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">{actionError}</div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
+                <input type="text" value={createForm.customer_name} onChange={e => setCreateForm(f => ({ ...f, customer_name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="John Doe" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input type="tel" value={createForm.customer_phone} onChange={e => setCreateForm(f => ({ ...f, customer_phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="(609) 456-8188" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={createForm.customer_email} onChange={e => setCreateForm(f => ({ ...f, customer_email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="customer@email.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                <select value={createForm.service_type} onChange={e => setCreateForm(f => ({ ...f, service_type: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="HAUL_AWAY">Haul Away</option>
+                  <option value="LABOR_ONLY">Labor Only</option>
+                  <option value="MATTRESS_SWAP">Mattress Swap</option>
+                  <option value="FURNITURE_ASSEMBLY">Furniture Assembly</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Address</label>
+                <input type="text" value={createForm.pickup_address} onChange={e => setCreateForm(f => ({ ...f, pickup_address: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="123 Main St, Philadelphia, PA 19103" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description / Items</label>
+                <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" rows={2} placeholder="Old couch, 2 mattresses..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+                <input type="number" step="0.01" value={createForm.estimated_price} onChange={e => setCreateForm(f => ({ ...f, estimated_price: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="279" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label>
+                <input type="date" value={createForm.scheduled_for} onChange={e => setCreateForm(f => ({ ...f, scheduled_for: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time Window</label>
+                <select value={createForm.pickup_time_window} onChange={e => setCreateForm(f => ({ ...f, pickup_time_window: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Any Time</option>
+                  <option value="MORNING">Morning (8AM-12PM)</option>
+                  <option value="AFTERNOON">Afternoon (12PM-4PM)</option>
+                  <option value="EVENING">Evening (4PM-8PM)</option>
+                  <option value="ALL_DAY">All Day (8AM-8PM)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Driver</label>
+                <select value={createForm.assign_driver_id} onChange={e => setCreateForm(f => ({ ...f, assign_driver_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">-- No driver (available to all) --</option>
+                  {createDrivers.map(d => (
+                    <option key={d.id} value={d.id}>{d.name || `${d.id.substring(0, 8)}...`} — {d.phone || d.email || 'No contact'}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Photos */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Photos</label>
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+              {createPhotos.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {createPhotos.map((p, i) => (
+                    <div key={i} className="relative">
+                      <img src={p} alt={`Photo ${i+1}`} className="w-16 h-16 object-cover rounded border" />
+                      <button onClick={() => setCreatePhotos(prev => prev.filter((_, idx) => idx !== i))}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center">&times;</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Signature */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Signature</label>
+              <input type="file" accept="image/*" onChange={handleSignatureUpload}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
+              {createSignature && (
+                <div className="mt-2 relative inline-block">
+                  <img src={createSignature} alt="Signature" className="h-16 border rounded" />
+                  <button onClick={() => setCreateSignature('')}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center">&times;</button>
+                </div>
+              )}
+            </div>
+
+            {/* Completed & Paid checkboxes */}
+            <div className="mb-4 flex gap-6">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={createForm.mark_completed} onChange={e => setCreateForm(f => ({ ...f, mark_completed: e.target.checked }))}
+                  className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                <span className="text-gray-700">Mark as Completed</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={createForm.mark_paid} onChange={e => setCreateForm(f => ({ ...f, mark_paid: e.target.checked }))}
+                  className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                <span className="text-gray-700">Mark as Paid</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200" disabled={actionLoading}>Cancel</button>
+              <button onClick={confirmCreateOrder}
+                className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                disabled={actionLoading || !createForm.customer_name || !createForm.customer_phone}>
+                {actionLoading ? 'Creating...' : 'Create Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMPLETE & PAY MODAL */}
+      {completePaidOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Complete & Mark Paid</h3>
+            <p className="text-gray-600 mb-4">
+              Mark order <strong>{completePaidOrder.id.substring(0, 8)}...</strong> for <strong>{completePaidOrder.customer_name}</strong> as completed and paid.
+            </p>
+            {actionError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">{actionError}</div>
+            )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Amount Paid ($)</label>
+              <input type="number" step="0.01" value={completePaidAmount} onChange={e => setCompletePaidAmount(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-lg font-bold"
+                placeholder="279.00" />
+              <p className="text-xs text-gray-500 mt-1">30% goes to HaulKind, 70% to the driver</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => { setCompletePaidOrder(null); setActionError(''); }} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200" disabled={actionLoading}>Cancel</button>
+              <button onClick={confirmCompletePaid}
+                className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                disabled={actionLoading || !completePaidAmount}>
+                {actionLoading ? 'Processing...' : 'Complete & Mark Paid'}
               </button>
             </div>
           </div>
