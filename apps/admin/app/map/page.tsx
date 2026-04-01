@@ -35,6 +35,7 @@ export default function MapPage() {
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const initialFitDone = useRef(false);
 
   // Load Leaflet CSS + JS dynamically
   useEffect(() => {
@@ -149,9 +150,10 @@ export default function MapPage() {
       markersRef.current.push(marker);
     });
 
-    if (driversWithLocation.length > 0) {
+    if (driversWithLocation.length > 0 && !initialFitDone.current) {
       const bounds = L.latLngBounds(driversWithLocation.map((d: DriverLocation) => [d.lat!, d.lng!]));
       mapRef.current.fitBounds(bounds.pad(0.2));
+      initialFitDone.current = true;
     }
   }, [drivers, leafletReady]);
 
