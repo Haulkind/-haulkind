@@ -906,53 +906,49 @@ export function registerAdminApiRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
-      // Step 1: Get all approved drivers using the same simple query pattern as /admin/drivers
-      let driversRows: any[] = [];
+      // Use SELECT * like the working /admin/drivers/:id endpoint does
+      // This avoids column-not-found errors from specifying columns that may not exist
+      const driversResult = await pool.query(
+        `SELECT * FROM drivers WHERE status = 'approved' ORDER BY created_at DESC`
+      );
+      const driversRows = driversResult.rows;
+
+      // Ensure driver_locations table exists (same as customerApi.ts startup)
       try {
-        const driversResult = await pool.query(
-          `SELECT id, name, phone, email, status, first_name, last_name, is_online, vehicle_type, driver_status
-           FROM drivers
-           WHERE driver_status = 'approved' OR status = 'approved'
-           ORDER BY is_online DESC NULLS LAST`
-        );
-        driversRows = driversResult.rows;
-      } catch (driverErr: any) {
-        console.error('[Admin] Drivers query failed:', driverErr.message);
-        // Minimal fallback - just id and name
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS driver_locations (
+            id SERIAL PRIMARY KEY,
+            driver_id TEXT NOT NULL,
+            lat DECIMAL(10,7) NOT NULL,
+            lng DECIMAL(10,7) NOT NULL,
+            heading DECIMAL(5,1),
+            speed DECIMAL(6,2),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
         try {
-          const minResult = await pool.query(
-            `SELECT id, name, phone, email, status FROM drivers WHERE status = 'approved'`
-          );
-          driversRows = minResult.rows;
-        } catch (minErr: any) {
-          console.error('[Admin] Minimal drivers query also failed:', minErr.message);
-          return res.status(500).json({ error: 'Failed to query drivers', details: minErr.message });
-        }
+          await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
+        } catch (e) { /* index may already exist */ }
+      } catch (e) {
+        console.warn('[Admin] Could not ensure driver_locations table:', (e as any)?.message);
       }
 
-      // Step 2: Try to get locations from driver_locations table
+      // Get locations from driver_locations table
       const locationMap = new Map<string, any>();
       try {
-        // Check if table exists first
-        const tableCheck = await pool.query(
-          `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'driver_locations') as exists`
+        const locResult = await pool.query(
+          `SELECT driver_id, lat::double precision, lng::double precision,
+                  heading::double precision, speed::double precision, updated_at as location_updated_at
+           FROM driver_locations`
         );
-        if (tableCheck.rows[0]?.exists) {
-          const locResult = await pool.query(
-            `SELECT driver_id, lat::double precision, lng::double precision,
-                    heading::double precision, speed::double precision, updated_at as location_updated_at
-             FROM driver_locations`
-          );
-          for (const row of locResult.rows) {
-            locationMap.set(row.driver_id, row);
-          }
+        for (const row of locResult.rows) {
+          locationMap.set(row.driver_id, row);
         }
       } catch (locErr: any) {
         console.warn('[Admin] Could not fetch driver locations:', locErr.message);
-        // Continue without locations - drivers will just show without GPS
       }
 
-      // Step 3: Merge drivers with their locations
+      // Merge drivers with their locations
       const drivers = driversRows.map((d: any) => {
         const loc = locationMap.get(String(d.id));
         const displayName = (d.first_name && d.last_name)
@@ -976,6 +972,7 @@ export function registerAdminApiRoutes(app: Express) {
         };
       });
 
+      console.log(`[Admin] GET /admin/drivers/locations - ${drivers.length} drivers, ${locationMap.size} with GPS`);
       res.json({ drivers });
     } catch (err: any) {
       console.error('Get driver locations error:', err);
