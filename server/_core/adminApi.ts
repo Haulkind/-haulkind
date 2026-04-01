@@ -906,60 +906,80 @@ export function registerAdminApiRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
-      // Ensure driver_locations table exists
+      // Step 1: Get all approved drivers using the same simple query pattern as /admin/drivers
+      let driversRows: any[] = [];
       try {
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS driver_locations (
-            id SERIAL PRIMARY KEY,
-            driver_id TEXT NOT NULL,
-            lat DECIMAL(10,7) NOT NULL,
-            lng DECIMAL(10,7) NOT NULL,
-            heading DECIMAL(5,1),
-            speed DECIMAL(6,2),
-            updated_at TIMESTAMP DEFAULT NOW()
-          )
-        `);
+        const driversResult = await pool.query(
+          `SELECT id, name, phone, email, status, first_name, last_name, is_online, vehicle_type, driver_status
+           FROM drivers
+           WHERE driver_status = 'approved' OR status = 'approved'
+           ORDER BY is_online DESC NULLS LAST`
+        );
+        driversRows = driversResult.rows;
+      } catch (driverErr: any) {
+        console.error('[Admin] Drivers query failed:', driverErr.message);
+        // Minimal fallback - just id and name
         try {
-          await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
-        } catch (e) { /* index may already exist */ }
-      } catch (e) {
-        console.warn('[Admin] Could not ensure driver_locations table:', (e as any)?.message);
+          const minResult = await pool.query(
+            `SELECT id, name, phone, email, status FROM drivers WHERE status = 'approved'`
+          );
+          driversRows = minResult.rows;
+        } catch (minErr: any) {
+          console.error('[Admin] Minimal drivers query also failed:', minErr.message);
+          return res.status(500).json({ error: 'Failed to query drivers', details: minErr.message });
+        }
       }
 
-      // Try the full query with JOIN
-      let result;
+      // Step 2: Try to get locations from driver_locations table
+      const locationMap = new Map<string, any>();
       try {
-        result = await pool.query(`
-          SELECT
-            d.id, d.name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as display_name,
-            d.phone, d.email, d.status, d.driver_status, d.is_online, d.vehicle_type,
-            dl.lat::double precision, dl.lng::double precision, dl.heading::double precision,
-            dl.speed::double precision, dl.updated_at as location_updated_at
-          FROM drivers d
-          LEFT JOIN driver_locations dl ON d.id::text = dl.driver_id
-          WHERE d.driver_status = 'approved' OR d.status = 'approved'
-          ORDER BY d.is_online DESC NULLS LAST, dl.updated_at DESC NULLS LAST
-        `);
-      } catch (joinErr: any) {
-        console.warn('[Admin] Full driver locations query failed, falling back to drivers only:', joinErr.message);
-        // Fallback: just get drivers without location data
-        result = await pool.query(`
-          SELECT
-            d.id, d.name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as display_name,
-            d.phone, d.email, d.status, d.driver_status, d.is_online, d.vehicle_type,
-            NULL::double precision as lat, NULL::double precision as lng,
-            NULL::double precision as heading, NULL::double precision as speed,
-            NULL::timestamp as location_updated_at
-          FROM drivers d
-          WHERE d.driver_status = 'approved' OR d.status = 'approved'
-          ORDER BY d.is_online DESC NULLS LAST
-        `);
+        // Check if table exists first
+        const tableCheck = await pool.query(
+          `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'driver_locations') as exists`
+        );
+        if (tableCheck.rows[0]?.exists) {
+          const locResult = await pool.query(
+            `SELECT driver_id, lat::double precision, lng::double precision,
+                    heading::double precision, speed::double precision, updated_at as location_updated_at
+             FROM driver_locations`
+          );
+          for (const row of locResult.rows) {
+            locationMap.set(row.driver_id, row);
+          }
+        }
+      } catch (locErr: any) {
+        console.warn('[Admin] Could not fetch driver locations:', locErr.message);
+        // Continue without locations - drivers will just show without GPS
       }
 
-      res.json({ drivers: result.rows });
+      // Step 3: Merge drivers with their locations
+      const drivers = driversRows.map((d: any) => {
+        const loc = locationMap.get(String(d.id));
+        const displayName = (d.first_name && d.last_name)
+          ? `${d.first_name} ${d.last_name}`
+          : d.name || 'Unknown';
+        return {
+          id: d.id,
+          name: d.name,
+          display_name: displayName,
+          phone: d.phone,
+          email: d.email,
+          status: d.status,
+          driver_status: d.driver_status || d.status,
+          is_online: d.is_online || false,
+          vehicle_type: d.vehicle_type || null,
+          lat: loc?.lat ?? null,
+          lng: loc?.lng ?? null,
+          heading: loc?.heading ?? null,
+          speed: loc?.speed ?? null,
+          location_updated_at: loc?.location_updated_at ?? null,
+        };
+      });
+
+      res.json({ drivers });
     } catch (err: any) {
       console.error('Get driver locations error:', err);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Internal server error', details: err.message });
     }
   });
 }
