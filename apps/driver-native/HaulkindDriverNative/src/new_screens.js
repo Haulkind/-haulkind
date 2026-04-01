@@ -647,12 +647,21 @@ export function HomeScreen({ navigation, route }) {
     }
     function startTracking() {
       // Send GPS to backend for admin map tracking
+      let gpsSendCount = 0;
       async function sendLocationToServer(lat, lng, heading, speed) {
         try {
+          const token = await AsyncStorage.getItem("driver_token");
+          if (!token) {
+            console.warn("[GPS] No token stored — cannot send location to server");
+            return;
+          }
           const result = await apiPostAuth("/driver/location", { lat, lng, heading: heading ?? null, speed: speed ?? null });
-          console.log("[GPS] Sent to server:", lat, lng, "result:", JSON.stringify(result));
+          gpsSendCount++;
+          if (gpsSendCount <= 5 || gpsSendCount % 10 === 0) {
+            console.log("[GPS] Sent #" + gpsSendCount + " to server:", lat.toFixed(4), lng.toFixed(4), "result:", JSON.stringify(result));
+          }
         } catch (e) {
-          console.warn("[GPS] Failed to send:", e?.message);
+          console.warn("[GPS] FAILED to send location:", e?.message);
         }
       }
       // Get initial position fast
@@ -673,11 +682,11 @@ export function HomeScreen({ navigation, route }) {
         (err) => console.log("Watch position error:", err),
         { enableHighAccuracy: true, distanceFilter: 50, maximumAge: 5000, timeout: 15000 }
       );
-      // Also send location every 30 seconds as a heartbeat (even if driver hasn't moved)
+      // Send location every 15 seconds as a heartbeat (even if driver hasn't moved)
       gpsIntervalRef.current = setInterval(() => {
         const loc = driverLocationRef.current;
         if (loc) sendLocationToServer(loc.latitude, loc.longitude, null, null);
-      }, 30000);
+      }, 15000);
     }
     requestLoc();
     return () => {

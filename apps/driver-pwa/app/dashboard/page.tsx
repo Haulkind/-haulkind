@@ -136,8 +136,14 @@ export default function DashboardPage() {
   const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const latRef = useRef<number | null>(null)
   const lngRef = useRef<number | null>(null)
+  const gpsSendCountRef = useRef(0)
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    if (!token) {
+      console.log('[PWA GPS] No token yet, skipping GPS tracking')
+      return
+    }
+    console.log('[PWA GPS] Starting GPS tracking with token:', token.substring(0, 20) + '...')
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setLat(pos.coords.latitude)
@@ -145,19 +151,25 @@ export default function DashboardPage() {
         latRef.current = pos.coords.latitude
         lngRef.current = pos.coords.longitude
         // Send to backend immediately on position change
-        if (token) {
-          sendDriverLocation(token, pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed).catch(() => {})
-        }
+        sendDriverLocation(token, pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed)
+          .then((res) => {
+            gpsSendCountRef.current++
+            if (gpsSendCountRef.current <= 5 || gpsSendCountRef.current % 10 === 0) {
+              console.log(`[PWA GPS] Sent #${gpsSendCountRef.current}:`, pos.coords.latitude.toFixed(4), pos.coords.longitude.toFixed(4), 'result:', JSON.stringify(res))
+            }
+          })
+          .catch((err) => console.warn('[PWA GPS] FAILED to send location:', err?.message))
       },
-      (err) => console.warn('GPS error:', err),
+      (err) => console.warn('[PWA GPS] Geolocation error:', err.message),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     )
-    // Also send every 30 seconds as a heartbeat (even if position hasn't changed)
+    // Send every 15 seconds as a heartbeat (even if position hasn't changed)
     gpsIntervalRef.current = setInterval(() => {
-      if (token && latRef.current != null && lngRef.current != null) {
-        sendDriverLocation(token, latRef.current, lngRef.current).catch(() => {})
+      if (latRef.current != null && lngRef.current != null) {
+        sendDriverLocation(token, latRef.current, lngRef.current)
+          .catch((err) => console.warn('[PWA GPS] Heartbeat failed:', err?.message))
       }
-    }, 30000)
+    }, 15000)
     return () => {
       navigator.geolocation.clearWatch(watchId)
       if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current)

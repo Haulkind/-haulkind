@@ -1319,7 +1319,7 @@ export function registerDriverAuthRoutes(app: Express) {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS driver_locations (
           id SERIAL PRIMARY KEY,
-          driver_id TEXT NOT NULL UNIQUE,
+          driver_id TEXT NOT NULL,
           lat DECIMAL(10,7) NOT NULL,
           lng DECIMAL(10,7) NOT NULL,
           heading DECIMAL(5,1),
@@ -1327,13 +1327,22 @@ export function registerDriverAuthRoutes(app: Express) {
           updated_at TIMESTAMP DEFAULT NOW()
         )
       `);
+      // Try to add unique index (may already exist, may fail if duplicates exist)
+      try {
+        await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
+      } catch (_e) {
+        // If unique index fails (e.g. duplicates exist), clean up duplicates first
+        try {
+          await pool.query(`
+            DELETE FROM driver_locations a USING driver_locations b
+            WHERE a.id < b.id AND a.driver_id = b.driver_id
+          `);
+          await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
+        } catch (_e2) { /* best effort */ }
+      }
       driverLocationsTableReady = true;
       console.log('[DriverAuth] driver_locations table ready');
     } catch (e: any) {
-      // Table might already exist with slightly different schema — try to add unique constraint
-      try {
-        await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id ON driver_locations (driver_id)`);
-      } catch (_e2) { /* index may already exist */ }
       driverLocationsTableReady = true;
       console.warn('[DriverAuth] driver_locations table setup warning:', e?.message);
     }
@@ -1355,26 +1364,79 @@ export function registerDriverAuthRoutes(app: Express) {
       await ensureDriverLocationsTable(pool);
 
       const driverId = String(decoded.driverId);
-      console.log(`[DriverAuth] POST /driver/location - driverId=${driverId}, lat=${lat}, lng=${lng}`);
+      console.log(`[DriverAuth] POST /driver/location - driverId=${driverId}, lat=${lat}, lng=${lng}, token.keys=${Object.keys(decoded).join(',')}`);
 
-      // Upsert: keep only latest location per driver (atomic)
-      // Use text cast to ensure consistent driver_id type matching
-      await pool.query(
-        `INSERT INTO driver_locations (driver_id, lat, lng, heading, speed, updated_at)
-         VALUES ($1::text, $2, $3, $4, $5, NOW())
-         ON CONFLICT (driver_id) DO UPDATE SET
-           lat = EXCLUDED.lat,
-           lng = EXCLUDED.lng,
-           heading = EXCLUDED.heading,
-           speed = EXCLUDED.speed,
-           updated_at = NOW()`,
+      // BULLETPROOF upsert: Try UPDATE first, then INSERT if no row exists.
+      // This approach does NOT require any unique constraint or index.
+      const updateResult = await pool.query(
+        `UPDATE driver_locations SET lat = $2, lng = $3, heading = $4, speed = $5, updated_at = NOW()
+         WHERE driver_id = $1`,
         [driverId, lat, lng, heading ?? null, speed ?? null]
       );
 
-      res.json({ success: true });
+      if (updateResult.rowCount === 0) {
+        // No existing row — insert new one
+        await pool.query(
+          `INSERT INTO driver_locations (driver_id, lat, lng, heading, speed, updated_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
+          [driverId, lat, lng, heading ?? null, speed ?? null]
+        );
+        console.log(`[DriverAuth] GPS INSERT for driverId=${driverId}`);
+      } else {
+        console.log(`[DriverAuth] GPS UPDATE for driverId=${driverId} (rows=${updateResult.rowCount})`);
+      }
+
+      res.json({ success: true, driverId });
     } catch (err: any) {
       console.error('[DriverAuth] Update driver location error:', err);
       res.status(500).json({ error: 'Failed to update location', details: err?.message });
+    }
+  });
+
+  // GET /driver/location-status - Public endpoint to check GPS storage (no auth)
+  // Used to verify the database state and debug GPS issues
+  app.get('/driver/location-status', async (_req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Check if table exists
+      const tableCheck = await pool.query(
+        `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'driver_locations') as exists`
+      );
+      if (!tableCheck.rows[0]?.exists) {
+        return res.json({ table_exists: false, rows: 0, message: 'driver_locations table does not exist yet' });
+      }
+
+      // Count rows and get summary
+      const countResult = await pool.query(`SELECT COUNT(*) as total FROM driver_locations`);
+      const recentResult = await pool.query(
+        `SELECT driver_id, lat, lng, updated_at FROM driver_locations ORDER BY updated_at DESC LIMIT 10`
+      );
+
+      // Get approved drivers for comparison
+      const driversResult = await pool.query(`SELECT id, name FROM drivers WHERE status = 'approved' ORDER BY id`);
+
+      // Check indexes
+      const indexResult = await pool.query(
+        `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'driver_locations'`
+      );
+
+      // Check column types
+      const schemaResult = await pool.query(
+        `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'driver_locations' ORDER BY ordinal_position`
+      );
+
+      res.json({
+        table_exists: true,
+        total_location_rows: parseInt(countResult.rows[0]?.total || '0'),
+        recent_locations: recentResult.rows,
+        approved_drivers: driversResult.rows.map((d: any) => ({ id: d.id, id_type: typeof d.id, id_str: String(d.id), name: d.name })),
+        indexes: indexResult.rows,
+        schema: schemaResult.rows,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
