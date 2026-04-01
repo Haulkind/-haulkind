@@ -906,17 +906,55 @@ export function registerAdminApiRoutes(app: Express) {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
-      const result = await pool.query(`
-        SELECT
-          d.id, d.name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as display_name,
-          d.phone, d.email, d.status, d.driver_status, d.is_online, d.vehicle_type,
-          dl.lat::double precision, dl.lng::double precision, dl.heading::double precision,
-          dl.speed::double precision, dl.updated_at as location_updated_at
-        FROM drivers d
-        LEFT JOIN driver_locations dl ON d.id::text = dl.driver_id
-        WHERE d.driver_status = 'approved' OR d.status = 'approved'
-        ORDER BY d.is_online DESC NULLS LAST, dl.updated_at DESC NULLS LAST
-      `);
+      // Ensure driver_locations table exists
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS driver_locations (
+            id SERIAL PRIMARY KEY,
+            driver_id TEXT NOT NULL,
+            lat DECIMAL(10,7) NOT NULL,
+            lng DECIMAL(10,7) NOT NULL,
+            heading DECIMAL(5,1),
+            speed DECIMAL(6,2),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+        try {
+          await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_locations_driver_id_unique ON driver_locations (driver_id)`);
+        } catch (e) { /* index may already exist */ }
+      } catch (e) {
+        console.warn('[Admin] Could not ensure driver_locations table:', (e as any)?.message);
+      }
+
+      // Try the full query with JOIN
+      let result;
+      try {
+        result = await pool.query(`
+          SELECT
+            d.id, d.name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as display_name,
+            d.phone, d.email, d.status, d.driver_status, d.is_online, d.vehicle_type,
+            dl.lat::double precision, dl.lng::double precision, dl.heading::double precision,
+            dl.speed::double precision, dl.updated_at as location_updated_at
+          FROM drivers d
+          LEFT JOIN driver_locations dl ON d.id::text = dl.driver_id
+          WHERE d.driver_status = 'approved' OR d.status = 'approved'
+          ORDER BY d.is_online DESC NULLS LAST, dl.updated_at DESC NULLS LAST
+        `);
+      } catch (joinErr: any) {
+        console.warn('[Admin] Full driver locations query failed, falling back to drivers only:', joinErr.message);
+        // Fallback: just get drivers without location data
+        result = await pool.query(`
+          SELECT
+            d.id, d.name, COALESCE(d.first_name || ' ' || d.last_name, d.name) as display_name,
+            d.phone, d.email, d.status, d.driver_status, d.is_online, d.vehicle_type,
+            NULL::double precision as lat, NULL::double precision as lng,
+            NULL::double precision as heading, NULL::double precision as speed,
+            NULL::timestamp as location_updated_at
+          FROM drivers d
+          WHERE d.driver_status = 'approved' OR d.status = 'approved'
+          ORDER BY d.is_online DESC NULLS LAST
+        `);
+      }
 
       res.json({ drivers: result.rows });
     } catch (err: any) {
