@@ -5,12 +5,15 @@ import Link from 'next/link'
 export default function HeroSection() {
   return (
     <section className="relative min-h-[600px] md:min-h-[700px] flex items-center">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/haulkind-hero.gif"
-        alt="HaulKind professional junk removal truck"
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
         className="absolute inset-0 w-full h-full object-cover object-center"
-      />
+      >
+        <source src="/haulkind-hero.mp4" type="video/mp4" />
+      </video>
       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent z-[1]" />
 
       <div className="relative z-10 container mx-auto px-4">
