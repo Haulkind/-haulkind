@@ -1,19 +1,15 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 
 export default function HeroSection() {
   return (
     <section className="relative min-h-[600px] md:min-h-[700px] flex items-center">
-      <Image
-        src="/haulkind_hero_truck_optimized.webp"
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/haulkind-hero.gif"
         alt="HaulKind professional junk removal truck"
-        fill
-        priority
-        quality={75}
-        sizes="100vw"
-        className="object-cover object-center"
+        className="absolute inset-0 w-full h-full object-cover object-center"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent z-[1]" />
 
