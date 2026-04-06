@@ -28,7 +28,7 @@ export default function PriceCalculator() {
   const router = useRouter()
   const [zipCode, setZipCode] = useState('')
   const [zipValid, setZipValid] = useState<boolean | null>(null)
-  const [serviceType, setServiceType] = useState<'junk-removal' | 'furniture-assembly'>('junk-removal')
+  const [serviceType, setServiceType] = useState<'junk-removal' | 'furniture-assembly' | 'mattress-swap' | 'labor'>('junk-removal')
   const [loadSize, setLoadSize] = useState<string>('quarter')
   const [selectedItems, setSelectedItems] = useState<string[]>([])
 
@@ -63,6 +63,10 @@ export default function PriceCalculator() {
     // Redirect to existing checkout flow - backend handles all pricing
     if (serviceType === 'junk-removal') {
       router.push('/quote?service=haul-away')
+    } else if (serviceType === 'mattress-swap') {
+      router.push('/quote/mattress-swap')
+    } else if (serviceType === 'furniture-assembly') {
+      router.push('/quote/assembly')
     } else {
       router.push('/quote?service=labor-only')
     }
@@ -147,73 +151,99 @@ export default function PriceCalculator() {
                 <div className="text-sm text-gray-500">Remove old furniture, appliances, and unwanted items</div>
               </button>
               <button
+                onClick={() => setServiceType('mattress-swap')}
+                className={`p-4 rounded-lg border-2 text-left transition ${
+                  serviceType === 'mattress-swap'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-semibold text-gray-900">Mattress Swap</div>
+                <div className="text-sm text-gray-500">We handle the heavy lifting — remove old, set up new</div>
+              </button>
+              <button
+                onClick={() => setServiceType('labor')}
+                className={`p-4 rounded-lg border-2 text-left transition ${
+                  serviceType === 'labor'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-semibold text-gray-900">Moving Labor</div>
+                <div className="text-sm text-gray-500">Hourly help to move, load, or unload items</div>
+              </button>
+              <button
                 onClick={() => setServiceType('furniture-assembly')}
                 className={`p-4 rounded-lg border-2 text-left transition ${
                   serviceType === 'furniture-assembly'
-                    ? 'border-teal-500 bg-teal-50'
+                    ? 'border-orange-500 bg-orange-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="font-semibold text-gray-900">Furniture Assembly</div>
-                <div className="text-sm text-gray-500">Assembly and installation of new furniture</div>
+                <div className="text-sm text-gray-500">Professional assembly for IKEA, Wayfair &amp; more</div>
               </button>
             </div>
           </div>
 
-          {/* Load Size */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Load Size
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {loadSizes.map((size) => (
-                <button
-                  key={size.id}
-                  onClick={() => setLoadSize(size.id)}
-                  className={`p-4 rounded-lg border-2 text-center transition ${
-                    loadSize === size.id
-                      ? 'border-teal-500 bg-teal-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900">{size.name}</div>
-                  <div className="text-sm text-gray-500">{size.description}</div>
-                </button>
-              ))}
+          {/* Load Size - only for Junk Removal */}
+          {serviceType === 'junk-removal' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estimated Load Size
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {loadSizes.map((size) => (
+                  <button
+                    key={size.id}
+                    onClick={() => setLoadSize(size.id)}
+                    className={`p-4 rounded-lg border-2 text-center transition ${
+                      loadSize === size.id
+                        ? 'border-teal-500 bg-teal-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-semibold text-gray-900">{size.name}</div>
+                    <div className="text-sm text-gray-500">{size.description}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Items Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Items to Remove
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              {items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => toggleItem(item.id)}
-                  className={`p-3 rounded-lg border-2 text-center transition ${
-                    selectedItems.includes(item.id)
-                      ? 'border-teal-500 bg-teal-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-2xl mb-1">{item.icon}</div>
-                  <div className="text-xs font-medium text-gray-700">{item.name}</div>
-                </button>
-              ))}
+          {/* Items Selection - only for Junk Removal */}
+          {serviceType === 'junk-removal' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Items to Remove
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleItem(item.id)}
+                    className={`p-3 rounded-lg border-2 text-center transition ${
+                      selectedItems.includes(item.id)
+                        ? 'border-teal-500 bg-teal-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">{item.icon}</div>
+                    <div className="text-xs font-medium text-gray-700">{item.name}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* CTA */}
           <div className="text-center pt-4 border-t">
-            {selectedItems.length > 0 ? (
+            {serviceType !== 'junk-removal' || selectedItems.length > 0 ? (
               <button
                 onClick={handleGetQuote}
                 className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
               >
-                Get My Instant Quote →
+                {serviceType === 'junk-removal' ? 'Get My Instant Quote →' : 'Continue to Pricing →'}
               </button>
             ) : (
               <p className="text-gray-500 py-4">
