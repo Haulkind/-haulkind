@@ -28,7 +28,7 @@ export default function PriceCalculator() {
   const router = useRouter()
   const [zipCode, setZipCode] = useState('')
   const [zipValid, setZipValid] = useState<boolean | null>(null)
-  const [serviceType, setServiceType] = useState<'junk-removal' | 'furniture-assembly' | 'mattress-swap' | 'labor' | 'donation' | 'property-cleanout' | 'electronics-disposal'>('junk-removal')
+  const [serviceType, setServiceType] = useState<'junk-removal' | 'furniture-assembly' | 'mattress-swap' | 'labor' | 'donation'>('junk-removal')
   const [loadSize, setLoadSize] = useState<string>('quarter')
   const [selectedItems, setSelectedItems] = useState<string[]>([])
 
@@ -61,7 +61,7 @@ export default function PriceCalculator() {
     sessionStorage.setItem('hk_load_size', loadSize)
     
     // Redirect to existing checkout flow - backend handles all pricing
-    if (serviceType === 'junk-removal' || serviceType === 'property-cleanout' || serviceType === 'electronics-disposal') {
+    if (serviceType === 'junk-removal') {
       router.push('/quote?service=haul-away')
     } else if (serviceType === 'donation') {
       router.push('/quote?service=donation')
@@ -201,35 +201,11 @@ export default function PriceCalculator() {
                 <div className="font-semibold text-gray-900">Furniture Assembly</div>
                 <div className="text-sm text-gray-500">Professional assembly for IKEA, Wayfair &amp; more</div>
               </button>
-              <button
-                onClick={() => setServiceType('property-cleanout')}
-                className={`relative p-4 rounded-lg border-2 text-left transition ${
-                  serviceType === 'property-cleanout'
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <span className="absolute top-2 right-2 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Full Service</span>
-                <div className="font-semibold text-gray-900">Property Cleanout</div>
-                <div className="text-sm text-gray-500">Complete clearing for homes, estates &amp; offices</div>
-              </button>
-              <button
-                onClick={() => setServiceType('electronics-disposal')}
-                className={`relative p-4 rounded-lg border-2 text-left transition ${
-                  serviceType === 'electronics-disposal'
-                    ? 'border-cyan-500 bg-cyan-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <span className="absolute top-2 right-2 bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Eco-Friendly</span>
-                <div className="font-semibold text-gray-900">Electronics Disposal</div>
-                <div className="text-sm text-gray-500">Certified e-waste recycling with secure data destruction</div>
-              </button>
             </div>
           </div>
 
           {/* Load Size - only for Junk Removal */}
-          {(serviceType === 'junk-removal' || serviceType === 'donation' || serviceType === 'property-cleanout' || serviceType === 'electronics-disposal') && (
+          {(serviceType === 'junk-removal' || serviceType === 'donation') && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Estimated Load Size
@@ -254,7 +230,7 @@ export default function PriceCalculator() {
           )}
 
           {/* Items Selection - only for Junk Removal */}
-          {(serviceType === 'junk-removal' || serviceType === 'donation' || serviceType === 'property-cleanout' || serviceType === 'electronics-disposal') && (
+          {(serviceType === 'junk-removal' || serviceType === 'donation') && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Items to Remove
@@ -280,12 +256,12 @@ export default function PriceCalculator() {
 
           {/* CTA */}
           <div className="text-center pt-4 border-t">
-            {!['junk-removal', 'donation', 'property-cleanout', 'electronics-disposal'].includes(serviceType) || selectedItems.length > 0 ? (
+            {!['junk-removal', 'donation'].includes(serviceType) || selectedItems.length > 0 ? (
               <button
                 onClick={handleGetQuote}
                 className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
               >
-                {['junk-removal', 'donation', 'property-cleanout', 'electronics-disposal'].includes(serviceType) ? 'Get My Instant Quote →' : 'Continue to Pricing →'}
+                {['junk-removal', 'donation'].includes(serviceType) ? 'Get My Instant Quote →' : 'Continue to Pricing →'}
               </button>
             ) : (
               <p className="text-gray-500 py-4">
