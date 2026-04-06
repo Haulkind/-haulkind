@@ -16,6 +16,10 @@ export default function DriversPage() {
   const [countdown, setCountdown] = useState(30);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', vehicle_type: '' });
+  const [editSaving, setEditSaving] = useState(false);
 
   const loadDrivers = useCallback(async () => {
     try {
@@ -130,6 +134,33 @@ export default function DriversPage() {
   const viewDriverDetails = (driver: Driver) => {
     setSelectedDriver(driver);
     setShowDetailsModal(true);
+  };
+
+  const openEditModal = (driver: Driver) => {
+    setEditingDriver(driver);
+    setEditForm({
+      name: driver.name || '',
+      email: driver.email || '',
+      phone: driver.phone || '',
+      vehicle_type: (driver as any).vehicle_type || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingDriver) return;
+    setEditSaving(true);
+    try {
+      await api.editDriver(editingDriver.id, editForm);
+      setShowEditModal(false);
+      setEditingDriver(null);
+      loadDrivers();
+      alert('Driver updated successfully!');
+    } catch (err: any) {
+      alert(`Failed to update driver: ${err.message}`);
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   if (loading) {
@@ -264,6 +295,12 @@ export default function DriversPage() {
                         className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                       >
                         View Details
+                      </button>
+                      <button
+                        onClick={() => openEditModal(driver)}
+                        className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
+                      >
+                        Edit
                       </button>
                       {driver.driver_status === 'pending_review' && (
                         <>
@@ -436,6 +473,78 @@ export default function DriversPage() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Driver Modal */}
+      {showEditModal && editingDriver && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Edit Driver</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type</label>
+                <input
+                  type="text"
+                  value={editForm.vehicle_type}
+                  onChange={(e) => setEditForm({ ...editForm, vehicle_type: e.target.value })}
+                  placeholder="e.g. Pickup Truck, Van, Box Truck"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleEditSave}
+                disabled={editSaving}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold disabled:opacity-50"
+              >
+                {editSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
