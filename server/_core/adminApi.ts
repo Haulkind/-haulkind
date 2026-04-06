@@ -260,6 +260,58 @@ export function registerAdminApiRoutes(app: Express) {
     }
   });
 
+  // PUT /admin/drivers/:id/edit - Edit driver information
+  app.put('/admin/drivers/:id/edit', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { name, email, phone, vehicle_type } = req.body;
+      const fields: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      if (name !== undefined) {
+        fields.push(`name = $${paramIndex++}`);
+        values.push(name);
+      }
+      if (email !== undefined) {
+        fields.push(`email = $${paramIndex++}`);
+        values.push(email);
+      }
+      if (phone !== undefined) {
+        fields.push(`phone = $${paramIndex++}`);
+        values.push(phone);
+      }
+      if (vehicle_type !== undefined) {
+        fields.push(`vehicle_type = $${paramIndex++}`);
+        values.push(vehicle_type);
+      }
+
+      if (fields.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+
+      fields.push(`updated_at = NOW()`);
+      values.push(req.params.id);
+
+      const result = await pool.query(
+        `UPDATE drivers SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+        values
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Driver not found' });
+      }
+
+      console.log(`[Admin] Driver ${req.params.id} EDITED: ${fields.join(', ')}`);
+      res.json({ driver: result.rows[0] });
+    } catch (err: any) {
+      console.error('Edit driver error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/admin/drivers/:id', requireAdmin, async (req, res) => {
     try {
       const pool = await getPgPool();

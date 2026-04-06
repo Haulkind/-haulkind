@@ -218,6 +218,13 @@ class ApiClient {
     });
   }
 
+  async editDriver(id: string, data: { name?: string; email?: string; phone?: string; vehicle_type?: string }): Promise<{ driver: Driver }> {
+    return this.request(`/admin/drivers/${id}/edit`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Customers
   async getCustomers(params?: { search?: string; limit?: number; offset?: number }): Promise<{ customers: Customer[]; total: number; limit: number; offset: number }> {
     const query = new URLSearchParams(params as any).toString();
