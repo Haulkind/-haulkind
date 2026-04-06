@@ -4,13 +4,13 @@ import Link from 'next/link'
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-[600px] md:min-h-[700px] flex items-center overflow-hidden bg-black">
+    <section className="relative min-h-[600px] md:min-h-[700px] flex items-center">
       <video
         autoPlay
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full object-contain md:object-cover object-center"
+        className="absolute inset-0 w-full h-full object-cover object-center"
       >
         <source src="/haulkind-hero.mp4" type="video/mp4" />
       </video>
