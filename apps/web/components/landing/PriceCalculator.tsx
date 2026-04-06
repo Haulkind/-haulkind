@@ -62,9 +62,9 @@ export default function PriceCalculator() {
     
     // Redirect to existing checkout flow - backend handles all pricing
     if (serviceType === 'junk-removal') {
-      router.push('/quote?service=haul-away')
+      router.push('/quote/haul-away/volume')
     } else if (serviceType === 'donation') {
-      router.push('/quote?service=donation')
+      router.push('/quote/haul-away/volume')
     } else if (serviceType === 'mattress-swap') {
       router.push('/quote/mattress-swap')
     } else if (serviceType === 'furniture-assembly') {
