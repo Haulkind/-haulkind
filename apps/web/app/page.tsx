@@ -2,7 +2,6 @@ import {
   HeroSection,
   WhyDifferent,
   PriceCalculator,
-  ServicesGrid,
   HowItWorks,
   Guarantees,
   Testimonials,
@@ -36,8 +35,6 @@ export default function Home() {
       {/* Interactive Price Calculator (UI only - redirects to existing checkout) */}
       <PriceCalculator />
 
-      {/* Services Grid - 6 cards including Donation Pickup & Assembly */}
-      <ServicesGrid />
 
       {/* How It Works - 3 steps */}
       <HowItWorks />
