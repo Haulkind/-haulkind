@@ -68,7 +68,7 @@ export default function PriceCalculator() {
     } else if (serviceType === 'furniture-assembly') {
       router.push('/quote/assembly')
     } else {
-      router.push('/quote?service=labor-only')
+      router.push('/quote/labor-only/hours')
     }
   }
 
