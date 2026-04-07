@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'HaulKind Drive',
   description: 'HaulKind Driver App — Manage orders, track earnings, go online.',
   manifest: '/manifest.json',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
