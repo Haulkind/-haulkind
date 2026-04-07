@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { getProfile, updateProfile, type Driver } from '@/lib/api'
+import { getProfile, type Driver } from '@/lib/api'
 import PageHeader from '@/components/PageHeader'
 
 export default function ProfilePage() {
@@ -11,10 +11,6 @@ export default function ProfilePage() {
   const { token, driver, isLoading, logout, updateDriver } = useAuth()
   const [profile, setProfile] = useState<Driver | null>(null)
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
@@ -26,15 +22,11 @@ export default function ProfilePage() {
     try {
       const data = await getProfile(token)
       setProfile(data.driver)
-      setName(data.driver.first_name || data.driver.name || '')
-      setPhone(data.driver.phone || '')
+      updateDriver(data.driver)
     } catch (err) {
       console.error('Failed to fetch profile:', err)
-      // Use local driver data as fallback
       if (driver) {
         setProfile(driver)
-        setName(driver.first_name || driver.name || '')
-        setPhone(driver.phone || '')
       }
     } finally {
       setLoading(false)
@@ -44,24 +36,6 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchProfile()
   }, [fetchProfile])
-
-  const handleSave = async () => {
-    if (!token) return
-    setSaving(true)
-    try {
-      await updateProfile(token, { name, phone })
-      if (profile) {
-        const updated = { ...profile, name, phone }
-        setProfile(updated)
-        updateDriver(updated)
-      }
-      setEditing(false)
-    } catch (err) {
-      alert('Failed to save profile')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to log out?')) {
@@ -105,63 +79,18 @@ export default function ProfilePage() {
       </div>
 
       <div className="px-5 py-4 space-y-4">
-        {/* Profile Info */}
+        {/* Profile Info (read-only — only admin can edit) */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Profile Info</h3>
-            {!editing && (
-              <button onClick={() => setEditing(true)} className="text-sm text-primary-600 font-semibold">
-                Edit
-              </button>
-            )}
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Profile Info</h3>
+          <div className="space-y-3">
+            <InfoRow label="Name" value={displayName} />
+            <InfoRow label="Email" value={profile?.email || driver?.email || ''} />
+            <InfoRow label="Phone" value={profile?.phone || driver?.phone || 'Not set'} />
+            {profile?.vehicle_type && <InfoRow label="Vehicle" value={profile.vehicle_type} />}
+            {profile?.vehicle_capacity && <InfoRow label="Capacity" value={profile.vehicle_capacity} />}
+            {profile?.license_plate && <InfoRow label="License Plate" value={profile.license_plate} />}
           </div>
-
-          {editing ? (
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Phone</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="flex-1 py-3 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-3 bg-primary-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <InfoRow label="Name" value={displayName} />
-              <InfoRow label="Email" value={profile?.email || driver?.email || ''} />
-              <InfoRow label="Phone" value={profile?.phone || driver?.phone || 'Not set'} />
-              {profile?.vehicle_type && <InfoRow label="Vehicle" value={profile.vehicle_type} />}
-              {profile?.vehicle_capacity && <InfoRow label="Capacity" value={profile.vehicle_capacity} />}
-              {profile?.license_plate && <InfoRow label="License Plate" value={profile.license_plate} />}
-            </div>
-          )}
+          <p className="text-xs text-gray-400 mt-3">To update your info, contact HaulKind support.</p>
         </div>
 
         {/* App Info */}
