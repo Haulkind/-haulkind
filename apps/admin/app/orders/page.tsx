@@ -49,6 +49,9 @@ export default function OrdersPage() {
   const [completePaidOrder, setCompletePaidOrder] = useState<Order | null>(null);
   const [completePaidAmount, setCompletePaidAmount] = useState('');
 
+  // Delete modal
+  const [deleteModalOrder, setDeleteModalOrder] = useState<Order | null>(null);
+
   const loadOrders= useCallback(async () => {
     try {
       const params: any = {};
@@ -335,6 +338,43 @@ export default function OrdersPage() {
       loadOrders();
     } catch (err: any) {
       setActionError(err.message || 'Failed to create order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ---- DELETE ORDER ----
+  const handleDeleteClick = (order: Order) => {
+    setActionError('');
+    setDeleteModalOrder(order);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModalOrder) return;
+    setActionLoading(true);
+    setActionError('');
+    try {
+      await api.deleteOrder(deleteModalOrder.id);
+      setActionSuccess(`Order ${deleteModalOrder.id.substring(0, 8)} deleted permanently`);
+      setDeleteModalOrder(null);
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to delete order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ---- REACTIVATE ORDER ----
+  const handleReactivateClick = async (order: Order) => {
+    setActionLoading(true);
+    setActionError('');
+    try {
+      await api.reactivateOrder(order.id);
+      setActionSuccess(`Order ${order.id.substring(0, 8)} reactivated (now pending)`);
+      loadOrders();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to reactivate order');
     } finally {
       setActionLoading(false);
     }
@@ -630,6 +670,38 @@ export default function OrdersPage() {
                           Complete & Pay
                         </button>
                       )}
+                      {order.status === 'cancelled' && (
+                        <>
+                          <button
+                            onClick={() => handleReactivateClick(order)}
+                            className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100"
+                            title="Reactivate this cancelled order (set back to pending)"
+                          >
+                            Reactivate
+                          </button>
+                          <button
+                            onClick={() => handleRescheduleClick(order)}
+                            className="px-2 py-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded hover:bg-amber-100"
+                            title="Reschedule this cancelled order"
+                          >
+                            Reschedule
+                          </button>
+                          <button
+                            onClick={() => handleCompletePaidClick(order)}
+                            className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100"
+                            title="Mark as completed and paid"
+                          >
+                            Mark as Paid
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(order)}
+                            className="px-2 py-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100"
+                            title="Permanently delete this order"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                       {order.status === 'completed' && order.has_signature && (
                         <button
                           onClick={async () => { setMediaModalOrder(order); setMediaTab('signature'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
@@ -679,6 +751,42 @@ export default function OrdersPage() {
                 disabled={actionLoading}
               >
                 {actionLoading ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE ORDER MODAL */}
+      {deleteModalOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Order Permanently</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to <strong>permanently delete</strong> order <strong>{deleteModalOrder.id.substring(0, 8)}...</strong> for <strong>{deleteModalOrder.customer_name}</strong>?
+            </p>
+            <p className="text-sm text-red-600 mb-4">
+              This action cannot be undone. The order will be removed from the database forever.
+            </p>
+            {actionError && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                {actionError}
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setDeleteModalOrder(null); setActionError(''); }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={actionLoading}
+              >
+                No, Keep Order
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Deleting...' : 'Yes, Delete Forever'}
               </button>
             </div>
           </div>

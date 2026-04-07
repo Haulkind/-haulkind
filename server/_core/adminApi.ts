@@ -1049,6 +1049,71 @@ export function registerAdminApiRoutes(app: Express) {
     }
   });
 
+  // DELETE /admin/orders/:id - Permanently delete an order
+  app.delete('/admin/orders/:id', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const orderId = req.params.id;
+
+      // Try to delete from job_assignments first
+      try {
+        await pool.query('DELETE FROM job_assignments WHERE job_id = $1', [orderId]);
+      } catch (e) { /* ignore if table doesn't exist */ }
+
+      // Try jobs table first (primary)
+      let result = await pool.query('DELETE FROM jobs WHERE id = $1 RETURNING id', [orderId]);
+
+      if (result.rows.length === 0) {
+        // Try orders table (legacy)
+        result = await pool.query('DELETE FROM orders WHERE id::text = $1 RETURNING id', [orderId]);
+      }
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      console.log(`[Admin] Order ${orderId} PERMANENTLY DELETED`);
+      res.json({ success: true, deleted_id: orderId });
+    } catch (err: any) {
+      console.error('Delete order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /admin/orders/:id/reactivate - Reactivate a cancelled order (set status back to pending)
+  app.put('/admin/orders/:id/reactivate', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      // Try jobs table first
+      let result = await pool.query(
+        `UPDATE jobs SET status = 'pending', updated_at = NOW() WHERE id = $1 AND status = 'cancelled' RETURNING *`,
+        [req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        // Try orders table (legacy)
+        result = await pool.query(
+          `UPDATE orders SET status = 'pending', updated_at = NOW() WHERE id::text = $1 AND status = 'cancelled' RETURNING *`,
+          [req.params.id]
+        );
+      }
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found or not cancelled' });
+      }
+
+      console.log(`[Admin] Order ${req.params.id} REACTIVATED (cancelled → pending)`);
+      res.json({ order: result.rows[0] });
+    } catch (err: any) {
+      console.error('Reactivate order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Debug endpoint: Check driver_locations table contents directly
   app.get('/admin/debug/driver-locations', requireAdmin, async (req, res) => {
     try {
