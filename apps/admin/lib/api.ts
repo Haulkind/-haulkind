@@ -298,6 +298,18 @@ class ApiClient {
     });
   }
 
+  async deleteOrder(id: string): Promise<{ success: boolean; deleted_id: string }> {
+    return this.request(`/admin/orders/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reactivateOrder(id: string): Promise<{ order: Order }> {
+    return this.request(`/admin/orders/${id}/reactivate`, {
+      method: 'PUT',
+    });
+  }
+
   async getDriverLocations(): Promise<{ drivers: Array<{
     id: string;
     name: string;
