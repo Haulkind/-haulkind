@@ -83,6 +83,8 @@ function SideMenu({ visible, onClose, navigation }) {
         if (driver?.name) setDriverName(driver.name);
         if (driver?.email) setDriverEmail(driver.email);
         if (driver?.selfieUrl || driver?.selfie_url) setSelfieUrl(driver.selfieUrl || driver.selfie_url);
+        // Update cached driver_data with fresh profile from API
+        await AsyncStorage.setItem('driver_data', JSON.stringify(driver));
       }
     } catch (e) {}
   };

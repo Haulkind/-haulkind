@@ -274,6 +274,15 @@ export function registerAdminApiRoutes(app: Express) {
       if (name !== undefined) {
         fields.push(`name = $${paramIndex++}`);
         values.push(name);
+        // Also update first_name and last_name so the name change reflects everywhere
+        // (orders query uses COALESCE(first_name || ' ' || last_name, name))
+        const nameParts = name.trim().split(/\s+/);
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        fields.push(`first_name = $${paramIndex++}`);
+        values.push(firstName);
+        fields.push(`last_name = $${paramIndex++}`);
+        values.push(lastName);
       }
       if (email !== undefined) {
         fields.push(`email = $${paramIndex++}`);
