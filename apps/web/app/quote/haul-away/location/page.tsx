@@ -6,6 +6,7 @@ import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
 import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protection'
+import SimpleCaptcha from '@/components/SimpleCaptcha'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
@@ -40,9 +41,10 @@ export default function HaulAwayLocationPage() {
   const [hasAttemptedContinue, setHasAttemptedContinue] = useState(false)
   const [formIsValid, setFormIsValid] = useState(false)
 
-  // Bot protection: honeypot + timestamp
+  // Bot protection: honeypot + timestamp + captcha
   const [honeypot, setHoneypot] = useState('')
   const formLoadedAt = useRef(getFormLoadTimestamp())
+  const [captchaVerified, setCaptchaVerified] = useState(false)
 
   // Force re-validation whenever form fields change
   useEffect(() => {
@@ -185,6 +187,11 @@ export default function HaulAwayLocationPage() {
     })
     if (botError) {
       setError(botError)
+      return
+    }
+
+    if (!captchaVerified) {
+      setError('Please complete the security check')
       return
     }
 
@@ -461,6 +468,9 @@ export default function HaulAwayLocationPage() {
                 </div>
               </div>
             </div>
+
+            {/* CAPTCHA */}
+            <SimpleCaptcha onVerify={setCaptchaVerified} />
 
             {/* Honeypot field — hidden from humans, bots auto-fill it */}
             <div aria-hidden="true" tabIndex={-1} style={{ position: 'absolute', left: '-9999px', top: '-9999px', height: 0, overflow: 'hidden' }}>

@@ -9,6 +9,7 @@ import PhoneBar from '@/components/PhoneBar'
 import RecruitBanner from '@/components/RecruitBanner'
 import { QuoteProvider } from '@/lib/QuoteContext'
 import { TRPCProvider } from '@/lib/trpc-provider'
+import CookieConsent from '@/components/CookieConsent'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -271,6 +272,7 @@ export default function RootLayout({
             <RecruitBanner />
             <Footer />
             <StickyCTA />
+            <CookieConsent />
           </QuoteProvider>
         </TRPCProvider>
       </body>
