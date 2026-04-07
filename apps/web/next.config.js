@@ -97,6 +97,9 @@ const nextConfig = {
       { source: '/commercial', destination: '/services/commercial', permanent: true },
       { source: '/about', destination: '/how-it-works', permanent: true },
       { source: '/about-us', destination: '/how-it-works', permanent: true },
+      { source: '/drive', destination: '/become-a-driver', permanent: true },
+      { source: '/jobs', destination: '/become-a-driver', permanent: true },
+      { source: '/apply', destination: '/become-a-driver/apply', permanent: true },
     ]
   },
 };

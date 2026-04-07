@@ -61,6 +61,9 @@ export default function Header() {
           <Link href="/service-areas" className="text-gray-700 hover:text-primary-600 transition">
             Service Areas
           </Link>
+          <Link href="/become-a-driver" className="text-gray-700 hover:text-primary-600 transition">
+            Become a Driver
+          </Link>
           <Link href="/blog" className="text-gray-700 hover:text-primary-600 transition">
             Blog
           </Link>

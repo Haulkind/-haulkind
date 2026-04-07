@@ -63,7 +63,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link href="/how-it-works" className="hover:text-white transition">How It Works</Link></li>
               <li><Link href="/service-areas" className="hover:text-white transition">Service Areas</Link></li>
-              <li><Link href="/become-a-driver" className="hover:text-white transition">Become a Driver</Link></li>
+              <li><Link href="/become-a-driver" className="hover:text-white transition">Become a HaulKind Driver</Link></li>
               <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
               <li><Link href="/blog" className="hover:text-white transition">Blog</Link></li>
               <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
@@ -94,6 +94,7 @@ export default function Footer() {
             <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Removal Philadelphia</Link>
             <Link href="/basement-cleanout-camden-nj" className="hover:text-white transition">Basement Cleanout Camden</Link>
             <Link href="/donation-pickup-cherry-hill-nj" className="hover:text-white transition">Donation Pickup Cherry Hill</Link>
+            <Link href="/become-a-driver" className="text-primary-400 hover:text-white transition font-medium">HaulKind Driver Jobs</Link>
             <Link href="/service-areas" className="text-primary-400 hover:text-white transition font-medium">View All Service Areas &rarr;</Link>
           </div>
         </div>
