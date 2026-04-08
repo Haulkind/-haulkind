@@ -232,12 +232,24 @@ export function registerDriverAuthRoutes(app: Express) {
         `);
         console.log('[DriverAuth] Jobs table ensured');
 
-        // Ensure pickup_time_window column exists on jobs table
+        // Ensure additional columns exist on jobs table
         try {
-          await pool.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS pickup_time_window TEXT`);
-          console.log('[DriverAuth] pickup_time_window column ensured');
+          await pool.query(`
+            ALTER TABLE jobs
+            ADD COLUMN IF NOT EXISTS pickup_time_window TEXT,
+            ADD COLUMN IF NOT EXISTS completion_photos TEXT,
+            ADD COLUMN IF NOT EXISTS signature_data TEXT,
+            ADD COLUMN IF NOT EXISTS photo_urls TEXT,
+            ADD COLUMN IF NOT EXISTS price_total_cents INTEGER,
+            ADD COLUMN IF NOT EXISTS platform_fee_cents INTEGER,
+            ADD COLUMN IF NOT EXISTS driver_earnings_cents INTEGER,
+            ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT,
+            ADD COLUMN IF NOT EXISTS payout_status TEXT
+          `);
+          console.log('[DriverAuth] Jobs table columns ensured (pickup_time_window, media, payment)');
         } catch (e) {
-          console.warn('[DriverAuth] Could not add pickup_time_window column:', (e as any)?.message);
+          console.warn('[DriverAuth] Could not add jobs columns:', (e as any)?.message);
         }
 
         // Create job_assignments table if not exists

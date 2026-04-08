@@ -148,6 +148,9 @@ export default function OrdersPage() {
       en_route: 'bg-indigo-100 text-indigo-800',
       arrived: 'bg-cyan-100 text-cyan-800',
       working: 'bg-orange-100 text-orange-800',
+      photo_taken: 'bg-teal-100 text-teal-800',
+      signed: 'bg-violet-100 text-violet-800',
+      paid: 'bg-emerald-100 text-emerald-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
     };
@@ -652,7 +655,7 @@ export default function OrdersPage() {
                           Customer Photos
                         </button>
                       )}
-                      {order.status === 'completed' && order.has_completion_photos && (
+                      {order.has_completion_photos && (
                         <button
                           onClick={async () => { setMediaModalOrder(order); setMediaTab('completion'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
                           className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100"
@@ -702,7 +705,7 @@ export default function OrdersPage() {
                           </button>
                         </>
                       )}
-                      {order.status === 'completed' && order.has_signature && (
+                      {order.has_signature && (
                         <button
                           onClick={async () => { setMediaModalOrder(order); setMediaTab('signature'); setMediaLoading(true); setMediaData(null); try { const data = await api.getOrderMedia(order.id); setMediaData(data); } catch {} finally { setMediaLoading(false); } }}
                           className="px-2 py-1 text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded hover:bg-violet-100"
