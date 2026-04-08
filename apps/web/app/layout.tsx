@@ -230,7 +230,7 @@ export default function RootLayout({
           }
           window.gtagSendEvent = gtagSendEvent;
         `}</Script>
-        <Script id="meta-pixel" strategy="lazyOnload">{`
+        <Script id="meta-pixel" strategy="afterInteractive">{`
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
           n.callMethod.apply(n,arguments):n.queue.push(arguments)};
