@@ -48,13 +48,10 @@ export function registerAdminApiRoutes(app: Express) {
       const customersResult = await pool.query('SELECT COUNT(*) as count FROM customers');
       const totalCustomers = parseInt(customersResult.rows[0]?.count || 0);
 
-      // Get order counts by status (from both orders and jobs tables)
+      // Get order counts by status from jobs table (primary source)
+      // Note: 'orders' may be a VIEW on 'jobs', querying both causes double-counting
       const ordersResult = await pool.query(`
-        SELECT status, COUNT(*) as count FROM (
-          SELECT status FROM orders
-          UNION ALL
-          SELECT status FROM jobs
-        ) combined
+        SELECT status, COUNT(*) as count FROM jobs
         GROUP BY status
       `);
       const orderStats = ordersResult.rows.reduce((acc: any, row: any) => {
@@ -62,22 +59,10 @@ export function registerAdminApiRoutes(app: Express) {
         return acc;
       }, {});
 
-      // Get recent orders count (last 24h, 7d, 30d) from both tables
-      const today = await pool.query(`SELECT COUNT(*) as count FROM (
-        SELECT created_at FROM orders WHERE created_at >= NOW() - INTERVAL '1 day'
-        UNION ALL
-        SELECT created_at FROM jobs WHERE created_at >= NOW() - INTERVAL '1 day'
-      ) combined`);
-      const thisWeek = await pool.query(`SELECT COUNT(*) as count FROM (
-        SELECT created_at FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'
-        UNION ALL
-        SELECT created_at FROM jobs WHERE created_at >= NOW() - INTERVAL '7 days'
-      ) combined`);
-      const thisMonth = await pool.query(`SELECT COUNT(*) as count FROM (
-        SELECT created_at FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'
-        UNION ALL
-        SELECT created_at FROM jobs WHERE created_at >= NOW() - INTERVAL '30 days'
-      ) combined`);
+      // Get recent orders count (last 24h, 7d, 30d) from jobs table
+      const today = await pool.query(`SELECT COUNT(*) as count FROM jobs WHERE created_at >= NOW() - INTERVAL '1 day'`);
+      const thisWeek = await pool.query(`SELECT COUNT(*) as count FROM jobs WHERE created_at >= NOW() - INTERVAL '7 days'`);
+      const thisMonth = await pool.query(`SELECT COUNT(*) as count FROM jobs WHERE created_at >= NOW() - INTERVAL '30 days'`);
 
       res.json({
         drivers: {
@@ -578,24 +563,13 @@ export function registerAdminApiRoutes(app: Express) {
 
       const { status, service_type, search, limit = 50, offset = 0 } = req.query;
       
-      // Query from BOTH orders (legacy) and jobs (new) tables using UNION ALL
-      // Normalize field names so the admin dashboard gets consistent data
+      // Query directly from jobs table (primary source of all orders)
+      // Note: 'orders' may be a VIEW on 'jobs', so querying both causes duplicates
       let baseQuery = `
-        SELECT id::text, service_type, customer_name, phone, email,
-               street, city, state, zip, lat::double precision, lng::double precision,
-               pickup_date::text, pickup_time_window::text,
-               items_json::text, pricing_json::text, status,
-               assigned_driver_id::text, created_at, updated_at,
-               CAST(NULL AS boolean) as has_completion_photos, CAST(NULL AS boolean) as has_signature, CAST(NULL AS boolean) as has_photo_urls,
-               CAST(NULL AS text) as paid_at, CAST(NULL AS text) as stripe_payment_intent_id,
-               CAST(NULL AS integer) as price_total_cents, CAST(NULL AS integer) as platform_fee_cents,
-               CAST(NULL AS integer) as driver_earnings_cents, CAST(NULL AS text) as payout_status
-        FROM orders
-        UNION ALL
         SELECT id::text, service_type, customer_name, customer_phone as phone, customer_email as email,
                pickup_address as street, '' as city, '' as state, '' as zip,
                pickup_lat::double precision as lat, pickup_lng::double precision as lng,
-               scheduled_for::text as pickup_date, '' as pickup_time_window,
+               scheduled_for::text as pickup_date, COALESCE(pickup_time_window, '') as pickup_time_window,
                COALESCE(items_json::text, '[]') as items_json, json_build_object('total', COALESCE(estimated_price, '0'))::text as pricing_json,
                status, assigned_driver_id::text, created_at, updated_at,
                (completion_photos IS NOT NULL AND completion_photos != '') as has_completion_photos,
