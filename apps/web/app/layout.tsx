@@ -239,11 +239,11 @@ export default function RootLayout({
           t.src=v;s=b.getElementsByTagName(e)[0];
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '14705378838126602');
+          fbq('init', '1470537883812602');
           fbq('track', 'PageView');
         `}</Script>
         <noscript>
-          <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=14705378838126602&ev=PageView&noscript=1" alt="Meta Pixel tracking" />
+          <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=1470537883812602&ev=PageView&noscript=1" alt="Meta Pixel tracking" />
         </noscript>
         <Script id="microsoft-clarity" strategy="afterInteractive">{`
           (function(c,l,a,r,i,t,y){
