@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protection'
-import SimpleCaptcha from '@/components/SimpleCaptcha'
 
 type Step1Data = {
   firstName: string
@@ -39,10 +38,9 @@ export default function DriverApplicationPage() {
   const [success, setSuccess] = useState(false)
   const totalSteps = 3
 
-  // Bot protection: honeypot + timestamp + captcha
+  // Bot protection: honeypot + timestamp
   const [honeypot, setHoneypot] = useState('')
   const formLoadedAt = useRef(getFormLoadTimestamp())
-  const [captchaVerified, setCaptchaVerified] = useState(false)
 
   // Step 1 data
   const [step1, setStep1] = useState<Step1Data>({
@@ -138,11 +136,6 @@ export default function DriverApplicationPage() {
     })
     if (botError) {
       setError(botError)
-      return
-    }
-
-    if (!captchaVerified) {
-      setError('Please complete the security check.')
       return
     }
 
@@ -654,9 +647,6 @@ export default function DriverApplicationPage() {
                   )}
                   <input ref={insuranceRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange('insurance', e.target.files?.[0] || null)} />
                 </div>
-
-                {/* CAPTCHA */}
-                <SimpleCaptcha onVerify={setCaptchaVerified} />
 
                 {/* Upload progress indicator */}
                 <div className="bg-gray-50 rounded-lg p-3">

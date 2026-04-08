@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createJob, createCheckoutSession } from '@/lib/api'
-import SimpleCaptcha from '@/components/SimpleCaptcha'
 
 export default function AssemblyContactPage() {
   const router = useRouter()
@@ -15,7 +14,6 @@ export default function AssemblyContactPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(87)
-  const [captchaVerified, setCaptchaVerified] = useState(false)
 
   useEffect(() => {
     const data = sessionStorage.getItem('assemblyData')
@@ -51,11 +49,6 @@ export default function AssemblyContactPage() {
     }
     if (phone.replace(/\D/g, '').length < 10) {
       setError('Please enter a valid 10-digit phone number.')
-      return
-    }
-
-    if (!captchaVerified) {
-      setError('Please complete the security check.')
       return
     }
 
@@ -233,8 +226,6 @@ export default function AssemblyContactPage() {
               <option value="other">Other</option>
             </select>
           </div>
-          {/* CAPTCHA */}
-          <SimpleCaptcha onVerify={setCaptchaVerified} className="mt-5" />
         </div>
 
         {/* Buttons */}

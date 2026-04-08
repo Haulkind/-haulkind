@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
-import SimpleCaptcha from '@/components/SimpleCaptcha'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
@@ -39,7 +38,6 @@ export default function LaborOnlyLocationPage() {
   // TASK 3: Track if user has attempted to continue (for error display)
   const [hasAttemptedContinue, setHasAttemptedContinue] = useState(false)
   const [formIsValid, setFormIsValid] = useState(false)
-  const [captchaVerified, setCaptchaVerified] = useState(false)
 
   // Force re-validation whenever form fields change
   useEffect(() => {
@@ -169,11 +167,6 @@ export default function LaborOnlyLocationPage() {
     
     if (!serviceDate.trim()) {
       setError('Please select a service date')
-      return
-    }
-
-    if (!captchaVerified) {
-      setError('Please complete the security check')
       return
     }
 
@@ -446,9 +439,6 @@ export default function LaborOnlyLocationPage() {
                 </div>
               </div>
             </div>
-
-            {/* CAPTCHA */}
-            <SimpleCaptcha onVerify={setCaptchaVerified} />
 
             {/* TASK 6: Continue button gated by form validation */}
             <div className="flex gap-3 pt-2">
