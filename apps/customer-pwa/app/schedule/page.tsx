@@ -383,9 +383,9 @@ function SchedulePageInner() {
         <h1 className="text-2xl font-bold text-white">Book a Service</h1>
         <p className="text-primary-200 mt-1">
           {step === 'service' && 'Choose your service type'}
+          {step === 'details' && 'Select your options'}
           {step === 'address' && 'Enter your pickup address'}
           {step === 'schedule' && 'Select date and time'}
-          {step === 'details' && 'Provide details'}
           {step === 'summary' && 'Review your order'}
           {step === 'confirm' && 'Order confirmed!'}
         </p>
@@ -394,11 +394,11 @@ function SchedulePageInner() {
       {/* Progress */}
       <div className="px-4 py-3 bg-white border-b">
         <div className="flex gap-1">
-          {['service', 'address', 'schedule', 'details', 'summary', 'confirm'].map((s, i) => (
+          {['service', 'details', 'address', 'schedule', 'summary', 'confirm'].map((s, i) => (
             <div
               key={s}
               className={`flex-1 h-1 rounded-full ${
-                ['service', 'address', 'schedule', 'details', 'summary', 'confirm'].indexOf(step) >= i
+                ['service', 'details', 'address', 'schedule', 'summary', 'confirm'].indexOf(step) >= i
                   ? 'bg-primary-600'
                   : 'bg-gray-200'
               }`}
@@ -418,7 +418,7 @@ function SchedulePageInner() {
             {SERVICE_OPTIONS.map(svc => (
               <button
                 key={svc.id}
-                onClick={() => { setServiceType(svc.id); setStep('address') }}
+                onClick={() => { setServiceType(svc.id); setStep('details') }}
                 className="w-full bg-white rounded-xl p-5 shadow-sm text-left hover:shadow-md transition border-2 border-transparent hover:border-primary-300"
               >
                 <div className="flex items-start gap-3">
@@ -482,7 +482,7 @@ function SchedulePageInner() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setStep('service')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
+              <button onClick={() => setStep('details')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
                 Back
               </button>
               <button
@@ -533,10 +533,11 @@ function SchedulePageInner() {
                 Back
               </button>
               <button
-                onClick={() => setStep('details')}
-                className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-medium"
+                onClick={handleGetQuote}
+                disabled={loading}
+                className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-medium disabled:opacity-50"
               >
-                Continue
+                {loading ? 'Getting quote...' : 'Continue'}
               </button>
             </div>
           </div>
@@ -997,15 +998,15 @@ function SchedulePageInner() {
               )}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setStep('schedule')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
+              <button onClick={() => setStep('service')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
                 Back
               </button>
               <button
-                onClick={handleGetQuote}
-                disabled={loading || (serviceType === 'MATTRESS_SWAP' && totalMattresses === 0) || (serviceType === 'FURNITURE_ASSEMBLY' && assemblyItemCount === 0)}
+                onClick={() => setStep('address')}
+                disabled={(serviceType === 'MATTRESS_SWAP' && totalMattresses === 0) || (serviceType === 'FURNITURE_ASSEMBLY' && assemblyItemCount === 0)}
                 className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-medium disabled:opacity-50"
               >
-                {loading ? 'Getting quote...' : 'Get Quote'}
+                Continue
               </button>
             </div>
           </div>
@@ -1152,7 +1153,7 @@ function SchedulePageInner() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setStep('details')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
+              <button onClick={() => setStep('schedule')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
                 Back
               </button>
               <button
