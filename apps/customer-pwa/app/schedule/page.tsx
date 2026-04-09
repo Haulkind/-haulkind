@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getQuote, createJob, payJob, createCheckoutSession, lookupServiceArea } from '@/lib/api'
 import { getCustomer, isLoggedIn } from '@/lib/auth'
@@ -18,12 +18,67 @@ const SERVICE_OPTIONS = [
 ]
 
 const VOLUME_TIERS = [
-  { id: 'EIGHTH', label: '1/8 Truck Load', desc: 'Small items, a few bags', price: 109 },
-  { id: 'QUARTER', label: '1/4 Truck Load', desc: 'A couch or small room', price: 169 },
-  { id: 'HALF', label: '1/2 Truck Load', desc: 'A bedroom or small office', price: 279 },
-  { id: 'THREE_QUARTER', label: '3/4 Truck Load', desc: 'Multiple rooms', price: 389 },
-  { id: 'FULL', label: 'Full Truck Load', desc: 'Full house cleanout', price: 529 },
+  { id: 'EIGHTH', label: '1/8 Truck', desc: 'Small load (1-2 items)', price: 99 },
+  { id: 'QUARTER', label: '1/4 Truck', desc: 'Medium load (3-5 items)', price: 189 },
+  { id: 'HALF', label: '1/2 Truck', desc: 'Large load (6-10 items)', price: 314 },
+  { id: 'THREE_QUARTER', label: '3/4 Truck', desc: 'Very large load (11-15 items)', price: 439 },
+  { id: 'FULL', label: 'Full Truck', desc: 'Maximum capacity (16+ items)', price: 599 },
 ]
+
+const MATTRESS_SERVICES = [
+  { id: 'swap-twin-full', label: 'Mattress Swap — Twin/Full', price: 99, desc: 'Remove old + set up new mattress (Twin or Full size)' },
+  { id: 'swap-queen', label: 'Mattress Swap — Queen', price: 119, desc: 'Remove old + set up new mattress (Queen size)' },
+  { id: 'swap-king', label: 'Mattress Swap — King/Cal King', price: 139, desc: 'Remove old + set up new mattress (King or California King)' },
+  { id: 'removal-only', label: 'Old Mattress Removal Only', price: 79, desc: 'We just take the old one away (no new setup)' },
+  { id: 'setup-only', label: 'New Mattress Setup Only', price: 69, desc: 'We just set up your new mattress (no removal)' },
+]
+
+const MATTRESS_ADDONS = [
+  { id: 'box-spring-removal', label: 'Box Spring Removal', price: 30, desc: 'Remove old box spring too' },
+  { id: 'box-spring-setup', label: 'Box Spring Setup', price: 20, desc: 'Set up new box spring under mattress' },
+  { id: 'bed-frame-disassembly', label: 'Bed Frame Disassembly', price: 40, desc: 'Take apart old bed frame if needed' },
+  { id: 'bed-frame-assembly', label: 'Bed Frame Assembly', price: 97, desc: 'Assemble new bed frame before mattress setup' },
+  { id: 'extra-stairs', label: 'Extra Flight of Stairs', price: 20, desc: 'Per additional flight above ground floor' },
+  { id: 'haul-extra', label: 'Haul Away Extra Items', price: 40, desc: 'Remove 1-2 extra small items while we\'re there' },
+]
+
+interface AssemblyItem {
+  id: string
+  label: string
+  price: number
+  desc: string
+  tier: number
+}
+
+const ASSEMBLY_ITEMS: AssemblyItem[] = [
+  { id: 'office-chair', label: 'Office Chair', price: 87, desc: 'Ergonomic, gaming, or standard office chairs', tier: 1 },
+  { id: 'nightstand', label: 'Nightstand', price: 87, desc: 'Side tables, small bedside cabinets', tier: 1 },
+  { id: 'shelving-unit', label: 'Shelving Unit', price: 87, desc: 'Wire shelves, storage racks, cube organizers', tier: 1 },
+  { id: 'bookshelf-small', label: 'Bookshelf (Small)', price: 87, desc: 'Under 5 feet tall', tier: 1 },
+  { id: 'dining-chairs', label: 'Dining Chairs (set of 4)', price: 87, desc: 'Price for a set of 4 chairs', tier: 1 },
+  { id: 'desk-simple', label: 'Desk (Simple)', price: 97, desc: 'Writing desks, small computer desks', tier: 2 },
+  { id: 'dresser', label: 'Dresser / Chest', price: 97, desc: 'Dressers with drawers, handles, leveling', tier: 2 },
+  { id: 'tv-stand', label: 'TV Stand / Console', price: 97, desc: 'Media centers, entertainment units', tier: 2 },
+  { id: 'bed-frame-twin', label: 'Bed Frame (Twin/Full)', price: 97, desc: 'Standard bed frame, platform beds', tier: 2 },
+  { id: 'bookshelf-large', label: 'Bookshelf (Large/Wall Unit)', price: 97, desc: 'Over 5 feet tall or wall-mounted units', tier: 2 },
+  { id: 'dining-table', label: 'Dining Table', price: 97, desc: 'Table assembly only (chairs separate)', tier: 2 },
+  { id: 'outdoor-furniture', label: 'Outdoor Furniture Set', price: 97, desc: 'Patio tables, chairs, outdoor sets', tier: 2 },
+  { id: 'desk-l-shaped', label: 'Desk (L-Shaped/Gaming)', price: 117, desc: 'Complex desks, corner desks, desks with hutch', tier: 3 },
+  { id: 'bed-frame-queen', label: 'Bed Frame (Queen/King)', price: 117, desc: 'Larger bed frames, storage beds', tier: 3 },
+  { id: 'baby-furniture', label: 'Baby Furniture (Crib)', price: 117, desc: 'Cribs, changing tables, baby dressers', tier: 3 },
+  { id: 'gym-equipment', label: 'Gym Equipment', price: 117, desc: 'Treadmills, ellipticals, home gym systems', tier: 3 },
+  { id: 'wardrobe', label: 'Wardrobe / Armoire', price: 117, desc: 'Freestanding wardrobes, PAX-style closets', tier: 3 },
+  { id: 'bed-frame-bunk', label: 'Bed Frame (Bunk/Loft)', price: 147, desc: 'Multi-level beds, loft beds with desk', tier: 4 },
+  { id: 'couch-sectional', label: 'Couch / Sectional', price: 147, desc: 'Sectional sofas requiring assembly', tier: 4 },
+  { id: 'wall-unit', label: 'Wall Unit / Murphy Bed', price: 147, desc: 'Large wall-mounted or fold-down systems', tier: 4 },
+]
+
+const ASSEMBLY_TIER_LABELS: Record<number, string> = {
+  1: 'Simple Assembly — $87',
+  2: 'Standard Assembly — $97',
+  3: 'Complex Assembly — $117',
+  4: 'Advanced Assembly — $147',
+}
 
 const TIME_WINDOWS = [
   { id: 'ALL_DAY', label: 'All Day', time: '8AM - 8PM' },
@@ -79,6 +134,14 @@ function SchedulePageInner() {
   const [estimatedHours, setEstimatedHours] = useState(2)
   const [mattressQty, setMattressQty] = useState(1)
   const [assemblyItems, setAssemblyItems] = useState(1)
+  const [pickupType, setPickupType] = useState<'IN_HOME' | 'CURBSIDE'>('IN_HOME')
+  // Mattress Swap state
+  const [mattressQuantities, setMattressQuantities] = useState<Record<string, number>>({})
+  const [selectedMattressAddons, setSelectedMattressAddons] = useState<string[]>([])
+  // Assembly state
+  const [selectedAssemblyItems, setSelectedAssemblyItems] = useState<Record<string, number>>({})
+  const [customAssemblyItem, setCustomAssemblyItem] = useState(false)
+  const [customAssemblyDesc, setCustomAssemblyDesc] = useState('')
   const [notes, setNotes] = useState('')
   const [customerName, setCustomerName] = useState(customer?.name || '')
   const [customerEmail, setCustomerEmail] = useState(customer?.email || '')
@@ -119,6 +182,51 @@ function SchedulePageInner() {
   const [quoteTotal, setQuoteTotal] = useState(0)
   const [jobId, setJobId] = useState('')
   const [trackingToken, setTrackingToken] = useState('')
+
+  // Mattress Swap computed values
+  const updateMattressQty = (id: string, delta: number) => {
+    setMattressQuantities(prev => {
+      const current = prev[id] || 0
+      const next = Math.max(0, current + delta)
+      if (next === 0) {
+        const { [id]: _removed, ...rest } = prev
+        void _removed
+        return rest
+      }
+      return { ...prev, [id]: next }
+    })
+  }
+  const totalMattresses = useMemo(() => Object.values(mattressQuantities).reduce((sum, qty) => sum + qty, 0), [mattressQuantities])
+  const mattressHasDiscount = totalMattresses >= 2
+  const mattressServicesSubtotal = useMemo(() => MATTRESS_SERVICES.reduce((sum, s) => sum + s.price * (mattressQuantities[s.id] || 0), 0), [mattressQuantities])
+  const mattressDiscountAmount = useMemo(() => mattressHasDiscount ? Math.round(mattressServicesSubtotal * 0.10) : 0, [mattressHasDiscount, mattressServicesSubtotal])
+  const mattressAddonsTotal = useMemo(() => MATTRESS_ADDONS.filter(a => selectedMattressAddons.includes(a.id)).reduce((sum, a) => sum + a.price, 0), [selectedMattressAddons])
+  const mattressTotal = mattressServicesSubtotal - mattressDiscountAmount + mattressAddonsTotal
+  const toggleMattressAddon = (id: string) => setSelectedMattressAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id])
+
+  // Assembly computed values
+  const toggleAssemblyItem = (id: string) => {
+    setSelectedAssemblyItems(prev => {
+      if (prev[id]) {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      }
+      return { ...prev, [id]: 1 }
+    })
+  }
+  const updateAssemblyQty = (id: string, delta: number) => {
+    setSelectedAssemblyItems(prev => {
+      const current = prev[id] || 1
+      const next = Math.max(1, Math.min(10, current + delta))
+      return { ...prev, [id]: next }
+    })
+  }
+  const assemblyItemCount = Object.values(selectedAssemblyItems).reduce((sum, qty) => sum + qty, 0) + (customAssemblyItem ? 1 : 0)
+  const assemblyTotal = Object.entries(selectedAssemblyItems).reduce((sum, [id, qty]) => {
+    const item = ASSEMBLY_ITEMS.find(i => i.id === id)
+    return sum + (item ? item.price * qty : 0)
+  }, 0)
 
   // Build full address string from parts
   const fullAddress = [street, city, state, zipCode].filter(Boolean).join(', ')
@@ -166,13 +274,26 @@ function SchedulePageInner() {
     setLoading(true)
     setError('')
     try {
+      // Calculate local totals for mattress swap and assembly
+      if (serviceType === 'MATTRESS_SWAP') {
+        setMattressQty(totalMattresses)
+        setQuoteTotal(mattressTotal)
+        setStep('summary')
+        return
+      }
+      if (serviceType === 'FURNITURE_ASSEMBLY') {
+        setAssemblyItems(assemblyItemCount)
+        setQuoteTotal(assemblyTotal)
+        setStep('summary')
+        return
+      }
       const data = await getQuote({
         serviceType,
         volumeTier: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? volumeTier : undefined,
         helperCount: serviceType === 'LABOR_ONLY' ? helperCount : undefined,
         estimatedHours: serviceType === 'LABOR_ONLY' ? estimatedHours : undefined,
-        mattressQty: serviceType === 'MATTRESS_SWAP' ? mattressQty : undefined,
-        assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItems : undefined,
+        mattressQty: serviceType === 'MATTRESS_SWAP' ? totalMattresses : undefined,
+        assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItemCount : undefined,
       })
       if (data.error) { setError(data.error); return }
       setQuoteTotal(data.total || 0)
@@ -203,8 +324,8 @@ function SchedulePageInner() {
         volumeTier: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? volumeTier : undefined,
         helperCount: serviceType === 'LABOR_ONLY' ? helperCount : undefined,
         estimatedHours: serviceType === 'LABOR_ONLY' ? estimatedHours : undefined,
-        mattressQty: serviceType === 'MATTRESS_SWAP' ? mattressQty : undefined,
-        assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItems : undefined,
+        mattressQty: serviceType === 'MATTRESS_SWAP' ? totalMattresses : undefined,
+        assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItemCount : undefined,
         customerNotes: notes,
         customerName,
         customerPhone,
@@ -424,158 +545,385 @@ function SchedulePageInner() {
         {/* Step: Details */}
         {step === 'details' && (
           <div className="space-y-4">
-            {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Volume</label>
+            {/* ─── JUNK REMOVAL / DONATION PICKUP ─── */}
+            {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900">Select Volume</h2>
+                <p className="text-sm text-gray-500">How much junk do you need removed?</p>
                 <div className="space-y-2">
                   {VOLUME_TIERS.map(v => (
                     <button
                       key={v.id}
                       onClick={() => setVolumeTier(v.id)}
-                      className={`w-full p-3 rounded-lg border-2 text-left transition ${
+                      className={`w-full p-4 rounded-xl border-2 text-left transition ${
                         volumeTier === v.id
                           ? 'border-primary-600 bg-primary-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium text-sm">{v.label}</div>
-                          <div className="text-xs text-gray-500">{v.desc}</div>
+                          <div className="font-bold">{v.label}</div>
+                          <div className="text-sm text-gray-500">{v.desc}</div>
                         </div>
-                        <div className="text-lg font-bold text-primary-600">${v.price}</div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-primary-600">${v.price}</div>
+                          <div className="text-xs text-green-600 font-medium">Disposal included</div>
+                        </div>
                       </div>
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : serviceType === 'LABOR_ONLY' ? (
-              <>
+
+                {/* In-Home vs Curbside */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Number of Helpers</label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4].map(n => {
-                      const rate = n === 1 ? 79 : 129
-                      return (
-                        <button
-                          key={n}
-                          onClick={() => setHelperCount(n)}
-                          className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
-                            helperCount === n
-                              ? 'border-primary-600 bg-primary-50 text-primary-600'
-                              : 'border-gray-200 text-gray-600'
-                          }`}
-                        >
-                          <div className="text-base">{n}</div>
-                          <div className="text-xs text-gray-500">${rate}/hr</div>
-                        </button>
-                      )
-                    })}
+                  <p className="text-sm font-medium text-gray-700 mb-2">Where are your items?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setPickupType('IN_HOME')}
+                      className={`p-3 rounded-xl border-2 text-left transition ${
+                        pickupType === 'IN_HOME'
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">In-Home Pickup</div>
+                      <p className="text-xs text-gray-500 mt-0.5">We come inside & carry items out</p>
+                    </button>
+                    <button
+                      onClick={() => setPickupType('CURBSIDE')}
+                      className={`p-3 rounded-xl border-2 text-left transition ${
+                        pickupType === 'CURBSIDE'
+                          ? 'border-green-600 bg-green-50'
+                          : 'border-gray-200 hover:border-green-300'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">Curbside Pickup <span className="text-green-600">— Save $5</span></div>
+                      <p className="text-xs text-gray-500 mt-0.5">Items already outside at the curb</p>
+                    </button>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Hours</label>
-                  <div className="flex gap-2">
-                    {[2, 3, 4, 5, 6].map(h => {
-                      const rate = helperCount === 1 ? 79 : 129
-                      const total = h * rate
-                      return (
-                        <button
-                          key={h}
-                          onClick={() => setEstimatedHours(h)}
-                          className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
-                            estimatedHours === h
-                              ? 'border-primary-600 bg-primary-50 text-primary-600'
-                              : 'border-gray-200 text-gray-600'
-                          }`}
-                        >
-                          <div className="text-base">{h}h</div>
-                          <div className="text-xs text-gray-500">${total}</div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-                {/* Estimated total for labor */}
-                <div className="bg-primary-50 rounded-lg p-3 border border-primary-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-700">Estimated Total</span>
-                    <span className="text-xl font-bold text-primary-600">
-                      ${(estimatedHours * (helperCount === 1 ? 79 : 129))}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {helperCount} helper{helperCount > 1 ? 's' : ''} x {estimatedHours} hours x ${helperCount === 1 ? 79 : 129}/hour
+
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <p className="text-xs text-green-900">
+                    <strong>All-in pricing.</strong> Disposal fee included in every price above — paid directly to your driver. No per-mile charges. No surprises.
                   </p>
                 </div>
-              </>
-            ) : serviceType === 'MATTRESS_SWAP' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Mattresses</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4].map(q => {
-                    const price = q === 1 ? 99 : Math.round(99 * q * 0.9)
-                    return (
-                      <button
-                        key={q}
-                        onClick={() => setMattressQty(q)}
-                        className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
-                          mattressQty === q
-                            ? 'border-primary-600 bg-primary-50 text-primary-600'
-                            : 'border-gray-200 text-gray-600'
-                        }`}
-                      >
-                        <div className="text-base">{q}</div>
-                        <div className="text-xs text-gray-500">${price}</div>
-                      </button>
-                    )
-                  })}
+              </div>
+            )}
+
+            {/* ─── MOVING LABOR ─── */}
+            {serviceType === 'LABOR_ONLY' && (
+              <div className="space-y-5">
+                <h2 className="text-lg font-bold text-gray-900">Select Hours & Helpers</h2>
+                <p className="text-sm text-gray-500">How many hours and helpers do you need?</p>
+
+                {/* Helper Count */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Helpers</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setHelperCount(1)}
+                      className={`p-4 rounded-xl border-2 transition ${
+                        helperCount === 1
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-xl font-bold">1 Helper</div>
+                      <div className="text-primary-600 font-semibold">$79/hour</div>
+                    </button>
+                    <button
+                      onClick={() => setHelperCount(2)}
+                      className={`p-4 rounded-xl border-2 transition ${
+                        helperCount === 2
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-xl font-bold">2 Helpers</div>
+                      <div className="text-primary-600 font-semibold">$129/hour</div>
+                    </button>
+                  </div>
                 </div>
-                <div className="bg-primary-50 rounded-lg p-3 border border-primary-200 mt-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-700">Estimated Total</span>
-                    <span className="text-xl font-bold text-primary-600">
-                      ${mattressQty === 1 ? 99 : Math.round(99 * mattressQty * 0.9)}
+
+                {/* Hours with +/- */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Hours (2 hour minimum)</label>
+                  <div className="flex items-center gap-4 justify-center">
+                    <button
+                      onClick={() => setEstimatedHours(Math.max(2, estimatedHours - 1))}
+                      className="w-12 h-12 rounded-xl border-2 border-gray-300 hover:border-primary-600 transition flex items-center justify-center text-2xl font-bold"
+                    >
+                      -
+                    </button>
+                    <div className="text-center">
+                      <div className="text-4xl font-bold">{estimatedHours}</div>
+                      <div className="text-gray-500 text-sm">hours</div>
+                    </div>
+                    <button
+                      onClick={() => setEstimatedHours(estimatedHours + 1)}
+                      className="w-12 h-12 rounded-xl border-2 border-gray-300 hover:border-primary-600 transition flex items-center justify-center text-2xl font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Estimate */}
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-gray-700">Estimated Total</span>
+                    <span className="text-2xl font-bold text-primary-600">
+                      ${estimatedHours * (helperCount === 1 ? 79 : 129)}
                     </span>
                   </div>
-                  {mattressQty > 1 && (
-                    <p className="text-xs text-green-600 mt-1">10% multi-mattress discount applied!</p>
-                  )}
+                  <p className="text-sm text-gray-600">
+                    {helperCount} helper{helperCount > 1 ? 's' : ''} x {estimatedHours} hours x ${helperCount === 1 ? 79 : 129}/hour
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    <strong>Note:</strong> Final price may vary if job takes longer or shorter than estimated.
+                  </p>
                 </div>
               </div>
-            ) : serviceType === 'FURNITURE_ASSEMBLY' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Items</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map(q => {
-                    const price = 87 * q
-                    return (
+            )}
+
+            {/* ─── MATTRESS SWAP ─── */}
+            {serviceType === 'MATTRESS_SWAP' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900">Mattress Swap — We Handle the Heavy Lifting</h2>
+                <p className="text-sm text-gray-500">We remove your old mattress and set up your new one. All sizes. Same-day available.</p>
+
+                {/* Service Options with quantities */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Choose your service</h3>
+                  <p className="text-xs text-gray-500 mb-3">Need multiple mattresses? Add quantities below — <span className="font-semibold text-green-600">10% off when you book 2 or more!</span></p>
+                  <div className="space-y-2">
+                    {MATTRESS_SERVICES.map(s => {
+                      const qty = mattressQuantities[s.id] || 0
+                      return (
+                        <div
+                          key={s.id}
+                          className={`w-full text-left p-3 rounded-xl border-2 transition ${
+                            qty > 0
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm">{s.label}</p>
+                              <p className="text-xs text-gray-500">{s.desc}</p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                              <span className="text-base font-bold text-purple-600">${s.price}</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => updateMattressQty(s.id, -1)}
+                                  disabled={qty === 0}
+                                  className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-600 hover:border-purple-500 transition disabled:opacity-30"
+                                >
+                                  -
+                                </button>
+                                <span className="w-6 text-center font-bold text-sm">{qty}</span>
+                                <button
+                                  onClick={() => updateMattressQty(s.id, 1)}
+                                  className="w-7 h-7 rounded-full border-2 border-purple-500 bg-purple-500 flex items-center justify-center text-white hover:bg-purple-600 transition"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Discount banner */}
+                {mattressHasDiscount && (
+                  <div className="bg-green-50 border border-green-300 rounded-xl p-3 flex items-center gap-2">
+                    <span className="text-xl">&#127881;</span>
+                    <div>
+                      <p className="font-semibold text-green-800 text-sm">10% multi-mattress discount applied!</p>
+                      <p className="text-xs text-green-700">You&apos;re saving ${mattressDiscountAmount} on {totalMattresses} mattresses.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add-ons */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Add-on services</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MATTRESS_ADDONS.map(a => (
                       <button
-                        key={q}
-                        onClick={() => setAssemblyItems(q)}
-                        className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
-                          assemblyItems === q
-                            ? 'border-primary-600 bg-primary-50 text-primary-600'
-                            : 'border-gray-200 text-gray-600'
+                        key={a.id}
+                        onClick={() => toggleMattressAddon(a.id)}
+                        className={`text-left p-3 rounded-xl border-2 transition ${
+                          selectedMattressAddons.includes(a.id)
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        <div className="text-base">{q}</div>
-                        <div className="text-xs text-gray-500">${price}</div>
+                        <div className="flex items-start gap-2">
+                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                            selectedMattressAddons.includes(a.id) ? 'border-purple-500 bg-purple-500' : 'border-gray-300'
+                          }`}>
+                            {selectedMattressAddons.includes(a.id) && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="font-semibold text-gray-900 text-xs">{a.label}</p>
+                              <span className="text-xs font-bold text-purple-600">+${a.price}</span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-0.5">{a.desc}</p>
+                          </div>
+                        </div>
                       </button>
-                    )
-                  })}
-                </div>
-                <div className="bg-primary-50 rounded-lg p-3 border border-primary-200 mt-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-700">Estimated Total</span>
-                    <span className="text-xl font-bold text-primary-600">
-                      ${87 * assemblyItems}
-                    </span>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{assemblyItems} item{assemblyItems > 1 ? 's' : ''} x $87 each</p>
+                </div>
+
+                {/* Info */}
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                  <p className="text-xs text-green-800">
+                    <strong>What happens to your old mattress?</strong> We donate mattresses in good condition to local charities. Damaged mattresses are disposed of responsibly.
+                  </p>
+                </div>
+
+                {/* Total bar */}
+                <div className="bg-white rounded-xl p-3 border shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-gray-500">Your estimated total</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-xl font-bold text-gray-900">${mattressTotal}</p>
+                        {mattressHasDiscount && (
+                          <span className="text-sm text-green-600 font-semibold line-through">${mattressServicesSubtotal + mattressAddonsTotal}</span>
+                        )}
+                      </div>
+                    </div>
+                    <a href="tel:+16094568188" className="text-xs text-gray-500 hover:text-gray-700">
+                      Call (609) 456-8188
+                    </a>
+                  </div>
                 </div>
               </div>
-            ) : null}
+            )}
+
+            {/* ─── FURNITURE ASSEMBLY ─── */}
+            {serviceType === 'FURNITURE_ASSEMBLY' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900">What do you need assembled?</h2>
+                <p className="text-sm text-gray-500">Select items and get your instant price. All prices include tools, hardware & cleanup.</p>
+
+                {assemblyItemCount >= 3 && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                    <p className="text-xs text-orange-800 font-medium">
+                      Assembling 3+ items? You may qualify for a multi-item discount!
+                    </p>
+                  </div>
+                )}
+
+                {/* Items by tier */}
+                {[1, 2, 3, 4].map(tier => (
+                  <div key={tier}>
+                    <h3 className="font-semibold text-gray-900 text-sm mb-2">{ASSEMBLY_TIER_LABELS[tier]}</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ASSEMBLY_ITEMS.filter(i => i.tier === tier).map(item => {
+                        const isSelected = !!selectedAssemblyItems[item.id]
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-3 rounded-xl border-2 transition cursor-pointer ${
+                              isSelected ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div onClick={() => toggleAssemblyItem(item.id)}>
+                              <div className="flex items-start justify-between">
+                                <p className="font-semibold text-gray-900 text-xs">{item.label}</p>
+                                <span className="text-sm font-bold text-orange-600 ml-1">${item.price}</span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 mt-0.5">{item.desc}</p>
+                            </div>
+                            {isSelected && (
+                              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-orange-200">
+                                <span className="text-xs text-gray-600">Qty:</span>
+                                <button
+                                  onClick={() => updateAssemblyQty(item.id, -1)}
+                                  className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-xs font-bold"
+                                >
+                                  -
+                                </button>
+                                <span className="w-5 text-center font-semibold text-xs">{selectedAssemblyItems[item.id]}</span>
+                                <button
+                                  onClick={() => updateAssemblyQty(item.id, 1)}
+                                  className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-xs font-bold"
+                                >
+                                  +
+                                </button>
+                                <span className="ml-auto text-xs font-semibold text-orange-600">
+                                  ${item.price * (selectedAssemblyItems[item.id] || 1)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Custom item */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-2">Custom</h3>
+                  <div
+                    className={`p-3 rounded-xl border-2 transition cursor-pointer ${
+                      customAssemblyItem ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div onClick={() => setCustomAssemblyItem(!customAssemblyItem)} className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-gray-900 text-xs">Other Item</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">We&apos;ll confirm price — describe the item below</p>
+                      </div>
+                      <span className="text-sm font-bold text-orange-600 ml-1">Custom</span>
+                    </div>
+                    {customAssemblyItem && (
+                      <div className="mt-2 pt-2 border-t border-orange-200">
+                        <input
+                          type="text"
+                          value={customAssemblyDesc}
+                          onChange={(e) => setCustomAssemblyDesc(e.target.value)}
+                          placeholder="Describe the item (e.g., IKEA KALLAX 4x4 shelf)"
+                          className="w-full h-9 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Total bar */}
+                <div className="bg-white rounded-xl p-3 border shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-gray-500">{assemblyItemCount} item{assemblyItemCount !== 1 ? 's' : ''} selected</p>
+                      <p className="text-xl font-bold text-gray-900">{assemblyTotal > 0 ? `$${assemblyTotal}` : 'Custom quote'}</p>
+                    </div>
+                    <a href="tel:+16094568188" className="text-xs text-gray-500 hover:text-gray-700">
+                      Call (609) 456-8188
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─── COMMON: Notes + Photos ─── */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
               <textarea
@@ -654,7 +1002,7 @@ function SchedulePageInner() {
               </button>
               <button
                 onClick={handleGetQuote}
-                disabled={loading}
+                disabled={loading || (serviceType === 'MATTRESS_SWAP' && totalMattresses === 0) || (serviceType === 'FURNITURE_ASSEMBLY' && assemblyItemCount === 0)}
                 className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-medium disabled:opacity-50"
               >
                 {loading ? 'Getting quote...' : 'Get Quote'}
@@ -686,10 +1034,16 @@ function SchedulePageInner() {
                   <span className="font-medium">{TIME_WINDOWS.find(t => t.id === timeWindow)?.label} ({TIME_WINDOWS.find(t => t.id === timeWindow)?.time})</span>
                 </div>
                 {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Volume</span>
-                    <span className="font-medium">{VOLUME_TIERS.find(v => v.id === volumeTier)?.label}</span>
-                  </div>
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Volume</span>
+                      <span className="font-medium">{VOLUME_TIERS.find(v => v.id === volumeTier)?.label}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Pickup Type</span>
+                      <span className="font-medium">{pickupType === 'CURBSIDE' ? 'Curbside (-$5)' : 'In-Home'}</span>
+                    </div>
+                  </>
                 )}
                 {serviceType === 'LABOR_ONLY' && (
                   <>
@@ -704,16 +1058,46 @@ function SchedulePageInner() {
                   </>
                 )}
                 {serviceType === 'MATTRESS_SWAP' && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Mattresses</span>
-                    <span className="font-medium">{mattressQty}</span>
-                  </div>
+                  <>
+                    {MATTRESS_SERVICES.filter(s => (mattressQuantities[s.id] || 0) > 0).map(s => (
+                      <div key={s.id} className="flex justify-between">
+                        <span className="text-gray-500">{s.label} x{mattressQuantities[s.id]}</span>
+                        <span className="font-medium">${s.price * mattressQuantities[s.id]}</span>
+                      </div>
+                    ))}
+                    {selectedMattressAddons.length > 0 && MATTRESS_ADDONS.filter(a => selectedMattressAddons.includes(a.id)).map(a => (
+                      <div key={a.id} className="flex justify-between">
+                        <span className="text-gray-500">{a.label}</span>
+                        <span className="font-medium">+${a.price}</span>
+                      </div>
+                    ))}
+                    {mattressHasDiscount && (
+                      <div className="flex justify-between text-green-600">
+                        <span>10% multi-mattress discount</span>
+                        <span className="font-medium">-${mattressDiscountAmount}</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 {serviceType === 'FURNITURE_ASSEMBLY' && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Items</span>
-                    <span className="font-medium">{assemblyItems}</span>
-                  </div>
+                  <>
+                    {Object.entries(selectedAssemblyItems).map(([id, qty]) => {
+                      const item = ASSEMBLY_ITEMS.find(i => i.id === id)
+                      if (!item) return null
+                      return (
+                        <div key={id} className="flex justify-between">
+                          <span className="text-gray-500">{item.label} x{qty}</span>
+                          <span className="font-medium">${item.price * qty}</span>
+                        </div>
+                      )
+                    })}
+                    {customAssemblyItem && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Custom: {customAssemblyDesc || 'Other item'}</span>
+                        <span className="font-medium">TBD</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 {photos.length > 0 && (
                   <div className="flex justify-between items-center">
