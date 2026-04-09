@@ -65,7 +65,7 @@ export default function AssemblyContactPage() {
     // Build full address from schedule data
     const sched = existing.schedule || {}
     const fullAddress = sched.street
-      ? `${sched.street}, ${sched.city}, ${sched.state} ${sched.zip}`
+      ? `${sched.street}${sched.apt ? `, ${sched.apt}` : ''}, ${sched.city}, ${sched.state} ${sched.zip}`
       : sched.zip ? `ZIP ${sched.zip}` : ''
 
     // Build description from selections

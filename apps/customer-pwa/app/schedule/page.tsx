@@ -121,6 +121,7 @@ function SchedulePageInner() {
   // Form data
   const [serviceType, setServiceType] = useState<ServiceType>('HAUL_AWAY')
   const [street, setStreet] = useState('')
+  const [apt, setApt] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zipCode, setZipCode] = useState('')
@@ -229,7 +230,7 @@ function SchedulePageInner() {
   }, 0)
 
   // Build full address string from parts
-  const fullAddress = [street, city, state, zipCode].filter(Boolean).join(', ')
+  const fullAddress = [street + (apt ? `, ${apt}` : ''), city, state, zipCode].filter(Boolean).join(', ')
 
   const handleAddressLookup = async () => {
     if (!street.trim()) { setError('Please enter a street address'); return }
@@ -445,6 +446,16 @@ function SchedulePageInner() {
                 onChange={e => setStreet(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                 placeholder="123 Main St"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Apt / Unit <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input
+                type="text"
+                value={apt}
+                onChange={e => setApt(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                placeholder="Apt 4B, Unit 12, etc."
               />
             </div>
             <div>
