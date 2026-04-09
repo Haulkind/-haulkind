@@ -176,11 +176,14 @@ export default function LaborOnlyLocationPage() {
 
     try {
       // TASK 5: Build serviceAddress string from structured fields (backend expects single string)
+      // Geocode WITHOUT apt/unit — Nominatim can't resolve apt numbers and returns no results
+      const geocodeAddress = `${street.trim()}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
+      // Full address with apt for display/storage
       const serviceAddress = `${street.trim()}${apt.trim() ? `, ${apt.trim()}` : ''}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
       
       // Geocode the address to get coordinates
-      console.log('[GEOCODING] Starting for:', serviceAddress)
-      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(serviceAddress)}&countrycodes=us&limit=1`
+      console.log('[GEOCODING] Starting for:', geocodeAddress)
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeAddress)}&countrycodes=us&limit=1`
       const geocodeResponse = await fetch(geocodeUrl, {
         headers: { 'User-Agent': 'Haulkind/1.0' }
       })

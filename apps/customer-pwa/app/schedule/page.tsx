@@ -229,7 +229,9 @@ function SchedulePageInner() {
     return sum + (item ? item.price * qty : 0)
   }, 0)
 
-  // Build full address string from parts
+  // Geocode WITHOUT apt/unit — Nominatim can't resolve apt numbers and returns no results
+  const geocodeAddress = [street, city, state, zipCode].filter(Boolean).join(', ')
+  // Full address with apt for display/storage
   const fullAddress = [street + (apt ? `, ${apt}` : ''), city, state, zipCode].filter(Boolean).join(', ')
 
   const handleAddressLookup = async () => {
@@ -240,9 +242,9 @@ function SchedulePageInner() {
     setLoading(true)
     setError('')
     try {
-      // Use browser geocoding via Nominatim
+      // Use browser geocoding via Nominatim (without apt/unit)
       const resp = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fullAddress)}&format=json&limit=1`,
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geocodeAddress)}&format=json&limit=1`,
         { headers: { 'User-Agent': 'Haulkind/1.0' } }
       )
       const results = await resp.json()
