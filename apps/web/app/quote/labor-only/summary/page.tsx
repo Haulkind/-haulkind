@@ -62,28 +62,10 @@ export default function LaborOnlySummaryPage() {
 
       updateData({ jobId: job.id })
 
-      // Redirect to checkout
+      // Always redirect to embedded checkout page (full-screen mobile-friendly)
       const origin = window.location.origin
-      const hasStripeKey = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
-      if (hasStripeKey) {
-        // Use embedded checkout (full-screen mobile-friendly)
-        window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
-        return
-      }
-
-      // Fall back to Stripe hosted checkout
-      const checkout = await createCheckoutSession(
-        job.id,
-        `${origin}/quote/tracking?jobId=${job.id}&payment=success`,
-        `${origin}/quote/labor-only/summary?payment=cancel`
-      )
-
-      if (checkout.url) {
-        window.location.href = checkout.url
-      } else {
-        throw new Error('No checkout URL returned')
-      }
+      window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
+      return
     } catch (err) {
       setError('Payment failed. Please try again.')
       setPaying(false)

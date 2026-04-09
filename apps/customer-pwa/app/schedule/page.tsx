@@ -339,27 +339,11 @@ function SchedulePageInner() {
       setJobId(data.id)
       setTrackingToken(data.trackingToken || '')
 
-      // Try Stripe Checkout — use embedded checkout if publishable key is available
+      // Always redirect to embedded checkout page (full-screen mobile-friendly)
       try {
         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
-        const hasStripeKey = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
-        if (hasStripeKey) {
-          // Redirect to our embedded checkout page (full-screen mobile-friendly)
-          window.location.href = `${origin}/checkout?jobId=${data.id}&return=/schedule`
-          return
-        }
-
-        // Fall back to Stripe hosted checkout
-        const checkout = await createCheckoutSession(
-          data.id,
-          `${origin}/schedule?payment=success&orderId=${data.id}`,
-          `${origin}/schedule?payment=cancelled&orderId=${data.id}`
-        )
-        if (checkout?.url) {
-          window.location.href = checkout.url
-          return
-        }
+        window.location.href = `${origin}/checkout?jobId=${data.id}&return=/schedule`
+        return
       } catch {
         // Stripe not configured — fall back to mock payment
       }

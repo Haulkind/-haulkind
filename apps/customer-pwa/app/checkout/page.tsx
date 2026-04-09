@@ -2,12 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { loadStripe } from '@stripe/stripe-js'
+import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
-
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app'
 
@@ -35,6 +31,36 @@ function CheckoutInner() {
   const jobId = searchParams.get('jobId')
   const returnPath = searchParams.get('return') || '/schedule'
   const [error, setError] = useState('')
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
+  const [stripeLoading, setStripeLoading] = useState(true)
+
+  // Fetch Stripe publishable key dynamically (not reliant on build-time env var)
+  useEffect(() => {
+    async function fetchStripeKey() {
+      // First try the build-time env var
+      const buildTimeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      if (buildTimeKey) {
+        setStripePromise(loadStripe(buildTimeKey))
+        setStripeLoading(false)
+        return
+      }
+
+      // Fetch from backend
+      try {
+        const res = await fetch(`${API_URL}/api/stripe/publishable-key`)
+        const data = await res.json()
+        if (data.success && data.publishableKey) {
+          setStripePromise(loadStripe(data.publishableKey))
+        } else {
+          setError('Payment system not configured.')
+        }
+      } catch {
+        setError('Failed to load payment system.')
+      }
+      setStripeLoading(false)
+    }
+    fetchStripeKey()
+  }, [])
 
   const fetchClientSecret = useCallback(async () => {
     if (!jobId) {
@@ -64,11 +90,15 @@ function CheckoutInner() {
     return data.clientSecret
   }, [jobId, returnPath])
 
+  if (stripeLoading) {
+    return <Loading />
+  }
+
   if (!stripePromise) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium">Payment system not configured.</p>
+          <p className="text-red-600 font-medium">{error || 'Payment system not configured.'}</p>
           <p className="text-gray-500 text-sm mt-2">Please contact support.</p>
         </div>
       </div>
