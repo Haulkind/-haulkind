@@ -33,8 +33,9 @@ function CheckoutInner() {
   const [error, setError] = useState('')
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [stripeLoading, setStripeLoading] = useState(true)
+  const [useHostedCheckout, setUseHostedCheckout] = useState(false)
 
-  // Fetch Stripe publishable key dynamically
+  // Fetch Stripe publishable key dynamically; fall back to hosted checkout if unavailable
   useEffect(() => {
     async function fetchStripeKey() {
       const buildTimeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -48,16 +49,48 @@ function CheckoutInner() {
         const data = await res.json()
         if (data.success && data.publishableKey) {
           setStripePromise(loadStripe(data.publishableKey))
-        } else {
-          setError('Payment system not configured.')
+          setStripeLoading(false)
+          return
         }
       } catch {
-        setError('Failed to load payment system.')
+        // publishable key not available
       }
+      // Publishable key not available — fall back to hosted Stripe checkout
+      setUseHostedCheckout(true)
       setStripeLoading(false)
     }
     fetchStripeKey()
   }, [])
+
+  // If publishable key not available, redirect to Stripe hosted checkout
+  useEffect(() => {
+    if (!useHostedCheckout || !jobId) return
+    async function redirectToHostedCheckout() {
+      try {
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://haulkind.com'
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            successUrl: `${origin}${returnPath}?jobId=${jobId}&payment=success`,
+            cancelUrl: `${origin}${returnPath}?jobId=${jobId}&payment=cancel`,
+          }),
+        })
+        const data = await res.json()
+        if (data.success && data.url) {
+          window.location.href = data.url
+          return
+        }
+        setUseHostedCheckout(false)
+        setError(data.error || 'Failed to create checkout session')
+      } catch {
+        setUseHostedCheckout(false)
+        setError('Failed to create checkout session. Please try again.')
+      }
+    }
+    redirectToHostedCheckout()
+  }, [useHostedCheckout, jobId, returnPath])
 
   const fetchClientSecret = useCallback(async () => {
     if (!jobId) {
@@ -87,19 +120,8 @@ function CheckoutInner() {
     return data.clientSecret
   }, [jobId, returnPath])
 
-  if (stripeLoading) {
+  if (stripeLoading || (useHostedCheckout && !error)) {
     return <Loading />
-  }
-
-  if (!stripePromise) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium">{error || 'Payment system not configured.'}</p>
-          <p className="text-gray-500 text-sm mt-2">Please contact support.</p>
-        </div>
-      </div>
-    )
   }
 
   if (error) {
@@ -145,7 +167,7 @@ function CheckoutInner() {
 
       <div className="py-4">
         <EmbeddedCheckoutProvider
-          stripe={stripePromise}
+          stripe={stripePromise!}
           options={{ fetchClientSecret }}
         >
           <EmbeddedCheckout />
