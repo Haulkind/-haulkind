@@ -440,8 +440,12 @@ export function registerStripeRoutes(app: Express) {
         return res.status(400).json({ error: "Order amount too low (minimum $0.50)" });
       }
 
-      // Create Stripe Checkout Session
-      const session = await stripe.checkout.sessions.create({
+      // Determine if embedded mode is requested
+      const uiMode = req.body.uiMode === "embedded" ? "embedded" : "hosted";
+      const returnUrl = req.body.returnUrl;
+
+      // Build session options
+      const sessionOptions: any = {
         payment_method_types: ["card"],
         line_items: [
           {
@@ -457,15 +461,24 @@ export function registerStripeRoutes(app: Express) {
           },
         ],
         mode: "payment",
-        success_url: successUrl || `https://app.haulkind.com/orders?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `https://app.haulkind.com/orders?payment=cancel`,
         metadata: {
           jobId: job.id,
           customerEmail: job.customer_email || "",
           customerName: job.customer_name || "",
         },
         customer_email: job.customer_email || undefined,
-      });
+      };
+
+      if (uiMode === "embedded") {
+        sessionOptions.ui_mode = "embedded";
+        sessionOptions.return_url = returnUrl || `https://app.haulkind.com/orders?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+      } else {
+        sessionOptions.success_url = successUrl || `https://app.haulkind.com/orders?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+        sessionOptions.cancel_url = cancelUrl || `https://app.haulkind.com/orders?payment=cancel`;
+      }
+
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create(sessionOptions);
 
       // Calculate fee breakdown
       const platformFeeCents = Math.round(totalCents * PLATFORM_FEE_RATE);
@@ -483,16 +496,23 @@ export function registerStripeRoutes(app: Express) {
         [session.id, totalCents, platformFeeCents, driverEarningsCents, job.id]
       );
 
-      console.log("[Stripe] Checkout session created:", session.id, "for job:", job.id, "amount:", totalCents);
+      console.log("[Stripe] Checkout session created:", session.id, "for job:", job.id, "amount:", totalCents, "mode:", uiMode);
 
-      res.json({
+      const response: any = {
         success: true,
         sessionId: session.id,
-        url: session.url,
         totalCents,
         platformFeeCents,
         driverEarningsCents,
-      });
+      };
+
+      if (uiMode === "embedded") {
+        response.clientSecret = session.client_secret;
+      } else {
+        response.url = session.url;
+      }
+
+      res.json(response);
     } catch (error: any) {
       console.error("[Stripe] Checkout create error:", error);
       res.status(500).json({ error: "Failed to create checkout session", details: error?.message });
