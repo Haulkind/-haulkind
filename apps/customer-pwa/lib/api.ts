@@ -130,6 +130,16 @@ export async function createCheckoutSession(jobId: string, successUrl: string, c
   return res.json();
 }
 
+// Stripe Embedded Checkout — creates a session and returns clientSecret
+export async function createEmbeddedCheckoutSession(jobId: string, returnUrl: string) {
+  const res = await fetch(`${API_URL}/api/checkout/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobId, uiMode: 'embedded', returnUrl }),
+  });
+  return res.json();
+}
+
 export async function lookupServiceArea(lat: number, lng: number) {
   const res = await fetch(`${API_URL}/service-areas/lookup?lat=${lat}&lng=${lng}`);
   return res.json();

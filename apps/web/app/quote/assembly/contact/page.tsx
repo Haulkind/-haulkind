@@ -134,8 +134,17 @@ export default function AssemblyContactPage() {
         })
       }
 
-      // 2. Create Stripe checkout session and redirect
+      // 2. Redirect to checkout
       const origin = window.location.origin
+      const hasStripeKey = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
+      if (hasStripeKey) {
+        // Use embedded checkout (full-screen mobile-friendly)
+        window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
+        return
+      }
+
+      // Fall back to Stripe hosted checkout
       const checkout = await createCheckoutSession(
         job.id,
         `${origin}/quote/tracking?jobId=${job.id}&payment=success`,
