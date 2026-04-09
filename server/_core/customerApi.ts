@@ -193,11 +193,15 @@ export function registerCustomerApiRoutes(app: Express) {
         { expiresIn: "30d" }
       );
 
-      // Link any existing orders by email
-      await pool.query(
-        "UPDATE jobs SET customer_account_id = $1 WHERE customer_email = $2 AND customer_account_id IS NULL",
-        [customer.id, email]
-      );
+      // Link any existing orders by email (case-insensitive)
+      try {
+        await pool.query(
+          "UPDATE jobs SET customer_account_id = $1 WHERE LOWER(customer_email) = LOWER($2) AND customer_account_id IS NULL",
+          [customer.id, email]
+        );
+      } catch (e) {
+        // Non-fatal
+      }
 
       console.log("[CustomerApi] Registered customer:", customer.email);
       res.json({ success: true, token, customer });
@@ -246,6 +250,16 @@ export function registerCustomerApiRoutes(app: Express) {
         process.env.JWT_SECRET || "secret",
         { expiresIn: "30d" }
       );
+
+      // Link any existing orders by email (case-insensitive)
+      try {
+        await pool.query(
+          "UPDATE jobs SET customer_account_id = $1 WHERE LOWER(customer_email) = LOWER($2) AND customer_account_id IS NULL",
+          [customer.id, customer.email]
+        );
+      } catch (e) {
+        // Non-fatal
+      }
 
       console.log("[CustomerApi] Login:", customer.email);
       res.json({
@@ -350,7 +364,7 @@ export function registerCustomerApiRoutes(app: Express) {
                items_json, scheduled_for, pickup_time_window, assigned_driver_id,
                tracking_token, created_at, updated_at, paid_at
         FROM jobs
-        WHERE (customer_account_id = $1 OR customer_email = $2)
+        WHERE (customer_account_id = $1 OR LOWER(customer_email) = LOWER($2))
       `;
       const params: any[] = [decoded.customerId, decoded.email];
 
@@ -407,7 +421,7 @@ export function registerCustomerApiRoutes(app: Express) {
       }
 
       const result = await pool.query(
-        `SELECT * FROM jobs WHERE id = $1 AND (customer_account_id = $2 OR customer_email = $3)`,
+        `SELECT * FROM jobs WHERE id = $1 AND (customer_account_id = $2 OR LOWER(customer_email) = LOWER($3))`,
         [req.params.id, decoded.customerId, decoded.email]
       );
 
