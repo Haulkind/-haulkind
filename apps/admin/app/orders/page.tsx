@@ -594,7 +594,7 @@ export default function OrdersPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {order.assigned_driver_id ? (
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{order.driver_display_name || order.driver_name || 'Unknown'}</div>
+                        <div className="text-sm font-medium text-gray-900">{(order.driver_display_name || '').trim() || (order.driver_name || '').trim() || 'Unknown'}</div>
                         {order.driver_phone && <div className="text-xs text-gray-500">{order.driver_phone}</div>}
                       </div>
                     ) : (
