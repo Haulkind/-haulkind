@@ -35,15 +35,17 @@ function CheckoutInner() {
   const [stripeLoading, setStripeLoading] = useState(true)
   const [useHostedCheckout, setUseHostedCheckout] = useState(false)
 
-  // Fetch Stripe publishable key dynamically; fall back to hosted checkout if unavailable
+  // Fetch Stripe publishable key: build-time env → backend → hardcoded fallback → hosted checkout
   useEffect(() => {
     async function fetchStripeKey() {
+      // 1. Build-time env var
       const buildTimeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
       if (buildTimeKey) {
         setStripePromise(loadStripe(buildTimeKey))
         setStripeLoading(false)
         return
       }
+      // 2. Fetch from backend
       try {
         const res = await fetch(`${API_URL}/api/stripe/publishable-key`)
         const data = await res.json()
@@ -53,10 +55,11 @@ function CheckoutInner() {
           return
         }
       } catch {
-        // publishable key not available
+        // backend not available
       }
-      // Publishable key not available — fall back to hosted Stripe checkout
-      setUseHostedCheckout(true)
+      // 3. Hardcoded publishable key (public, safe to embed)
+      const FALLBACK_KEY = 'pk_live_51SXMuWL8VIYulg0mxbLNX9PHQAt0jpjQ9Gm25XCHwECVN2PLtMkxnLMsbBG3mNI7huG3FMicaE7eo4DwZv7ABSpt00y4eGli4b'
+      setStripePromise(loadStripe(FALLBACK_KEY))
       setStripeLoading(false)
     }
     fetchStripeKey()
