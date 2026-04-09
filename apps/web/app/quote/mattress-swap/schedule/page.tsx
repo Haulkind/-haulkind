@@ -9,6 +9,7 @@ const PA_NJ_NY_ZIPS = /^(0[89]|1[0-4]|169|176|177|178|179|18[0-9]|19[0-5]|100|10
 export default function MattressSwapSchedulePage() {
   const router = useRouter()
   const [street, setStreet] = useState('')
+  const [apt, setApt] = useState('')
   const [city, setCity] = useState('')
   const [usState, setUsState] = useState('')
   const [zip, setZip] = useState('')
@@ -69,7 +70,7 @@ export default function MattressSwapSchedulePage() {
     const existing = JSON.parse(sessionStorage.getItem('mattressSwapData') || '{}')
     sessionStorage.setItem('mattressSwapData', JSON.stringify({
       ...existing,
-      schedule: { street: street.trim(), city: city.trim(), state: usState.trim().toUpperCase(), zip, date, time, floor, mattressStatus, arrivalDate, instructions },
+      schedule: { street: street.trim(), apt: apt.trim(), city: city.trim(), state: usState.trim().toUpperCase(), zip, date, time, floor, mattressStatus, arrivalDate, instructions },
     }))
     router.push('/quote/mattress-swap/contact')
   }
@@ -103,7 +104,19 @@ export default function MattressSwapSchedulePage() {
               type="text"
               value={street}
               onChange={(e) => setStreet(e.target.value)}
-              placeholder="123 Main St, Apt 4B"
+              placeholder="123 Main St"
+              className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Apt / Unit (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Apt / Unit <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={apt}
+              onChange={(e) => setApt(e.target.value)}
+              placeholder="Apt 4B, Unit 12, etc."
               className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>

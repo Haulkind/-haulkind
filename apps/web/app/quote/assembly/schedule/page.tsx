@@ -9,6 +9,7 @@ const PA_NJ_NY_ZIPS = /^(0[89]|1[0-4]|169|176|177|178|179|18[0-9]|19[0-5]|100|10
 export default function AssemblySchedulePage() {
   const router = useRouter()
   const [street, setStreet] = useState('')
+  const [apt, setApt] = useState('')
   const [city, setCity] = useState('')
   const [usState, setUsState] = useState('')
   const [zip, setZip] = useState('')
@@ -65,7 +66,7 @@ export default function AssemblySchedulePage() {
     const existing = JSON.parse(sessionStorage.getItem('assemblyData') || '{}')
     sessionStorage.setItem('assemblyData', JSON.stringify({
       ...existing,
-      schedule: { street: street.trim(), city: city.trim(), state: usState.trim().toUpperCase(), zip, date, time, floor, store: store === 'other' ? storeOther : store, boxStatus, instructions },
+      schedule: { street: street.trim(), apt: apt.trim(), city: city.trim(), state: usState.trim().toUpperCase(), zip, date, time, floor, store: store === 'other' ? storeOther : store, boxStatus, instructions },
     }))
     router.push('/quote/assembly/contact')
   }
@@ -99,7 +100,19 @@ export default function AssemblySchedulePage() {
               type="text"
               value={street}
               onChange={(e) => setStreet(e.target.value)}
-              placeholder="123 Main St, Apt 4B"
+              placeholder="123 Main St"
+              className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Apt / Unit (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Apt / Unit <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={apt}
+              onChange={(e) => setApt(e.target.value)}
+              placeholder="Apt 4B, Unit 12, etc."
               className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>

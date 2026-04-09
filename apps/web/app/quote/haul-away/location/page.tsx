@@ -20,6 +20,7 @@ export default function HaulAwayLocationPage() {
   
   // TASK 5: Structured address fields (required)
   const [street, setStreet] = useState('')
+  const [apt, setApt] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
@@ -193,7 +194,7 @@ export default function HaulAwayLocationPage() {
 
     try {
       // TASK 5: Build serviceAddress string from structured fields (backend expects single string)
-      const serviceAddress = `${street.trim()}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
+      const serviceAddress = `${street.trim()}${apt.trim() ? `, ${apt.trim()}` : ''}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
       
       // Geocode the address to get coordinates
       console.log('[GEOCODING] Starting for:', serviceAddress)
@@ -309,6 +310,20 @@ export default function HaulAwayLocationPage() {
                     className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
                   />
                   <p className="text-[11px] text-gray-400 mt-1">Start typing and select your address from the suggestions</p>
+                </div>
+
+                {/* Apt / Unit (optional) */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Apt / Unit <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={apt}
+                    onChange={(e) => setApt(e.target.value)}
+                    placeholder="Apt 4B, Unit 12, etc."
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                  />
                 </div>
 
                 {/* Row 2: City (50%) + State (20%) + ZIP (30%) */}
