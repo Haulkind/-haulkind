@@ -384,7 +384,7 @@ export function registerCustomerApiRoutes(app: Express) {
           if (order.assigned_driver_id) {
             try {
               const driverResult = await pool.query(
-                "SELECT id, name, phone FROM drivers WHERE id = $1",
+                "SELECT id, name, phone FROM drivers WHERE id::text = $1",
                 [order.assigned_driver_id]
               );
               if (driverResult.rows.length > 0) {
@@ -435,7 +435,7 @@ export function registerCustomerApiRoutes(app: Express) {
       if (order.assigned_driver_id) {
         try {
           const driverResult = await pool.query(
-            "SELECT id, name, phone FROM drivers WHERE id = $1",
+            "SELECT id, name, phone FROM drivers WHERE id::text = $1",
             [order.assigned_driver_id]
           );
           if (driverResult.rows.length > 0) {
@@ -557,7 +557,7 @@ export function registerCustomerApiRoutes(app: Express) {
       if (order.assigned_driver_id) {
         try {
           const driverResult = await pool.query(
-            "SELECT id, name, phone FROM drivers WHERE id = $1",
+            "SELECT id, name, phone FROM drivers WHERE id::text = $1",
             [order.assigned_driver_id]
           );
           if (driverResult.rows.length > 0) {
