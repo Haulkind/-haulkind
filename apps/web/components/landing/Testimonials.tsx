@@ -78,7 +78,7 @@ export default function Testimonials() {
       const maxScroll = el.scrollWidth - el.clientWidth
       if (maxScroll <= 0) return
       setScrollPos((prev) => {
-        const next = prev + 1
+        const next = prev + 2
         if (next >= maxScroll) {
           el.scrollTo({ left: 0, behavior: 'smooth' })
           return 0
