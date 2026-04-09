@@ -5,7 +5,17 @@ interface OrderCardProps {
   onClick?: () => void
 }
 
+const SERVICE_LABELS: Record<string, { emoji: string; label: string }> = {
+  HAUL_AWAY: { emoji: '🚛', label: 'Junk Removal' },
+  LABOR_ONLY: { emoji: '💪', label: 'Moving Labor' },
+  DONATION_PICKUP: { emoji: '❤️', label: 'Donation Pickup' },
+  MATTRESS_SWAP: { emoji: '🛏️', label: 'Mattress Swap' },
+  FURNITURE_ASSEMBLY: { emoji: '🔧', label: 'Furniture Assembly' },
+}
+
 export default function OrderCard({ order, onClick }: OrderCardProps) {
+  const isUnpaid = !order.paid_at && order.status !== 'completed' && order.status !== 'cancelled'
+
   const statusColor = (s: string) => {
     if (s === 'completed') return 'bg-green-100 text-green-700'
     if (s === 'cancelled') return 'bg-red-100 text-red-700'
@@ -22,20 +32,23 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
     return tw || ''
   }
 
+  const svc = SERVICE_LABELS[order.service_type] || { emoji: '📦', label: order.service_type }
+
   return (
     <button
       onClick={onClick}
-      className="w-full bg-white rounded-xl p-4 shadow-sm text-left hover:shadow-md transition"
+      className={`w-full bg-white rounded-xl p-4 shadow-sm text-left hover:shadow-md transition ${isUnpaid ? 'border-2 border-amber-400' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">
-              {order.service_type === 'LABOR_ONLY' ? '💪' : '🚛'}
-            </span>
-            <span className="font-bold text-gray-900">
-              {order.service_type === 'LABOR_ONLY' ? 'Labor Only' : 'Junk Removal'}
-            </span>
+            <span className="text-lg">{svc.emoji}</span>
+            <span className="font-bold text-gray-900">{svc.label}</span>
+            {isUnpaid && (
+              <span className="w-5 h-5 bg-amber-400 text-white rounded-full flex items-center justify-center text-xs font-bold" title="Pending Payment">
+                ?
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-500 truncate">{order.pickup_address || 'No address'}</p>
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
@@ -46,11 +59,20 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
               <span>{formatTimeWindow(order.pickup_time_window)}</span>
             )}
           </div>
+          {isUnpaid && (
+            <p className="text-xs text-amber-600 font-medium mt-1">Pending Payment — Tap to pay</p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 ml-3">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(order.status)}`}>
-            {order.status?.toUpperCase()}
-          </span>
+          {isUnpaid ? (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+              UNPAID
+            </span>
+          ) : (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(order.status)}`}>
+              {order.status?.toUpperCase()}
+            </span>
+          )}
           <span className="font-bold text-primary-600">
             ${Number(order.estimated_price || 0).toFixed(2)}
           </span>

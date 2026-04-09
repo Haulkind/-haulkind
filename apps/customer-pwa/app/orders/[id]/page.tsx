@@ -7,6 +7,14 @@ import { getToken, isLoggedIn } from '@/lib/auth'
 import StatusTimeline from '@/components/StatusTimeline'
 import DriverTrackingMap from '@/components/DriverTrackingMap'
 
+const SERVICE_LABELS: Record<string, string> = {
+  HAUL_AWAY: 'Junk Removal',
+  LABOR_ONLY: 'Moving Labor',
+  DONATION_PICKUP: 'Donation Pickup',
+  MATTRESS_SWAP: 'Mattress Swap',
+  FURNITURE_ASSEMBLY: 'Furniture Assembly',
+}
+
 export default function OrderDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -72,6 +80,13 @@ export default function OrderDetailPage() {
     return 'bg-yellow-100 text-yellow-700'
   }
 
+  const isUnpaid = !order.paid_at && order.status !== 'completed' && order.status !== 'cancelled'
+
+  const handlePayNow = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
+    window.location.href = `${origin}/checkout?jobId=${order.id}&return=/orders/${order.id}`
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
@@ -81,9 +96,15 @@ export default function OrderDetailPage() {
         </button>
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900">Order Details</h1>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(order.status)}`}>
-            {order.status?.toUpperCase()}
-          </span>
+          {isUnpaid ? (
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+              UNPAID
+            </span>
+          ) : (
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(order.status)}`}>
+              {order.status?.toUpperCase()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -94,7 +115,7 @@ export default function OrderDetailPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Type</span>
-              <span className="font-medium">{order.service_type === 'LABOR_ONLY' ? 'Labor Only' : 'Haul Away'}</span>
+              <span className="font-medium">{SERVICE_LABELS[order.service_type] || order.service_type}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Address</span>
@@ -120,6 +141,25 @@ export default function OrderDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Pay Now Banner for unpaid orders */}
+        {isUnpaid && (
+          <div className="bg-amber-50 rounded-xl p-4 shadow-sm border-2 border-amber-400">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="w-8 h-8 bg-amber-400 text-white rounded-full flex items-center justify-center text-lg font-bold">?</span>
+              <div>
+                <h2 className="font-bold text-amber-800">Payment Pending</h2>
+                <p className="text-sm text-amber-600">This order will be assigned to a driver after payment.</p>
+              </div>
+            </div>
+            <button
+              onClick={handlePayNow}
+              className="w-full py-3 bg-primary-600 text-white rounded-lg font-bold text-lg hover:bg-primary-700 transition"
+            >
+              💳 Pay Now — ${Number(order.estimated_price || 0).toFixed(2)}
+            </button>
+          </div>
+        )}
 
         {/* Driver Info */}
         {order.driver && (
