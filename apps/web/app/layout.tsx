@@ -216,6 +216,7 @@ export default function RootLayout({
           gtag('js', new Date());
           gtag('config', 'G-KCC7J1ZT6Y');
           gtag('config', 'AW-17988332947');
+          gtag('config', 'AW-17510762936');
           function gtagSendEvent(url) {
             var callback = function () {
               if (typeof url === 'string') {
