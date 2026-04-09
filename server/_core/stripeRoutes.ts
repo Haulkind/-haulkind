@@ -142,6 +142,17 @@ async function createLedgerEvent(
 export function registerStripeRoutes(app: Express) {
 
   // ==========================================================================
+  // GET /api/stripe/publishable-key — expose publishable key to frontends
+  // ==========================================================================
+  app.get("/api/stripe/publishable-key", (_req: any, res: any) => {
+    const key = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+    if (!key) {
+      return res.json({ success: false, error: "Stripe publishable key not configured" });
+    }
+    res.json({ success: true, publishableKey: key });
+  });
+
+  // ==========================================================================
   // DATABASE MIGRATION — ensure Stripe tables/columns exist
   // ==========================================================================
   (async () => {
