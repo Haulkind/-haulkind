@@ -82,8 +82,10 @@ function CheckoutInner() {
           window.location.href = data.url
           return
         }
+        setUseHostedCheckout(false)
         setError(data.error || 'Failed to create checkout session')
       } catch {
+        setUseHostedCheckout(false)
         setError('Failed to create checkout session. Please try again.')
       }
     }
@@ -118,7 +120,7 @@ function CheckoutInner() {
     return data.clientSecret
   }, [jobId, returnPath])
 
-  if (stripeLoading || useHostedCheckout) {
+  if (stripeLoading || (useHostedCheckout && !error)) {
     return <Loading />
   }
 
