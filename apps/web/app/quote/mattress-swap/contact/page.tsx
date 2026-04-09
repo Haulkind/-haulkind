@@ -64,6 +64,11 @@ export default function MattressSwapContactPage() {
 
     // Build full address from schedule data
     const sched = existing.schedule || {}
+    // Geocode WITHOUT apt/unit — Nominatim can't resolve apt numbers
+    const geocodeAddress = sched.street
+      ? `${sched.street}, ${sched.city}, ${sched.state} ${sched.zip}`
+      : sched.zip ? `ZIP ${sched.zip}` : ''
+    // Full address with apt for display/storage
     const fullAddress = sched.street
       ? `${sched.street}${sched.apt ? `, ${sched.apt}` : ''}, ${sched.city}, ${sched.state} ${sched.zip}`
       : sched.zip ? `ZIP ${sched.zip}` : ''
@@ -105,9 +110,9 @@ export default function MattressSwapContactPage() {
       // Geocode the address to get real coordinates for the driver
       let pickupLat = 0
       let pickupLng = 0
-      if (fullAddress && fullAddress !== `ZIP ${sched.zip}`) {
+      if (geocodeAddress && geocodeAddress !== `ZIP ${sched.zip}`) {
         try {
-          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&countrycodes=us&limit=1`
+          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeAddress)}&countrycodes=us&limit=1`
           const geocodeResp = await fetch(geocodeUrl, { headers: { 'User-Agent': 'Haulkind/1.0' } })
           if (geocodeResp.ok) {
             const geocodeData = await geocodeResp.json()
@@ -147,28 +152,10 @@ export default function MattressSwapContactPage() {
         })
       }
 
-      // 2. Redirect to checkout
+      // 2. Always redirect to embedded checkout page (full-screen mobile-friendly)
       const origin = window.location.origin
-      const hasStripeKey = !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
-      if (hasStripeKey) {
-        // Use embedded checkout (full-screen mobile-friendly)
-        window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
-        return
-      }
-
-      // Fall back to Stripe hosted checkout
-      const checkout = await createCheckoutSession(
-        job.id,
-        `${origin}/quote/tracking?jobId=${job.id}&payment=success`,
-        `${origin}/quote/mattress-swap/contact?payment=cancel`
-      )
-
-      if (checkout.url) {
-        window.location.href = checkout.url
-      } else {
-        throw new Error('No checkout URL returned')
-      }
+      window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
+      return
     } catch (err: any) {
       console.error('[MATTRESS_SWAP] Job/checkout failed:', err)
       setError(err.message || 'Something went wrong. Please try again or call (609) 456-8188.')

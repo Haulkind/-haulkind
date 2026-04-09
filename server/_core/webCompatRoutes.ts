@@ -181,39 +181,21 @@ export function registerWebCompatRoutes(app: Express) {
         ? JSON.stringify(photoUrls)
         : null;
 
-      // Look up customer_account_id by email so orders appear in "My Orders"
-      let customerAccountId: string | null = null;
-      if (customerEmail) {
-        try {
-          const acctResult = await pool.query(
-            "SELECT id FROM customer_accounts WHERE email = $1 LIMIT 1",
-            [customerEmail.trim().toLowerCase()]
-          );
-          if (acctResult.rows.length > 0) {
-            customerAccountId = acctResult.rows[0].id;
-          }
-        } catch (e) {
-          // Non-fatal — order will still be created without account link
-        }
-      }
-
       // Insert into jobs table (single source of truth for driver + admin)
       const result = await pool.query(
         `INSERT INTO jobs (
           customer_name, customer_phone, customer_email,
-          customer_account_id,
           service_type, status, pickup_address,
           pickup_lat, pickup_lng,
           description, estimated_price, items_json, scheduled_for,
           pickup_time_window, photo_urls,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
         RETURNING *`,
         [
           customerName || "Web Customer",
           customerPhone || "",
           customerEmail || "",
-          customerAccountId,
           serviceType || "HAUL_AWAY",
           pickupAddress || "",
           pickupLat || 0,
@@ -226,6 +208,20 @@ export function registerWebCompatRoutes(app: Express) {
           photoUrlsJson,
         ]
       );
+
+      // Link to customer account (non-fatal if column doesn't exist or account not found)
+      if (customerEmail) {
+        try {
+          await pool.query(
+            `UPDATE jobs SET customer_account_id = (
+              SELECT id FROM customer_accounts WHERE LOWER(email) = LOWER($1) LIMIT 1
+            ) WHERE id = $2`,
+            [customerEmail.trim(), result.rows[0].id]
+          );
+        } catch (e) {
+          // Non-fatal — order already created, account link is optional
+        }
+      }
 
       const job = result.rows[0];
       console.log("[WebCompat] POST /jobs - created job id=" + job.id + " status=" + job.status + " total=$" + totalAmount + " at=" + job.created_at);
