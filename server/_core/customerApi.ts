@@ -348,7 +348,7 @@ export function registerCustomerApiRoutes(app: Express) {
         SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                pickup_address, pickup_lat, pickup_lng, description, estimated_price,
                items_json, scheduled_for, pickup_time_window, assigned_driver_id,
-               tracking_token, created_at, updated_at
+               tracking_token, created_at, updated_at, paid_at
         FROM jobs
         WHERE (customer_account_id = $1 OR customer_email = $2)
       `;

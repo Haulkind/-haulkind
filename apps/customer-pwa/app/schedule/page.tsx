@@ -7,6 +7,16 @@ import { getCustomer, isLoggedIn } from '@/lib/auth'
 
 type Step = 'service' | 'address' | 'schedule' | 'details' | 'summary' | 'confirm'
 
+type ServiceType = 'HAUL_AWAY' | 'LABOR_ONLY' | 'DONATION_PICKUP' | 'MATTRESS_SWAP' | 'FURNITURE_ASSEMBLY'
+
+const SERVICE_OPTIONS = [
+  { id: 'HAUL_AWAY' as ServiceType, label: 'Junk Removal', emoji: '🚛', desc: 'We haul away your unwanted items', price: 'Starting at $99' },
+  { id: 'LABOR_ONLY' as ServiceType, label: 'Moving Labor', emoji: '💪', desc: 'Helpers for moving, loading, or cleanup', price: 'Starting at $79/hr' },
+  { id: 'DONATION_PICKUP' as ServiceType, label: 'Donation Pickup', emoji: '❤️', desc: 'We pick up and deliver to a local charity', price: 'Starting at $109' },
+  { id: 'MATTRESS_SWAP' as ServiceType, label: 'Mattress Swap', emoji: '🛏️', desc: 'Remove your old mattress & set up the new one', price: 'Starting at $99' },
+  { id: 'FURNITURE_ASSEMBLY' as ServiceType, label: 'Furniture Assembly', emoji: '🔧', desc: 'IKEA, Wayfair, Amazon & more', price: 'Starting at $87' },
+]
+
 const VOLUME_TIERS = [
   { id: 'EIGHTH', label: '1/8 Truck Load', desc: 'Small items, a few bags', price: 109 },
   { id: 'QUARTER', label: '1/4 Truck Load', desc: 'A couch or small room', price: 169 },
@@ -54,7 +64,7 @@ function SchedulePageInner() {
   }, [searchParams])
 
   // Form data
-  const [serviceType, setServiceType] = useState<'HAUL_AWAY' | 'LABOR_ONLY'>('HAUL_AWAY')
+  const [serviceType, setServiceType] = useState<ServiceType>('HAUL_AWAY')
   const [street, setStreet] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
@@ -67,6 +77,8 @@ function SchedulePageInner() {
   const [volumeTier, setVolumeTier] = useState('QUARTER')
   const [helperCount, setHelperCount] = useState(1)
   const [estimatedHours, setEstimatedHours] = useState(2)
+  const [mattressQty, setMattressQty] = useState(1)
+  const [assemblyItems, setAssemblyItems] = useState(1)
   const [notes, setNotes] = useState('')
   const [customerName, setCustomerName] = useState(customer?.name || '')
   const [customerEmail, setCustomerEmail] = useState(customer?.email || '')
@@ -156,9 +168,11 @@ function SchedulePageInner() {
     try {
       const data = await getQuote({
         serviceType,
-        volumeTier: serviceType === 'HAUL_AWAY' ? volumeTier : undefined,
+        volumeTier: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? volumeTier : undefined,
         helperCount: serviceType === 'LABOR_ONLY' ? helperCount : undefined,
         estimatedHours: serviceType === 'LABOR_ONLY' ? estimatedHours : undefined,
+        mattressQty: serviceType === 'MATTRESS_SWAP' ? mattressQty : undefined,
+        assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItems : undefined,
       })
       if (data.error) { setError(data.error); return }
       setQuoteTotal(data.total || 0)
@@ -186,9 +200,11 @@ function SchedulePageInner() {
         pickupLng: lng,
         pickupAddress: fullAddress,
         scheduledFor,
-        volumeTier: serviceType === 'HAUL_AWAY' ? volumeTier : undefined,
+        volumeTier: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? volumeTier : undefined,
         helperCount: serviceType === 'LABOR_ONLY' ? helperCount : undefined,
         estimatedHours: serviceType === 'LABOR_ONLY' ? estimatedHours : undefined,
+        mattressQty: serviceType === 'MATTRESS_SWAP' ? mattressQty : undefined,
+        assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItems : undefined,
         customerNotes: notes,
         customerName,
         customerPhone,
@@ -278,22 +294,22 @@ function SchedulePageInner() {
         {/* Step: Service Type */}
         {step === 'service' && (
           <div className="space-y-3">
-            <button
-              onClick={() => { setServiceType('HAUL_AWAY'); setStep('address') }}
-              className="w-full bg-white rounded-xl p-5 shadow-sm text-left hover:shadow-md transition border-2 border-transparent hover:border-primary-300"
-            >
-              <div className="text-2xl mb-2">🚛</div>
-              <h3 className="font-bold text-lg">Junk Removal</h3>
-              <p className="text-sm text-gray-500 mt-1">We haul away your unwanted items</p>
-            </button>
-            <button
-              onClick={() => { setServiceType('LABOR_ONLY'); setStep('address') }}
-              className="w-full bg-white rounded-xl p-5 shadow-sm text-left hover:shadow-md transition border-2 border-transparent hover:border-primary-300"
-            >
-              <div className="text-2xl mb-2">💪</div>
-              <h3 className="font-bold text-lg">Labor Only</h3>
-              <p className="text-sm text-gray-500 mt-1">Helpers for moving, loading, or cleanup</p>
-            </button>
+            {SERVICE_OPTIONS.map(svc => (
+              <button
+                key={svc.id}
+                onClick={() => { setServiceType(svc.id); setStep('address') }}
+                className="w-full bg-white rounded-xl p-5 shadow-sm text-left hover:shadow-md transition border-2 border-transparent hover:border-primary-300"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl flex-shrink-0">{svc.emoji}</div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg">{svc.label}</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">{svc.desc}</p>
+                    <p className="text-sm font-semibold text-primary-600 mt-1">{svc.price}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
 
@@ -408,7 +424,7 @@ function SchedulePageInner() {
         {/* Step: Details */}
         {step === 'details' && (
           <div className="space-y-4">
-            {serviceType === 'HAUL_AWAY' ? (
+            {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Volume</label>
                 <div className="space-y-2">
@@ -433,7 +449,7 @@ function SchedulePageInner() {
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : serviceType === 'LABOR_ONLY' ? (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Number of Helpers</label>
@@ -493,7 +509,73 @@ function SchedulePageInner() {
                   </p>
                 </div>
               </>
-            )}
+            ) : serviceType === 'MATTRESS_SWAP' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Mattresses</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4].map(q => {
+                    const price = q === 1 ? 99 : Math.round(99 * q * 0.9)
+                    return (
+                      <button
+                        key={q}
+                        onClick={() => setMattressQty(q)}
+                        className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
+                          mattressQty === q
+                            ? 'border-primary-600 bg-primary-50 text-primary-600'
+                            : 'border-gray-200 text-gray-600'
+                        }`}
+                      >
+                        <div className="text-base">{q}</div>
+                        <div className="text-xs text-gray-500">${price}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="bg-primary-50 rounded-lg p-3 border border-primary-200 mt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700">Estimated Total</span>
+                    <span className="text-xl font-bold text-primary-600">
+                      ${mattressQty === 1 ? 99 : Math.round(99 * mattressQty * 0.9)}
+                    </span>
+                  </div>
+                  {mattressQty > 1 && (
+                    <p className="text-xs text-green-600 mt-1">10% multi-mattress discount applied!</p>
+                  )}
+                </div>
+              </div>
+            ) : serviceType === 'FURNITURE_ASSEMBLY' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Items</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map(q => {
+                    const price = 87 * q
+                    return (
+                      <button
+                        key={q}
+                        onClick={() => setAssemblyItems(q)}
+                        className={`flex-1 py-2 rounded-lg border-2 font-medium transition ${
+                          assemblyItems === q
+                            ? 'border-primary-600 bg-primary-50 text-primary-600'
+                            : 'border-gray-200 text-gray-600'
+                        }`}
+                      >
+                        <div className="text-base">{q}</div>
+                        <div className="text-xs text-gray-500">${price}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="bg-primary-50 rounded-lg p-3 border border-primary-200 mt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700">Estimated Total</span>
+                    <span className="text-xl font-bold text-primary-600">
+                      ${87 * assemblyItems}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{assemblyItems} item{assemblyItems > 1 ? 's' : ''} x $87 each</p>
+                </div>
+              </div>
+            ) : null}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
               <textarea
@@ -589,7 +671,7 @@ function SchedulePageInner() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Service</span>
-                  <span className="font-medium">{serviceType === 'HAUL_AWAY' ? 'Junk Removal' : 'Labor Only'}</span>
+                  <span className="font-medium">{SERVICE_OPTIONS.find(s => s.id === serviceType)?.label || serviceType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Address</span>
@@ -603,7 +685,7 @@ function SchedulePageInner() {
                   <span className="text-gray-500">Time Window</span>
                   <span className="font-medium">{TIME_WINDOWS.find(t => t.id === timeWindow)?.label} ({TIME_WINDOWS.find(t => t.id === timeWindow)?.time})</span>
                 </div>
-                {serviceType === 'HAUL_AWAY' && (
+                {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Volume</span>
                     <span className="font-medium">{VOLUME_TIERS.find(v => v.id === volumeTier)?.label}</span>
@@ -620,6 +702,18 @@ function SchedulePageInner() {
                       <span className="font-medium">{estimatedHours}h</span>
                     </div>
                   </>
+                )}
+                {serviceType === 'MATTRESS_SWAP' && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Mattresses</span>
+                    <span className="font-medium">{mattressQty}</span>
+                  </div>
+                )}
+                {serviceType === 'FURNITURE_ASSEMBLY' && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Items</span>
+                    <span className="font-medium">{assemblyItems}</span>
+                  </div>
                 )}
                 {photos.length > 0 && (
                   <div className="flex justify-between items-center">

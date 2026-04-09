@@ -76,6 +76,8 @@ export async function getQuote(data: {
   addons?: string[];
   helperCount?: number;
   estimatedHours?: number;
+  mattressQty?: number;
+  assemblyItems?: number;
 }) {
   const res = await fetch(`${API_URL}/quotes`, {
     method: 'POST',
@@ -96,6 +98,8 @@ export async function createJob(data: {
   addons?: string[];
   helperCount?: number;
   estimatedHours?: number;
+  mattressQty?: number;
+  assemblyItems?: number;
   customerNotes?: string;
   customerName?: string;
   customerPhone?: string;
