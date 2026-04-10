@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getQuote, createJob, payJob, createCheckoutSession, lookupServiceArea } from '@/lib/api'
-import { getCustomer, isLoggedIn } from '@/lib/auth'
+import { getCustomer, getToken, isLoggedIn } from '@/lib/auth'
 
 type Step = 'service' | 'address' | 'schedule' | 'details' | 'summary' | 'confirm'
 
@@ -336,7 +336,7 @@ function SchedulePageInner() {
         timeWindow,
         total: quoteTotal,
         photoUrls: photos.length > 0 ? photos : undefined,
-      })
+      }, getToken())
       if (data.error) { setError(data.error); return }
       setJobId(data.id)
       setTrackingToken(data.trackingToken || '')

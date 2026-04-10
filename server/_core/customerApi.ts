@@ -358,6 +358,8 @@ export function registerCustomerApiRoutes(app: Express) {
       }
 
       const status = req.query.status as string;
+      console.log("[CustomerApi] GET /customer/orders - customerId:", decoded.customerId, "email:", decoded.email, "status:", status);
+      
       let query = `
         SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                pickup_address, pickup_lat, pickup_lng, description, estimated_price,
@@ -366,7 +368,7 @@ export function registerCustomerApiRoutes(app: Express) {
         FROM jobs
         WHERE (customer_account_id = $1 OR LOWER(customer_email) = LOWER($2))
       `;
-      const params: any[] = [decoded.customerId, decoded.email];
+      const params: any[] = [String(decoded.customerId), decoded.email];
 
       if (status === "active") {
         query += ` AND status NOT IN ('completed', 'cancelled')`;
@@ -377,6 +379,7 @@ export function registerCustomerApiRoutes(app: Express) {
       query += ` ORDER BY created_at DESC LIMIT 50`;
 
       const result = await pool.query(query, params);
+      console.log("[CustomerApi] GET /customer/orders - found", result.rows.length, "orders for customerId:", decoded.customerId);
 
       // Enrich with driver info if assigned
       const orders = await Promise.all(
