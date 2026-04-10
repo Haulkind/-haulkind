@@ -44,9 +44,14 @@ export function registerAdminApiRoutes(app: Express) {
         return acc;
       }, {});
 
-      // Get total customers
-      const customersResult = await pool.query('SELECT COUNT(*) as count FROM customers');
-      const totalCustomers = parseInt(customersResult.rows[0]?.count || 0);
+      // Get total customers from customer_accounts table
+      let totalCustomers = 0;
+      try {
+        const customersResult = await pool.query('SELECT COUNT(*) as count FROM customer_accounts');
+        totalCustomers = parseInt(customersResult.rows[0]?.count || 0);
+      } catch (e) {
+        // Table may not exist yet — default to 0
+      }
 
       // Get order counts by status from jobs table (primary source)
       // Note: 'orders' may be a VIEW on 'jobs', querying both causes double-counting
