@@ -44,13 +44,26 @@ export function registerAdminApiRoutes(app: Express) {
         return acc;
       }, {});
 
-      // Get total customers from customer_accounts table
+      // Get total customers — try customer_accounts table first, fall back to unique emails from jobs
       let totalCustomers = 0;
       try {
         const customersResult = await pool.query('SELECT COUNT(*) as count FROM customer_accounts');
-        totalCustomers = parseInt(customersResult.rows[0]?.count || 0);
-      } catch (e) {
-        // Table may not exist yet — default to 0
+        totalCustomers = parseInt(customersResult.rows[0]?.count || '0');
+        console.log('[AdminStats] customer_accounts count:', totalCustomers);
+      } catch (e: any) {
+        console.log('[AdminStats] customer_accounts query failed:', e?.message);
+      }
+      // Fallback: if customer_accounts is empty or missing, count unique customer emails from jobs
+      if (totalCustomers === 0) {
+        try {
+          const uniqueEmailsResult = await pool.query(
+            "SELECT COUNT(DISTINCT LOWER(customer_email)) as count FROM jobs WHERE customer_email IS NOT NULL AND customer_email != ''"
+          );
+          totalCustomers = parseInt(uniqueEmailsResult.rows[0]?.count || '0');
+          console.log('[AdminStats] unique customer emails from jobs:', totalCustomers);
+        } catch (e: any) {
+          console.log('[AdminStats] unique emails fallback failed:', e?.message);
+        }
       }
 
       // Get order counts by status from jobs table (primary source)
