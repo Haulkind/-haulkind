@@ -15,6 +15,7 @@
 
 import { Express, Request, Response } from "express";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 // Approved states for service area coverage
 const APPROVED_STATES = ["NJ", "MA", "PA", "NY", "CT"];
@@ -181,20 +182,44 @@ export function registerWebCompatRoutes(app: Express) {
         ? JSON.stringify(photoUrls)
         : null;
 
-      // Look up customer_account_id by email so orders appear in "My Orders"
+      // Look up customer_account_id — try auth token first (most reliable), then email lookup
       let customerAccountId: string | null = null;
-      if (customerEmail) {
+      
+      // Method 1: Extract from auth token (if customer is logged in)
+      try {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          const decoded = jwt.verify(
+            authHeader.split(" ")[1],
+            process.env.JWT_SECRET || "secret"
+          ) as any;
+          if (decoded && decoded.role === "customer" && decoded.customerId) {
+            customerAccountId = String(decoded.customerId);
+            console.log("[WebCompat] POST /jobs - customer_account_id from token:", customerAccountId);
+          }
+        }
+      } catch (e) {
+        // Token invalid or expired — fall back to email lookup
+      }
+
+      // Method 2: Look up by email (fallback if no token)
+      if (!customerAccountId && customerEmail) {
         try {
           const acctResult = await pool.query(
             "SELECT id FROM customer_accounts WHERE LOWER(email) = LOWER($1) LIMIT 1",
             [customerEmail.trim()]
           );
           if (acctResult.rows.length > 0) {
-            customerAccountId = acctResult.rows[0].id;
+            customerAccountId = String(acctResult.rows[0].id);
+            console.log("[WebCompat] POST /jobs - customer_account_id from email lookup:", customerAccountId);
           }
         } catch (e) {
           // Non-fatal — order will still be created without account link
         }
+      }
+      
+      if (!customerAccountId) {
+        console.warn("[WebCompat] POST /jobs - WARNING: no customer_account_id found for email:", customerEmail);
       }
 
       // Insert into jobs table (single source of truth for driver + admin)

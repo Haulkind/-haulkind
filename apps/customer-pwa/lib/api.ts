@@ -107,10 +107,12 @@ export async function createJob(data: {
   timeWindow?: string;
   total?: number;
   photoUrls?: string[];
-}){
+}, token?: string | null){
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_URL}/jobs`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   return res.json();

@@ -13,6 +13,7 @@ function OrdersContent() {
   const [tab, setTab] = useState<'active' | 'completed'>(initialTab)
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace('/auth'); return }
@@ -21,13 +22,21 @@ function OrdersContent() {
 
   const loadOrders = async () => {
     setLoading(true)
+    setError('')
     const token = getToken()
     if (!token) return
     try {
       const data = await getMyOrders(token, tab)
-      setOrders(data.orders || [])
+      if (data.error) {
+        console.error('Orders API error:', data.error)
+        setError(data.error)
+        setOrders([])
+      } else {
+        setOrders(data.orders || [])
+      }
     } catch (e) {
       console.error('Failed to load orders:', e)
+      setError('Failed to connect to server')
     } finally {
       setLoading(false)
     }
@@ -58,11 +67,17 @@ function OrdersContent() {
       </div>
 
       <div className="px-4 py-4">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+            <button onClick={loadOrders} className="ml-2 underline font-medium">Retry</button>
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
           </div>
-        ) : orders.length === 0 ? (
+        ) : orders.length === 0 && !error ? (
           <div className="text-center py-12">
             <div className="text-4xl mb-3">{tab === 'active' ? '📭' : '📋'}</div>
             <p className="text-gray-500">
