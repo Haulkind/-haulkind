@@ -8,9 +8,15 @@ export default function CookieConsent() {
   useEffect(() => {
     const consent = localStorage.getItem('hk_cookie_consent')
     if (!consent) {
-      // Small delay so it doesn't flash on page load
-      const timer = setTimeout(() => setVisible(true), 1500)
-      return () => clearTimeout(timer)
+      // Wait until browser is idle + 3s delay to avoid blocking main thread during initial load
+      const show = () => setTimeout(() => setVisible(true), 3000)
+      if ('requestIdleCallback' in window) {
+        const id = requestIdleCallback(show)
+        return () => cancelIdleCallback(id)
+      } else {
+        const timer = setTimeout(show, 100)
+        return () => clearTimeout(timer)
+      }
     }
   }, [])
 

@@ -197,6 +197,9 @@ export default function RootLayout({
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-KNBG3C48');
         `}</Script>
+        {/* Preload hero poster for instant LCP paint */}
+        <link rel="preload" href="/haulkind-hero-poster.jpg" as="image" />
+        <link rel="preload" href="/haulkind-hero.mp4" as="video" type="video/mp4" />
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
