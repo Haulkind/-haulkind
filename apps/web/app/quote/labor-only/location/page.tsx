@@ -396,21 +396,13 @@ export default function LaborOnlyLocationPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Pickup Date *
                   </label>
-                  <select
+                  <input
+                    type="date"
                     value={serviceDate}
                     onChange={(e) => setServiceDate(e.target.value)}
-                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent bg-white"
-                  >
-                    {Array.from({ length: 90 }, (_, i) => {
-                      const d = new Date(Date.now() + (i + 1) * 86400000)
-                      const y = d.getFullYear()
-                      const m = String(d.getMonth() + 1).padStart(2, '0')
-                      const day = String(d.getDate()).padStart(2, '0')
-                      const value = `${y}-${m}-${day}`
-                      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                      return <option key={value} value={value}>{label}</option>
-                    })}
-                  </select>
+                    min={tomorrow}
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
+                  />
                 </div>
 
                 <div>

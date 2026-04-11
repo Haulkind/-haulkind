@@ -159,21 +159,13 @@ export default function MattressSwapSchedulePage() {
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Preferred Date *</label>
-            <select
+            <input
+              type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
-            >
-              {Array.from({ length: 30 }, (_, i) => {
-                const d = new Date(Date.now() + (i + 1) * 86400000)
-                const y = d.getFullYear()
-                const m = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-                const value = `${y}-${m}-${day}`
-                const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                return <option key={value} value={value}>{label}</option>
-              })}
-            </select>
+              min={tomorrowStr}
+              className="w-full h-11 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
             <p className="text-xs text-gray-500 mt-1">Same-day mattress swap may be available! We&apos;ll confirm by phone.</p>
           </div>
 
