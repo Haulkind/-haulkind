@@ -298,6 +298,8 @@ export default function HaulAwayLocationPage() {
         preferredDateTime,
       })
       router.push('/quote/haul-away/summary')
+    } finally {
+      setLoading(false)
     }
   }
 

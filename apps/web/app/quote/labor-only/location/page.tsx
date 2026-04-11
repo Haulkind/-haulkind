@@ -277,6 +277,8 @@ export default function LaborOnlyLocationPage() {
         preferredDateTime,
       })
       router.push('/quote/labor-only/summary')
+    } finally {
+      setLoading(false)
     }
   }
 
