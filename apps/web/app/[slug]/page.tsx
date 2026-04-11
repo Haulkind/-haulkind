@@ -457,33 +457,35 @@ export default function LocalSEOPage({ params }: PageProps) {
         </section>
 
         {/* Same service in nearby cities */}
-        <section className="py-12 md:py-16">
-          <div className="container mx-auto px-4 max-w-5xl">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6">
-              {service.name} in Nearby {city.state} Cities
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {nearbyCities.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/${service.slug}-${c.slug}`}
-                  className="bg-gray-50 p-5 rounded-xl hover:bg-primary-50 transition border border-gray-200"
-                >
-                  <h3 className="font-bold text-gray-900">{service.name} in {c.name}, {c.stateAbbr}</h3>
-                  <p className="text-sm text-gray-600 mt-1">Serving {c.name} and surrounding areas</p>
-                </Link>
-              ))}
-              {sameCityState.length > nearbyCities.length && (
-                <Link
-                  href={`/service-areas/${city.stateSlug}`}
-                  className="bg-primary-50 p-5 rounded-xl hover:bg-primary-100 transition border border-primary-200 flex items-center justify-center"
-                >
-                  <span className="font-bold text-primary-600">View all {city.state} cities &rarr;</span>
-                </Link>
-              )}
+        {nearbyCities.length > 0 && (
+          <section className="py-12 md:py-16">
+            <div className="container mx-auto px-4 max-w-5xl">
+              <h2 className="text-2xl md:text-3xl font-bold mb-6">
+                {service.name} in Nearby {city.state} Cities
+              </h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {nearbyCities.map((c) => (
+                  <Link
+                    key={c.slug}
+                    href={`/${service.slug}-${c.slug}`}
+                    className="bg-gray-50 p-5 rounded-xl hover:bg-primary-50 transition border border-gray-200"
+                  >
+                    <h3 className="font-bold text-gray-900">{service.name} in {c.name}, {c.stateAbbr}</h3>
+                    <p className="text-sm text-gray-600 mt-1">Serving {c.name} and surrounding areas</p>
+                  </Link>
+                ))}
+                {sameCityState.length > nearbyCities.length && (
+                  <Link
+                    href={`/service-areas/${city.stateSlug}`}
+                    className="bg-primary-50 p-5 rounded-xl hover:bg-primary-100 transition border border-primary-200 flex items-center justify-center"
+                  >
+                    <span className="font-bold text-primary-600">View all {city.state} cities &rarr;</span>
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Final CTA */}
         <section className="py-16 md:py-20 bg-gradient-to-br from-primary-600 to-primary-800 text-white">
