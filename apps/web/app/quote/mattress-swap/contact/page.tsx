@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createJob, createCheckoutSession } from '@/lib/api'
@@ -14,6 +14,7 @@ export default function MattressSwapContactPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(99)
+  const abortRef = useRef<AbortController | null>(null)
 
   // Reset state when restored from bfcache (iOS Safari back button)
   useEffect(() => {
@@ -68,8 +69,13 @@ export default function MattressSwapContactPage() {
     setError('')
     setLoading(true)
 
-    // Safety timeout: if payment doesn't complete in 25s, reset button
+    // Create AbortController so safety timer can cancel in-flight request
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Safety timeout: if payment doesn't complete in 25s, abort and reset
     const safetyTimer = setTimeout(() => {
+      controller.abort()
       setLoading(false)
       setError('Payment is taking too long. Please try again.')
     }, 25000)
@@ -160,7 +166,7 @@ export default function MattressSwapContactPage() {
         timeWindow: sched.time?.toUpperCase() || 'FLEXIBLE',
         total: existing.total || 99,
       }
-      const job = await createJob(jobPayload)
+      const job = await createJob(jobPayload, controller.signal)
 
       // Fire Google Ads conversion
       if (typeof window !== 'undefined' && (window as any).gtag) {
@@ -172,6 +178,7 @@ export default function MattressSwapContactPage() {
       }
 
       clearTimeout(safetyTimer)
+      if (controller.signal.aborted) return
 
       // Redirect to checkout page (uses Stripe hosted checkout)
       const origin = window.location.origin
@@ -179,6 +186,7 @@ export default function MattressSwapContactPage() {
       return
     } catch (err: any) {
       clearTimeout(safetyTimer)
+      if (err.name === 'AbortError') return
       console.error('[MATTRESS_SWAP] Job/checkout failed:', err)
       setError(err.message || 'Something went wrong. Please try again or call (609) 456-8188.')
       setLoading(false)

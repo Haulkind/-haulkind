@@ -80,17 +80,19 @@ function CheckoutInner() {
     }
   }, [jobId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset state when restored from bfcache (iOS Safari back button)
+  // Reset state and re-trigger redirect when restored from bfcache (iOS Safari back button)
   useEffect(() => {
     const handlePageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
         setRedirecting(false)
         setError('')
+        // Re-trigger redirect after state reset
+        setTimeout(() => redirectToCheckout(), 0)
       }
     }
     window.addEventListener('pageshow', handlePageShow)
     return () => window.removeEventListener('pageshow', handlePageShow)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (redirecting) {
     return <Loading />

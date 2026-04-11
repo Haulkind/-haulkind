@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { getQuote, createJob, createCheckoutSession } from '@/lib/api'
@@ -50,13 +50,20 @@ export default function LaborOnlySummaryPage() {
     }
   }
 
+  const abortRef = useRef<AbortController | null>(null)
+
   const handlePayment = useCallback(async () => {
     if (paying) return
     setPaying(true)
     setError('')
 
-    // Safety timeout: if payment doesn't complete in 20s, reset button
+    // Create AbortController so safety timer can cancel in-flight request
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Safety timeout: if payment doesn't complete in 20s, abort and reset
     const safetyTimer = setTimeout(() => {
+      controller.abort()
       setPaying(false)
       setError('Payment is taking too long. Please try again.')
     }, 20000)
@@ -77,16 +84,18 @@ export default function LaborOnlySummaryPage() {
         customerPhone: data.customerPhone,
         customerEmail: data.customerEmail,
         timeWindow: data.timeWindow,
-      })
+      }, controller.signal)
 
       clearTimeout(safetyTimer)
+      if (controller.signal.aborted) return
       updateData({ jobId: job.id })
 
       const origin = window.location.origin
       window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
       return
-    } catch (err) {
+    } catch (err: any) {
       clearTimeout(safetyTimer)
+      if (err.name === 'AbortError') return
       setError('Payment failed. Please try again.')
       setPaying(false)
     }
