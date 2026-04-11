@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
@@ -33,7 +33,9 @@ function CheckoutInner() {
   const [error, setError] = useState('')
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [stripeLoading, setStripeLoading] = useState(true)
-  const [useHostedCheckout, setUseHostedCheckout] = useState(false)
+  const [redirectingToHosted, setRedirectingToHosted] = useState(false)
+  const [embeddedReady, setEmbeddedReady] = useState(false)
+  const embeddedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch Stripe publishable key: build-time env → backend → hardcoded fallback → hosted checkout
   useEffect(() => {
@@ -65,35 +67,47 @@ function CheckoutInner() {
     fetchStripeKey()
   }, [])
 
-  // If publishable key not available, redirect to Stripe hosted checkout
-  useEffect(() => {
-    if (!useHostedCheckout || !jobId) return
-    async function redirectToHostedCheckout() {
-      try {
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
-        const res = await fetch(`${API_URL}/api/checkout/create`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobId,
-            successUrl: `${origin}${returnPath}?payment=success&orderId=${jobId}`,
-            cancelUrl: `${origin}${returnPath}?payment=cancel&orderId=${jobId}`,
-          }),
-        })
-        const data = await res.json()
-        if (data.success && data.url) {
-          window.location.href = data.url
-          return
-        }
-        setUseHostedCheckout(false)
-        setError(data.error || 'Failed to create checkout session')
-      } catch {
-        setUseHostedCheckout(false)
-        setError('Failed to create checkout session. Please try again.')
+  // Fallback: redirect to Stripe hosted checkout
+  const redirectToHostedCheckout = useCallback(async () => {
+    if (!jobId || redirectingToHosted) return
+    setRedirectingToHosted(true)
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
+      const res = await fetch(`${API_URL}/api/checkout/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          successUrl: `${origin}${returnPath}?payment=success&orderId=${jobId}`,
+          cancelUrl: `${origin}${returnPath}?payment=cancel&orderId=${jobId}`,
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.url) {
+        window.location.href = data.url
+        return
       }
+      setRedirectingToHosted(false)
+      setError(data.error || 'Failed to create checkout session')
+    } catch {
+      setRedirectingToHosted(false)
+      setError('Failed to create checkout session. Please try again.')
     }
-    redirectToHostedCheckout()
-  }, [useHostedCheckout, jobId, returnPath])
+  }, [jobId, returnPath, redirectingToHosted])
+
+  // Safety timeout: if embedded checkout doesn't render within 12s, fall back to hosted
+  useEffect(() => {
+    if (stripeLoading || !jobId || embeddedReady || redirectingToHosted || error) return
+    embeddedTimerRef.current = setTimeout(() => {
+      if (!embeddedReady && !error) {
+        console.warn('[Checkout] Embedded checkout timed out — falling back to hosted')
+        redirectToHostedCheckout()
+      }
+    }, 12000)
+    return () => {
+      if (embeddedTimerRef.current) clearTimeout(embeddedTimerRef.current)
+    }
+  }, [stripeLoading, jobId, embeddedReady, redirectingToHosted, error, redirectToHostedCheckout])
 
   const fetchClientSecret = useCallback(async () => {
     if (!jobId) {
@@ -101,29 +115,44 @@ function CheckoutInner() {
       return ''
     }
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
-    const returnUrl = `${origin}${returnPath}?payment=success&orderId=${jobId}`
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.haulkind.com'
+      const returnUrl = `${origin}${returnPath}?payment=success&orderId=${jobId}`
 
-    const res = await fetch(`${API_URL}/api/checkout/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jobId,
-        uiMode: 'embedded',
-        returnUrl,
-      }),
-    })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
 
-    const data = await res.json()
-    if (!data.success || !data.clientSecret) {
-      setError(data.error || 'Failed to create checkout session')
+      const res = await fetch(`${API_URL}/api/checkout/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          uiMode: 'embedded',
+          returnUrl,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      const data = await res.json()
+      if (!data.success || !data.clientSecret) {
+        console.warn('[Checkout] Embedded session failed, falling back to hosted:', data.error)
+        redirectToHostedCheckout()
+        return ''
+      }
+
+      setEmbeddedReady(true)
+      if (embeddedTimerRef.current) clearTimeout(embeddedTimerRef.current)
+      return data.clientSecret
+    } catch (err: any) {
+      console.error('[Checkout] fetchClientSecret error:', err?.message)
+      redirectToHostedCheckout()
       return ''
     }
+  }, [jobId, returnPath, redirectToHostedCheckout])
 
-    return data.clientSecret
-  }, [jobId, returnPath])
-
-  if (stripeLoading || (useHostedCheckout && !error)) {
+  if (stripeLoading || redirectingToHosted) {
     return <Loading />
   }
 
@@ -131,13 +160,22 @@ function CheckoutInner() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium">{error}</p>
-          <button
-            onClick={() => window.history.back()}
-            className="mt-4 px-6 py-2 bg-teal-600 text-white rounded-lg"
-          >
-            Go Back
-          </button>
+          <p className="text-red-600 font-medium mb-2">{error}</p>
+          <p className="text-gray-500 text-sm mb-4">If the problem persists, please call us at (978) 515-4980</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => redirectToHostedCheckout()}
+              className="px-6 py-2 bg-teal-600 text-white rounded-lg"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.history.back()}
+              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     )
