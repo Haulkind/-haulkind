@@ -10,6 +10,8 @@ export default function HeroSection() {
         muted
         loop
         playsInline
+        poster="/haulkind-hero-poster.jpg"
+        preload="metadata"
         className="absolute inset-0 w-full h-full object-cover object-center"
       >
         <source src="/haulkind-hero.mp4" type="video/mp4" />
