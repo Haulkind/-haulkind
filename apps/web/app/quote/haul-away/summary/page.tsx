@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { getQuote, createJob, createCheckoutSession } from '@/lib/api'
@@ -21,6 +21,18 @@ export default function HaulAwaySummaryPage() {
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
   const [customerNotes, setCustomerNotes] = useState(data.customerNotes || '')
+
+  // Reset state when restored from bfcache (iOS Safari back button)
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setPaying(false)
+        setError('')
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
 
   useEffect(() => {
     fetchQuote()
@@ -82,10 +94,17 @@ export default function HaulAwaySummaryPage() {
     return labels[data.timeWindow] || data.timeWindow
   }
 
-  const handlePayment = async () => {
+  const handlePayment = useCallback(async () => {
+    if (paying) return
     setPaying(true)
     setError('')
     updateData({ customerNotes })
+
+    // Safety timeout: if payment doesn't complete in 20s, reset button
+    const safetyTimer = setTimeout(() => {
+      setPaying(false)
+      setError('Payment is taking too long. Please try again.')
+    }, 20000)
 
     try {
       const job = await createJob({
@@ -105,18 +124,19 @@ export default function HaulAwaySummaryPage() {
         timeWindow: data.timeWindow,
       })
 
+      clearTimeout(safetyTimer)
       updateData({ jobId: job.id })
 
-      // Always redirect to embedded checkout page (full-screen mobile-friendly)
       const origin = window.location.origin
       window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
       return
     } catch (err) {
+      clearTimeout(safetyTimer)
       console.error('[SUMMARY] Payment failed:', err)
       setError('Payment failed. Please try again.')
       setPaying(false)
     }
-  }
+  }, [paying, customerNotes, data, updateData])
 
   if (loading) {
     return (
