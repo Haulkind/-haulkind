@@ -44,25 +44,27 @@ export function registerAdminApiRoutes(app: Express) {
         return acc;
       }, {});
 
-      // Get total customers — try customer_accounts table first, fall back to unique emails from jobs
+      // Get total customers — union of customer_accounts emails + unique customer emails from jobs
       let totalCustomers = 0;
       try {
-        const customersResult = await pool.query('SELECT COUNT(*) as count FROM customer_accounts');
+        const customersResult = await pool.query(`
+          SELECT COUNT(*) as count FROM (
+            SELECT LOWER(email) as email FROM customer_accounts WHERE email IS NOT NULL AND email != ''
+            UNION
+            SELECT LOWER(customer_email) as email FROM jobs WHERE customer_email IS NOT NULL AND customer_email != ''
+          ) all_customers
+        `);
         totalCustomers = parseInt(customersResult.rows[0]?.count || '0');
-        console.log('[AdminStats] customer_accounts count:', totalCustomers);
+        console.log('[AdminStats] total unique customers (accounts + jobs):', totalCustomers);
       } catch (e: any) {
-        console.log('[AdminStats] customer_accounts query failed:', e?.message);
-      }
-      // Fallback: if customer_accounts is empty or missing, count unique customer emails from jobs
-      if (totalCustomers === 0) {
+        console.log('[AdminStats] combined customer count failed, trying jobs only:', e?.message);
         try {
           const uniqueEmailsResult = await pool.query(
             "SELECT COUNT(DISTINCT LOWER(customer_email)) as count FROM jobs WHERE customer_email IS NOT NULL AND customer_email != ''"
           );
           totalCustomers = parseInt(uniqueEmailsResult.rows[0]?.count || '0');
-          console.log('[AdminStats] unique customer emails from jobs:', totalCustomers);
-        } catch (e: any) {
-          console.log('[AdminStats] unique emails fallback failed:', e?.message);
+        } catch (e2: any) {
+          console.log('[AdminStats] jobs fallback also failed:', e2?.message);
         }
       }
 
