@@ -416,13 +416,18 @@ export default function HaulAwayLocationPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Pickup Date *
                   </label>
-                  <input
-                    type="date"
+                  <select
                     value={serviceDate}
                     onChange={(e) => setServiceDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                  />
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent bg-white"
+                  >
+                    {Array.from({ length: 90 }, (_, i) => {
+                      const d = new Date(Date.now() + (i + 1) * 86400000)
+                      const value = d.toISOString().split('T')[0]
+                      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                      return <option key={value} value={value}>{label}</option>
+                    })}
+                  </select>
                 </div>
 
                 <div>
