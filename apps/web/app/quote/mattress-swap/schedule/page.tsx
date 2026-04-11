@@ -14,7 +14,9 @@ export default function MattressSwapSchedulePage() {
   const [usState, setUsState] = useState('')
   const [zip, setZip] = useState('')
   const [zipError, setZipError] = useState('')
-  const [date, setDate] = useState('')
+  // Default to tomorrow's date so the calendar isn't blank
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const [date, setDate] = useState(tomorrow)
   const [time, setTime] = useState('')
   const [floor, setFloor] = useState('')
   const [mattressStatus, setMattressStatus] = useState('')

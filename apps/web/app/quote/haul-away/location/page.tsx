@@ -31,7 +31,9 @@ export default function HaulAwayLocationPage() {
   const [selectedLat, setSelectedLat] = useState<number | null>(null)
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
   
-  const [serviceDate, setServiceDate] = useState(data.serviceDate || '')
+  // Default to tomorrow's date so the calendar isn't blank
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const [serviceDate, setServiceDate] = useState(data.serviceDate || tomorrow)
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(data.timeWindow || 'ALL_DAY')
   const [asap, setAsap] = useState(data.asap || false)
   const [loading, setLoading] = useState(false)
