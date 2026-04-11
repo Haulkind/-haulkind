@@ -32,7 +32,8 @@ export default function HaulAwayLocationPage() {
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
   
   // Default to tomorrow's date so the calendar isn't blank
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const tD = new Date(Date.now() + 86400000)
+  const tomorrow = `${tD.getFullYear()}-${String(tD.getMonth() + 1).padStart(2, '0')}-${String(tD.getDate()).padStart(2, '0')}`
   const [serviceDate, setServiceDate] = useState(data.serviceDate || tomorrow)
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(data.timeWindow || 'ALL_DAY')
   const [asap, setAsap] = useState(data.asap || false)
@@ -423,7 +424,10 @@ export default function HaulAwayLocationPage() {
                   >
                     {Array.from({ length: 90 }, (_, i) => {
                       const d = new Date(Date.now() + (i + 1) * 86400000)
-                      const value = d.toISOString().split('T')[0]
+                      const y = d.getFullYear()
+                      const m = String(d.getMonth() + 1).padStart(2, '0')
+                      const day = String(d.getDate()).padStart(2, '0')
+                      const value = `${y}-${m}-${day}`
                       const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
                       return <option key={value} value={value}>{label}</option>
                     })}

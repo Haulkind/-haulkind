@@ -15,7 +15,8 @@ export default function AssemblySchedulePage() {
   const [zip, setZip] = useState('')
   const [zipError, setZipError] = useState('')
   // Default to tomorrow's date so the calendar isn't blank
-  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const tD = new Date(Date.now() + 86400000)
+  const tomorrowStr = `${tD.getFullYear()}-${String(tD.getMonth() + 1).padStart(2, '0')}-${String(tD.getDate()).padStart(2, '0')}`
   const [date, setDate] = useState(tomorrowStr)
   const [time, setTime] = useState('')
   const [floor, setFloor] = useState('')
@@ -161,7 +162,10 @@ export default function AssemblySchedulePage() {
             >
               {Array.from({ length: 30 }, (_, i) => {
                 const d = new Date(Date.now() + (i + 1) * 86400000)
-                const value = d.toISOString().split('T')[0]
+                const y = d.getFullYear()
+                const m = String(d.getMonth() + 1).padStart(2, '0')
+                const day = String(d.getDate()).padStart(2, '0')
+                const value = `${y}-${m}-${day}`
                 const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
                 return <option key={value} value={value}>{label}</option>
               })}
