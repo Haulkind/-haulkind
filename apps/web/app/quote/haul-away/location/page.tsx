@@ -32,7 +32,8 @@ export default function HaulAwayLocationPage() {
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
   
   // Default to tomorrow's date so the calendar isn't blank
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const tD = new Date(Date.now() + 86400000)
+  const tomorrow = `${tD.getFullYear()}-${String(tD.getMonth() + 1).padStart(2, '0')}-${String(tD.getDate()).padStart(2, '0')}`
   const [serviceDate, setServiceDate] = useState(data.serviceDate || tomorrow)
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(data.timeWindow || 'ALL_DAY')
   const [asap, setAsap] = useState(data.asap || false)
@@ -416,13 +417,21 @@ export default function HaulAwayLocationPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Pickup Date *
                   </label>
-                  <input
-                    type="date"
+                  <select
                     value={serviceDate}
                     onChange={(e) => setServiceDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent"
-                  />
+                    className="w-full h-9 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-600 focus:border-transparent bg-white"
+                  >
+                    {Array.from({ length: 90 }, (_, i) => {
+                      const d = new Date(Date.now() + (i + 1) * 86400000)
+                      const y = d.getFullYear()
+                      const m = String(d.getMonth() + 1).padStart(2, '0')
+                      const day = String(d.getDate()).padStart(2, '0')
+                      const value = `${y}-${m}-${day}`
+                      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                      return <option key={value} value={value}>{label}</option>
+                    })}
+                  </select>
                 </div>
 
                 <div>
