@@ -71,7 +71,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https: http:",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://haulkind-production-285b.up.railway.app https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://connect.facebook.net https://www.clarity.ms https://nominatim.openstreetmap.org https://challenges.cloudflare.com",
-              "frame-src https://js.stripe.com https://challenges.cloudflare.com",
+              "frame-src https://js.stripe.com https://challenges.cloudflare.com https://maps.google.com https://www.google.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

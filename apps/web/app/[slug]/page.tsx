@@ -1,22 +1,31 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { SERVICES, CITIES, parseSlug, generateFAQs, generatePageContent, getAllSlugs } from '@/lib/seo-data'
+import { SERVICES } from '@/lib/seo-data'
+import { getAllCities } from '@/lib/geo'
+import {
+  parseSlugNational,
+  generatePageContentNational,
+  generateFAQsNational,
+  generateCityDescription,
+  getNearbyCities,
+} from '@/lib/seo-data-national'
 
 interface PageProps {
   params: { slug: string }
 }
 
-export function generateStaticParams() {
-  return getAllSlugs().map((slug) => ({ slug }))
-}
+// ISR: pages generated on first visit and revalidated every 24 hours
+// Replaces generateStaticParams() to avoid multi-hour builds at national scale (5500+ pages)
+export const revalidate = 86400
+export const dynamicParams = true
 
 export function generateMetadata({ params }: PageProps): Metadata {
-  const data = parseSlug(params.slug)
+  const data = parseSlugNational(params.slug)
   if (!data) return {}
 
   const { service, city } = data
-  const page = generatePageContent(service, city)
+  const page = generatePageContentNational(service, city)
 
   return {
     title: page.title,
@@ -37,17 +46,21 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default function LocalSEOPage({ params }: PageProps) {
-  const data = parseSlug(params.slug)
+  const data = parseSlugNational(params.slug)
   if (!data) notFound()
 
   const { service, city } = data
-  const page = generatePageContent(service, city)
-  const faqs = generateFAQs(service, city)
+  const page = generatePageContentNational(service, city)
+  const faqs = generateFAQsNational(service, city)
+  const cityDescription = generateCityDescription(city)
 
   // Related services in the same city (exclude current)
   const relatedServices = SERVICES.filter((s) => s.slug !== service.slug).slice(0, 5)
-  // Same service in other cities
-  const otherCities = CITIES.filter((c) => c.slug !== city.slug)
+  // Nearby cities for cross-linking
+  const nearbyCities = getNearbyCities(city, 5)
+  // Same service in other cities from same state
+  const allCities = getAllCities()
+  const sameCityState = allCities.filter((c) => c.stateAbbr === city.stateAbbr && c.slug !== city.slug)
 
   // Schema markup
   const faqSchema = {
@@ -72,6 +85,13 @@ export default function LocalSEOPage({ params }: PageProps) {
       '@type': 'LocalBusiness',
       name: 'HaulKind',
       url: 'https://haulkind.com',
+      telephone: '+1-267-434-7689',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: city.name,
+        addressRegion: city.stateAbbr,
+        addressCountry: 'US',
+      },
       areaServed: {
         '@type': 'City',
         name: city.name,
@@ -79,6 +99,11 @@ export default function LocalSEOPage({ params }: PageProps) {
           '@type': 'State',
           name: city.state,
         },
+      },
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: city.lat,
+        longitude: city.lng,
       },
     },
     areaServed: {
@@ -92,6 +117,7 @@ export default function LocalSEOPage({ params }: PageProps) {
     serviceType: service.name,
     offers: {
       '@type': 'Offer',
+      priceCurrency: 'USD',
       priceSpecification: {
         '@type': 'PriceSpecification',
         priceCurrency: 'USD',
@@ -105,8 +131,9 @@ export default function LocalSEOPage({ params }: PageProps) {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://haulkind.com' },
       { '@type': 'ListItem', position: 2, name: 'Service Areas', item: 'https://haulkind.com/service-areas' },
-      { '@type': 'ListItem', position: 3, name: `${city.name}, ${city.stateAbbr}`, item: `https://haulkind.com/service-areas` },
-      { '@type': 'ListItem', position: 4, name: service.name, item: `https://haulkind.com${page.url}` },
+      { '@type': 'ListItem', position: 3, name: city.state, item: `https://haulkind.com/service-areas/${city.stateSlug}` },
+      { '@type': 'ListItem', position: 4, name: `${city.name}, ${city.stateAbbr}`, item: `https://haulkind.com/service-areas/${city.stateSlug}/${city.slug}` },
+      { '@type': 'ListItem', position: 5, name: service.name, item: `https://haulkind.com${page.url}` },
     ],
   }
 
@@ -123,6 +150,8 @@ export default function LocalSEOPage({ params }: PageProps) {
             <li><Link href="/" className="hover:text-primary-600">Home</Link></li>
             <li>/</li>
             <li><Link href="/service-areas" className="hover:text-primary-600">Service Areas</Link></li>
+            <li>/</li>
+            <li><Link href={`/service-areas/${city.stateSlug}`} className="hover:text-primary-600">{city.state}</Link></li>
             <li>/</li>
             <li><span className="text-gray-900 font-medium">{service.name} in {city.name}</span></li>
           </ol>
@@ -184,18 +213,65 @@ export default function LocalSEOPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* City intro */}
+        {/* Dynamic data injection: Local info + Driver availability + Regulations */}
+        <section className="py-8 bg-primary-50 border-b border-primary-100">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">
+                <span className="text-2xl" aria-hidden="true">&#x1F4CD;</span>
+                <div>
+                  <p className="font-semibold text-gray-900">Serving {city.name}</p>
+                  <p className="text-sm text-gray-600">{city.county}, {city.stateAbbr} &middot; {city.zipCodes.length} ZIP codes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">
+                <span className="text-2xl" aria-hidden="true">&#x1F69B;</span>
+                <div>
+                  <p className="font-semibold text-gray-900">Drivers Available</p>
+                  <p className="text-sm text-gray-600">We have drivers available near {city.name} today</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">
+                <span className="text-2xl" aria-hidden="true">&#x1F4CB;</span>
+                <div>
+                  <p className="font-semibold text-gray-900">Local Regulations</p>
+                  <p className="text-sm text-gray-600">In {city.name}, {city.stateAbbr}, bulk trash rules vary. We ensure compliant disposal.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* City intro with unique description */}
         <section className="py-12 md:py-16">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
               Professional {service.name} Services in {city.name}
             </h2>
             <p className="text-gray-700 text-lg leading-relaxed mb-4">
-              {city.description}
+              {cityDescription}
             </p>
             <p className="text-gray-700 text-lg leading-relaxed">
               HaulKind brings professional {service.shortName} services directly to {city.name} residents and businesses. With transparent pricing starting at {service.priceRange}, fast scheduling, and live GPS tracking of your driver, we make {service.shortName} simple and stress-free.
             </p>
+          </div>
+        </section>
+
+        {/* Google Maps embed */}
+        <section className="py-8">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <h2 className="text-xl font-bold mb-4">{service.name} Service Area in {city.name}, {city.stateAbbr}</h2>
+            <div className="rounded-xl overflow-hidden shadow-lg border border-gray-200">
+              <iframe
+                title={`${service.name} service area map - ${city.name}, ${city.stateAbbr}`}
+                width="100%"
+                height="350"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(city.name + ', ' + city.stateAbbr + ', USA')}&t=&z=12&ie=UTF8&iwloc=&output=embed`}
+              />
+            </div>
           </div>
         </section>
 
@@ -332,7 +408,11 @@ export default function LocalSEOPage({ params }: PageProps) {
                 </span>
               ))}
             </div>
-            <p className="text-gray-600 text-sm">
+            <div className="mt-4">
+              <p className="text-gray-600 text-sm font-medium mb-2">ZIP codes we serve in {city.name}:</p>
+              <p className="text-gray-500 text-sm">{city.zipCodes.join(', ')}</p>
+            </div>
+            <p className="text-gray-600 text-sm mt-4">
               We also serve nearby areas including {city.nearbyAreas.join(', ')}. Enter your ZIP code in our quote tool to check coverage instantly.
             </p>
           </div>
@@ -376,14 +456,14 @@ export default function LocalSEOPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Same service in other cities */}
+        {/* Same service in nearby cities */}
         <section className="py-12 md:py-16">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl md:text-3xl font-bold mb-6">
-              {service.name} in Other Areas
+              {service.name} in Nearby {city.state} Cities
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {otherCities.map((c) => (
+              {nearbyCities.map((c) => (
                 <Link
                   key={c.slug}
                   href={`/${service.slug}-${c.slug}`}
@@ -393,6 +473,14 @@ export default function LocalSEOPage({ params }: PageProps) {
                   <p className="text-sm text-gray-600 mt-1">Serving {c.name} and surrounding areas</p>
                 </Link>
               ))}
+              {sameCityState.length > nearbyCities.length && (
+                <Link
+                  href={`/service-areas/${city.stateSlug}`}
+                  className="bg-primary-50 p-5 rounded-xl hover:bg-primary-100 transition border border-primary-200 flex items-center justify-center"
+                >
+                  <span className="font-bold text-primary-600">View all {city.state} cities &rarr;</span>
+                </Link>
+              )}
             </div>
           </div>
         </section>
