@@ -1,14 +1,23 @@
+import dynamic from 'next/dynamic'
 import {
   HeroSection,
   WhyDifferent,
-  PriceCalculator,
   HowItWorks,
   Guarantees,
-  Testimonials,
   CTASection,
   OurStory,
   ComparisonTable,
 } from '@/components/landing'
+
+// Lazy-load heavy interactive components below the fold to reduce TBT
+const PriceCalculator = dynamic(
+  () => import('@/components/landing/PriceCalculator'),
+  { ssr: true }
+)
+const Testimonials = dynamic(
+  () => import('@/components/landing/Testimonials'),
+  { ssr: true }
+)
 
 export default function Home() {
   return (
