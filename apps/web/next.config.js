@@ -37,7 +37,7 @@ const nextConfig = {
       },
       {
         // ISR pages: serve from edge cache, revalidate in background
-        source: '/:path((?!_next|api|favicon|.*\\.).*)',
+        source: '/((?!_next|api|favicon).*)',
         headers: [
           {
             key: 'Cache-Control',

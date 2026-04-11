@@ -9,13 +9,14 @@ export default function CookieConsent() {
     const consent = localStorage.getItem('hk_cookie_consent')
     if (!consent) {
       // Wait until browser is idle + 3s delay to avoid blocking main thread during initial load
-      const show = () => setTimeout(() => setVisible(true), 3000)
+      let innerTimer: ReturnType<typeof setTimeout>
+      const show = () => { innerTimer = setTimeout(() => setVisible(true), 3000) }
       if ('requestIdleCallback' in window) {
         const id = requestIdleCallback(show)
-        return () => cancelIdleCallback(id)
+        return () => { cancelIdleCallback(id); clearTimeout(innerTimer) }
       } else {
         const timer = setTimeout(show, 100)
-        return () => clearTimeout(timer)
+        return () => { clearTimeout(timer); clearTimeout(innerTimer) }
       }
     }
   }, [])
