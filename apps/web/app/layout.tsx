@@ -1,15 +1,18 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
+import dynamic from 'next/dynamic'
 import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import StickyCTA from '@/components/StickyCTA'
 import PhoneBar from '@/components/PhoneBar'
-import RecruitBanner from '@/components/RecruitBanner'
 import { QuoteProvider } from '@/lib/QuoteContext'
 import { TRPCProvider } from '@/lib/trpc-provider'
-import CookieConsent from '@/components/CookieConsent'
+
+// Lazy-load non-critical layout components to reduce initial JS bundle / TBT
+const StickyCTA = dynamic(() => import('@/components/StickyCTA'), { ssr: false })
+const RecruitBanner = dynamic(() => import('@/components/RecruitBanner'), { ssr: false })
+const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -186,8 +189,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Google Tag Manager */}
-        <Script id="gtm-head" strategy="afterInteractive">{`
+        {/* Google Tag Manager — deferred to reduce TBT */}
+        <Script id="gtm-head" strategy="lazyOnload">{`
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -202,13 +205,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#0D9488" />
         <link rel="manifest" href="/site.webmanifest" />
-        {/* Preconnect to third-party domains for faster resource loading */}
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <link rel="preconnect" href="https://www.google-analytics.com" />
-        <link rel="preconnect" href="https://connect.facebook.net" />
-        <link rel="preconnect" href="https://www.clarity.ms" />
+        {/* DNS-prefetch only (no preconnect) since scripts are deferred via lazyOnload */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
+        <link rel="dns-prefetch" href="https://www.clarity.ms" />
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="lazyOnload" />
         <Script id="gtag-init" strategy="lazyOnload">{`
           window.dataLayer = window.dataLayer || [];
@@ -231,7 +231,7 @@ export default function RootLayout({
           }
           window.gtagSendEvent = gtagSendEvent;
         `}</Script>
-        <Script id="meta-pixel" strategy="afterInteractive">{`
+        <Script id="meta-pixel" strategy="lazyOnload">{`
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
           n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -246,7 +246,7 @@ export default function RootLayout({
         <noscript>
           <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=1470537883812602&ev=PageView&noscript=1" alt="Meta Pixel tracking" />
         </noscript>
-        <Script id="microsoft-clarity" strategy="afterInteractive">{`
+        <Script id="microsoft-clarity" strategy="lazyOnload">{`
           (function(c,l,a,r,i,t,y){
             c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
             t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
