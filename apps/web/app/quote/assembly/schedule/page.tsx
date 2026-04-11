@@ -39,7 +39,7 @@ export default function AssemblySchedulePage() {
     setZip(value)
     if (value.length === 5) {
       if (!PA_NJ_NY_ZIPS.test(value)) {
-        setZipError('We don\'t serve this area yet. Call (609) 456-8188 to check availability.')
+        setZipError('This ZIP may be outside our usual area. We\'ll confirm by phone.')
       } else {
         setZipError('')
       }
@@ -57,8 +57,8 @@ export default function AssemblySchedulePage() {
       setError('Please enter a valid 2-letter state code (e.g. PA, NJ, NY).')
       return
     }
-    if (zip.length !== 5 || zipError) {
-      setError('Please enter a valid ZIP code in our service area.')
+    if (zip.length !== 5) {
+      setError('Please enter a valid 5-digit ZIP code.')
       return
     }
 
