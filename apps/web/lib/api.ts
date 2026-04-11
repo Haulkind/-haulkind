@@ -108,7 +108,7 @@ export async function getQuote(request: QuoteRequest): Promise<QuoteResponse> {
   return data
 }
 
-export async function createJob(request: JobCreateRequest): Promise<JobResponse> {
+export async function createJob(request: JobCreateRequest, signal?: AbortSignal): Promise<JobResponse> {
   console.log('[API] createJob request:', JSON.stringify(request))
   const response = await fetch('/api/jobs', {
     method: 'POST',
@@ -116,6 +116,7 @@ export async function createJob(request: JobCreateRequest): Promise<JobResponse>
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(request),
+    signal,
   })
   console.log('[API] createJob status:', response.status)
   if (!response.ok) {

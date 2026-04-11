@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createJob, createCheckoutSession } from '@/lib/api'
@@ -14,6 +14,19 @@ export default function AssemblyContactPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(87)
+  const abortRef = useRef<AbortController | null>(null)
+
+  // Reset state when restored from bfcache (iOS Safari back button)
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setLoading(false)
+        setError('')
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
 
   useEffect(() => {
     const data = sessionStorage.getItem('assemblyData')
@@ -37,7 +50,7 @@ export default function AssemblyContactPage() {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!fullName.trim() || !phone.trim() || !email.trim()) {
       setError('Please fill in all required fields.')
       return
@@ -52,8 +65,20 @@ export default function AssemblyContactPage() {
       return
     }
 
+    if (loading) return
     setError('')
     setLoading(true)
+
+    // Create AbortController so safety timer can cancel in-flight request
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Safety timeout: if payment doesn't complete in 25s, abort and reset
+    const safetyTimer = setTimeout(() => {
+      controller.abort()
+      setLoading(false)
+      setError('Payment is taking too long. Please try again.')
+    }, 25000)
 
     const existing = JSON.parse(sessionStorage.getItem('assemblyData') || '{}')
     const finalData = {
@@ -128,7 +153,7 @@ export default function AssemblyContactPage() {
         timeWindow: sched.time?.toUpperCase() || 'FLEXIBLE',
         total: existing.total || 87,
       }
-      const job = await createJob(jobPayload)
+      const job = await createJob(jobPayload, controller.signal)
 
       // Fire Google Ads conversion
       if (typeof window !== 'undefined' && (window as any).gtag) {
@@ -139,16 +164,21 @@ export default function AssemblyContactPage() {
         })
       }
 
-      // 2. Always redirect to embedded checkout page (full-screen mobile-friendly)
+      clearTimeout(safetyTimer)
+      if (controller.signal.aborted) return
+
+      // Redirect to checkout page (uses Stripe hosted checkout)
       const origin = window.location.origin
       window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
       return
     } catch (err: any) {
+      clearTimeout(safetyTimer)
+      if (err.name === 'AbortError') return
       console.error('[ASSEMBLY] Job/checkout failed:', err)
       setError(err.message || 'Something went wrong. Please try again or call (609) 456-8188.')
       setLoading(false)
     }
-  }
+  }, [loading, fullName, phone, email, referral, total, router])
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuote } from '@/lib/QuoteContext'
 import { getQuote, createJob, createCheckoutSession } from '@/lib/api'
@@ -12,6 +12,18 @@ export default function LaborOnlySummaryPage() {
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
+
+  // Reset state when restored from bfcache (iOS Safari back button)
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setPaying(false)
+        setError('')
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
 
   useEffect(() => {
     fetchQuote()
@@ -38,9 +50,23 @@ export default function LaborOnlySummaryPage() {
     }
   }
 
-  const handlePayment = async () => {
+  const abortRef = useRef<AbortController | null>(null)
+
+  const handlePayment = useCallback(async () => {
+    if (paying) return
     setPaying(true)
     setError('')
+
+    // Create AbortController so safety timer can cancel in-flight request
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Safety timeout: if payment doesn't complete in 20s, abort and reset
+    const safetyTimer = setTimeout(() => {
+      controller.abort()
+      setPaying(false)
+      setError('Payment is taking too long. Please try again.')
+    }, 20000)
 
     try {
       const job = await createJob({
@@ -58,19 +84,22 @@ export default function LaborOnlySummaryPage() {
         customerPhone: data.customerPhone,
         customerEmail: data.customerEmail,
         timeWindow: data.timeWindow,
-      })
+      }, controller.signal)
 
+      clearTimeout(safetyTimer)
+      if (controller.signal.aborted) return
       updateData({ jobId: job.id })
 
-      // Always redirect to embedded checkout page (full-screen mobile-friendly)
       const origin = window.location.origin
       window.location.href = `${origin}/checkout?jobId=${job.id}&return=/quote/tracking`
       return
-    } catch (err) {
+    } catch (err: any) {
+      clearTimeout(safetyTimer)
+      if (err.name === 'AbortError') return
       setError('Payment failed. Please try again.')
       setPaying(false)
     }
-  }
+  }, [paying, data, updateData])
 
   if (loading) {
     return (
