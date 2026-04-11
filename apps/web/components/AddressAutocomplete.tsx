@@ -91,7 +91,7 @@ export default function AddressAutocomplete({
       setHighlightedIndex(-1)
     } catch (err) {
       console.error('Address search error:', err)
-      setError('Unable to search addresses. Please enter manually.')
+      setError('Autocomplete unavailable — just type your full address below.')
       setSuggestions([])
       setShowDropdown(false)
     } finally {

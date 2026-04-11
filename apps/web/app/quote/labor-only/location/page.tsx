@@ -175,51 +175,53 @@ export default function LaborOnlyLocationPage() {
     setError('')
 
     try {
-      // TASK 5: Build serviceAddress string from structured fields (backend expects single string)
+      // Build serviceAddress string from structured fields (backend expects single string)
       // Geocode WITHOUT apt/unit — Nominatim can't resolve apt numbers and returns no results
       const geocodeAddress = `${street.trim()}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
       // Full address with apt for display/storage
       const serviceAddress = `${street.trim()}${apt.trim() ? `, ${apt.trim()}` : ''}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
       
-      // Geocode the address to get coordinates
-      console.log('[GEOCODING] Starting for:', geocodeAddress)
-      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeAddress)}&countrycodes=us&limit=1`
-      const geocodeResponse = await fetch(geocodeUrl, {
-        headers: { 'User-Agent': 'Haulkind/1.0' }
-      })
-      
-      console.log('[GEOCODING] Response status:', geocodeResponse.status)
-      
-      if (!geocodeResponse.ok) {
-        const errorText = await geocodeResponse.text()
-        console.error('[GEOCODING] HTTP Error:', geocodeResponse.status, errorText)
-        setError(`Unable to verify address. Please check your address and try again.`)
-        setLoading(false)
-        return
+      // Best-effort geocoding — NEVER block the customer from proceeding
+      let lat = 0
+      let lng = 0
+      try {
+        console.log('[GEOCODING] Starting for:', geocodeAddress)
+        const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeAddress)}&countrycodes=us&limit=1`
+        const geocodeResponse = await fetch(geocodeUrl, {
+          headers: { 'User-Agent': 'Haulkind/1.0' },
+          signal: AbortSignal.timeout(8000),
+        })
+        
+        if (geocodeResponse.ok) {
+          const geocodeData = await geocodeResponse.json()
+          if (geocodeData && geocodeData.length > 0) {
+            lat = parseFloat(geocodeData[0].lat)
+            lng = parseFloat(geocodeData[0].lon)
+            console.log('[GEOCODING] Coordinates:', { lat, lng })
+          } else {
+            console.warn('[GEOCODING] No results — continuing with manual address')
+          }
+        } else {
+          console.warn('[GEOCODING] HTTP error', geocodeResponse.status, '— continuing with manual address')
+        }
+      } catch (geoErr) {
+        console.warn('[GEOCODING] Failed — continuing with manual address:', geoErr)
       }
-      
-      const geocodeData = await geocodeResponse.json()
-      console.log('[GEOCODING] Results:', geocodeData.length, 'items')
-      
-      if (!geocodeData || geocodeData.length === 0) {
-        console.error('[GEOCODING] No results for:', serviceAddress)
-        setError('Address not found. Please check your address and try again.')
-        setLoading(false)
-        return
-      }
-      
-      const lat = parseFloat(geocodeData[0].lat)
-      const lng = parseFloat(geocodeData[0].lon)
-      console.log('[GEOCODING] Coordinates:', { lat, lng })
 
-      console.log('[SERVICE_AREA] Checking coverage for:', { lat, lng, state })
-      const result = await checkServiceArea(lat, lng, state)
-      console.log('[SERVICE_AREA] Result:', result)
-      
-      if (!result.covered) {
-        setError('Sorry, we do not serve this area yet.')
-        setLoading(false)
-        return
+      // Best-effort service area check — warn but NEVER block
+      let serviceAreaId: number | null = null
+      let serviceAreaName = ''
+      if (lat !== 0 && lng !== 0) {
+        try {
+          const result = await checkServiceArea(lat, lng, state)
+          console.log('[SERVICE_AREA] Result:', result)
+          if (result.covered && result.serviceArea) {
+            serviceAreaId = result.serviceArea.id
+            serviceAreaName = result.serviceArea.name
+          }
+        } catch (saErr) {
+          console.warn('[SERVICE_AREA] Check failed — continuing anyway:', saErr)
+        }
       }
 
       // Calculate preferredDateTime based on timeWindow
@@ -241,8 +243,8 @@ export default function LaborOnlyLocationPage() {
         pickupAddress: serviceAddress,
         pickupLat: lat,
         pickupLng: lng,
-        serviceAreaId: result.serviceArea?.id || null,
-        serviceAreaName: result.serviceArea?.name || '',
+        serviceAreaId,
+        serviceAreaName,
         // Date/time
         serviceDate,
         timeWindow,
@@ -254,8 +256,27 @@ export default function LaborOnlyLocationPage() {
       router.push('/quote/labor-only/summary')
     } catch (err: any) {
       console.error('[ERROR] Full error:', err)
-      setError(`We couldn't verify the service area right now. Please try again in a minute.`)
-      setLoading(false)
+      // Even on unexpected errors, try to continue with the address as-is
+      const serviceAddress = `${street.trim()}${apt.trim() ? `, ${apt.trim()}` : ''}, ${city.trim()}, ${state.trim().toUpperCase()} ${zip.trim()}`
+      const timeMap: Record<string, string> = { MORNING: '09:00', AFTERNOON: '13:00', EVENING: '17:00', ALL_DAY: '09:00' }
+      const preferredDateTime = `${serviceDate}T${timeMap[timeWindow]}:00`
+      updateData({
+        serviceType: 'LABOR_ONLY',
+        customerName: fullName.trim(),
+        customerPhone: phone.trim(),
+        customerEmail: email.trim(),
+        pickupAddress: serviceAddress,
+        pickupLat: 0,
+        pickupLng: 0,
+        serviceAreaId: null,
+        serviceAreaName: '',
+        serviceDate,
+        timeWindow,
+        asap,
+        scheduledFor: preferredDateTime,
+        preferredDateTime,
+      })
+      router.push('/quote/labor-only/summary')
     }
   }
 

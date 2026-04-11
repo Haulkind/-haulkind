@@ -242,32 +242,47 @@ function SchedulePageInner() {
     setLoading(true)
     setError('')
     try {
-      // Use browser geocoding via Nominatim (without apt/unit)
-      const resp = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geocodeAddress)}&format=json&limit=1`,
-        { headers: { 'User-Agent': 'Haulkind/1.0' } }
-      )
-      const results = await resp.json()
-      if (!results || results.length === 0) {
-        setError('Address not found. Please check street, city, state, and zip code.')
-        return
+      // Best-effort geocoding — NEVER block the customer from proceeding
+      let foundLat = 0
+      let foundLng = 0
+      try {
+        const resp = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geocodeAddress)}&format=json&limit=1`,
+          { headers: { 'User-Agent': 'Haulkind/1.0' }, signal: AbortSignal.timeout(8000) }
+        )
+        if (resp.ok) {
+          const results = await resp.json()
+          if (results && results.length > 0) {
+            foundLat = parseFloat(results[0].lat)
+            foundLng = parseFloat(results[0].lon)
+          } else {
+            console.warn('[GEOCODING] No results — continuing with manual address')
+          }
+        }
+      } catch (geoErr) {
+        console.warn('[GEOCODING] Failed — continuing with manual address:', geoErr)
       }
-      const loc = results[0]
-      const foundLat = parseFloat(loc.lat)
-      const foundLng = parseFloat(loc.lon)
+
       setLat(foundLat)
       setLng(foundLng)
 
-      // Check service area
-      const areaData = await lookupServiceArea(foundLat, foundLng)
-      if (!areaData.covered) {
-        setError('Sorry, this address is not in our service area yet.')
-        return
+      // Best-effort service area check — warn but NEVER block
+      if (foundLat !== 0 && foundLng !== 0) {
+        try {
+          const areaData = await lookupServiceArea(foundLat, foundLng)
+          if (areaData.covered && areaData.serviceArea) {
+            setServiceAreaId(areaData.serviceArea.id || 1)
+          }
+        } catch (saErr) {
+          console.warn('[SERVICE_AREA] Check failed — continuing anyway:', saErr)
+        }
       }
-      setServiceAreaId(areaData.serviceArea?.id || 1)
+
       setStep('schedule')
     } catch {
-      setError('Failed to look up address. Please try again.')
+      // Even on unexpected errors, let the customer proceed
+      console.warn('[ADDRESS] Unexpected error — continuing anyway')
+      setStep('schedule')
     } finally {
       setLoading(false)
     }
