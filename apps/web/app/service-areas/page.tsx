@@ -1,30 +1,26 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { SERVICES, CITIES } from '@/lib/seo-data'
+import { SERVICES } from '@/lib/seo-data'
+import { getStatesWithCounts } from '@/lib/seo-data-national'
 
 export const metadata: Metadata = {
-  title: 'Service Areas - Junk Removal & Moving Help in PA, NJ & NY | HaulKind',
-  description: 'HaulKind serves Philadelphia PA, South Jersey, New York City, Long Island and surrounding areas. Professional junk removal, furniture removal, cleanouts, and moving help. Get a free quote.',
+  title: 'Service Areas - Nationwide Junk Removal & Moving Help | HaulKind',
+  description: 'HaulKind serves cities across all 50 states. Professional junk removal, furniture removal, cleanouts, and moving help. Get a free quote.',
   alternates: { canonical: '/service-areas' },
   openGraph: {
-    title: 'HaulKind Service Areas - PA, NJ & NY Coverage',
-    description: 'Professional junk removal and moving help in Philadelphia, South Jersey, NYC, Long Island and surrounding areas. Book online in 60 seconds.',
+    title: 'HaulKind Service Areas - Nationwide Coverage',
+    description: 'Professional junk removal and moving help across all 50 states. Book online in 60 seconds.',
     url: 'https://haulkind.com/service-areas',
   },
 }
-
-// Group cities by state
-const citiesByState: Record<string, typeof CITIES> = {}
-CITIES.forEach((city) => {
-  if (!citiesByState[city.state]) citiesByState[city.state] = []
-  citiesByState[city.state].push(city)
-})
 
 const featuredServices = SERVICES.filter((s) =>
   ['junk-removal', 'furniture-removal', 'mattress-removal', 'appliance-removal', 'garage-cleanout', 'moving-help'].includes(s.slug)
 )
 
 export default function ServiceAreas() {
+  const statesWithCounts = getStatesWithCounts()
+
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -55,7 +51,7 @@ export default function ServiceAreas() {
               Junk Removal &amp; Moving Help Service Areas
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor across Pennsylvania, New Jersey, and the New York Metro area. Find your city below and book online in 60 seconds.
+              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor nationwide. Find your state and city below and book online in 60 seconds.
             </p>
             <Link
               href="/quote"
@@ -66,130 +62,25 @@ export default function ServiceAreas() {
           </div>
         </section>
 
-        {/* Cities by State */}
+        {/* All States Grid */}
         <section className="py-16 md:py-20">
           <div className="container mx-auto px-4 max-w-6xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Our Service Areas</h2>
-
-            {Object.entries(citiesByState).map(([state, cities]) => (
-              <div key={state} className="mb-16">
-                <h3 className="text-2xl md:text-3xl font-bold text-primary-600 mb-6 border-b-2 border-primary-100 pb-3">
-                  {state}
-                </h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {cities.map((city) => (
-                    <div key={city.slug} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition">
-                      <h4 className="text-xl font-bold text-gray-900 mb-2">
-                        {city.name}, {city.stateAbbr}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Population: {city.population} &middot; {city.neighborhoods.length}+ neighborhoods served
-                      </p>
-                      <div className="space-y-2 mb-4">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Popular services:</p>
-                        {featuredServices.slice(0, 4).map((service) => (
-                          <Link
-                            key={service.slug}
-                            href={`/${service.slug}-${city.slug}`}
-                            className="block text-sm text-primary-600 hover:text-primary-800 hover:underline"
-                          >
-                            {service.name} in {city.name} &rarr;
-                          </Link>
-                        ))}
-                      </div>
-                      <Link
-                        href={`/junk-removal-${city.slug}`}
-                        className="inline-block w-full text-center bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition text-sm"
-                      >
-                        View All Services in {city.name}
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {/* New York Metro — C1 */}
-            <div className="mb-16">
-              <h3 className="text-2xl md:text-3xl font-bold text-primary-600 mb-6 border-b-2 border-primary-100 pb-3">
-                New York Metro
-              </h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                  { name: 'Manhattan', desc: 'All of Manhattan from the Financial District to Washington Heights.' },
-                  { name: 'Brooklyn', desc: 'Williamsburg, Park Slope, Bushwick, Flatbush, and all Brooklyn neighborhoods.' },
-                  { name: 'Queens', desc: 'Astoria, Flushing, Jamaica, Long Island City, and more.' },
-                  { name: 'The Bronx', desc: 'Riverdale, Fordham, Pelham Bay, Mott Haven, and beyond.' },
-                  { name: 'Staten Island', desc: 'North Shore to South Shore — all of Staten Island.' },
-                  { name: 'Long Island', desc: 'Nassau County and Suffolk County — Hempstead to the Hamptons.' },
-                  { name: 'Westchester County', desc: 'White Plains, Yonkers, New Rochelle, Scarsdale, and more.' },
-                  { name: 'Jersey City / Hoboken', desc: 'Downtown JC, the Heights, and all of Hoboken.' },
-                  { name: 'Newark', desc: 'Ironbound, North Ward, and all Newark neighborhoods.' },
-                ].map((area) => (
-                  <div key={area.name} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition">
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">{area.name}</h4>
-                    <p className="text-sm text-gray-600 mb-4">{area.desc}</p>
-                    <Link
-                      href="/quote"
-                      className="inline-block w-full text-center bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition text-sm"
-                    >
-                      Get a Quote in {area.name}
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Popular Services Grid */}
-        <section className="py-16 md:py-20 bg-gray-50">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">Popular Services</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">All {statesWithCounts.length} States</h2>
             <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-              Browse our most requested services by location. Click any combination to learn more and get an instant quote.
+              Click a state to see all cities and services available in that area.
             </p>
-            <div className="space-y-8">
-              {SERVICES.slice(0, 8).map((service) => (
-                <div key={service.slug}>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{service.name}</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {CITIES.map((city) => (
-                      <Link
-                        key={`${service.slug}-${city.slug}`}
-                        href={`/${service.slug}-${city.slug}`}
-                        className="bg-white px-4 py-2 rounded-full text-sm text-gray-700 border border-gray-200 hover:border-primary-400 hover:text-primary-600 transition shadow-sm"
-                      >
-                        {city.name}, {city.stateAbbr}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {statesWithCounts.map((state) => (
+                <Link
+                  key={state.slug}
+                  href={`/service-areas/${state.slug}`}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-lg hover:border-primary-200 transition group"
+                >
+                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600">{state.name}</h3>
+                  <p className="text-sm text-gray-500 mt-1">{state.cities.length} {state.cities.length === 1 ? 'city' : 'cities'}</p>
+                </Link>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* All Services by City */}
-        <section className="py-16 md:py-20">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">All Services by City</h2>
-            {CITIES.map((city) => (
-              <div key={city.slug} className="mb-10">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{city.name}, {city.stateAbbr}</h3>
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {SERVICES.map((service) => (
-                    <Link
-                      key={`${service.slug}-${city.slug}`}
-                      href={`/${service.slug}-${city.slug}`}
-                      className="text-sm text-primary-600 hover:text-primary-800 hover:underline py-1"
-                    >
-                      {service.name} in {city.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
           </div>
         </section>
 

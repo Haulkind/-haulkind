@@ -1,157 +1,96 @@
 import type { MetadataRoute } from 'next'
-import { SERVICES, CITIES } from '@/lib/seo-data'
+import { SERVICES } from '@/lib/seo-data'
+import { STATES, getAllCities } from '@/lib/geo'
 import { getAllPosts } from '@/lib/blog'
+import { getStatesWithCounts } from '@/lib/seo-data-national'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Sitemap index: chunk pSEO URLs into multiple child sitemaps to stay under the 50k URL limit.
+// Chunk 0 = core + blog pages
+// Chunk 1..N = pSEO pages grouped by service (one chunk per service)
+// This ensures each child sitemap stays well under 50k URLs.
+
+/** Next.js App Router: generates the sitemap index entries */
+export async function generateSitemaps() {
+  // Chunk 0 = core + blog + service-areas hierarchy
+  // Chunk 1..11 = one chunk per service (each service × all cities)
+  const ids = [{ id: 0 }]
+  SERVICES.forEach((_, i) => ids.push({ id: i + 1 }))
+  return ids
+}
+
+export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
   const baseUrl = 'https://haulkind.com'
+  const now = new Date()
 
-  // Core pages
-  const corePages: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/services/cleanout`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/services/furniture`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/services/appliances`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/services/moving-labor`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/services/commercial`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/services/electronics`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/services/what-we-take`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/how-it-works`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/service-areas`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/faq`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/become-a-driver`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/mattress-swap`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/quote/mattress-swap`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/quote/assembly`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-  ]
+  // Chunk 0: Core pages + blog + service-areas hierarchy
+  if (id === 0) {
+    const corePages: MetadataRoute.Sitemap = [
+      { url: baseUrl, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
+      { url: `${baseUrl}/services/cleanout`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/services/furniture`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/services/appliances`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/services/moving-labor`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/services/commercial`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/services/electronics`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/services/what-we-take`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/pricing`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/how-it-works`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+      { url: `${baseUrl}/service-areas`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+      { url: `${baseUrl}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+      { url: `${baseUrl}/faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+      { url: `${baseUrl}/become-a-driver`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+      { url: `${baseUrl}/mattress-swap`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+      { url: `${baseUrl}/quote/mattress-swap`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+      { url: `${baseUrl}/quote/assembly`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+      { url: `${baseUrl}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
+      { url: `${baseUrl}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
+    ]
 
-  // Local SEO pages: service + city combinations
-  const localPages: MetadataRoute.Sitemap = []
-  for (const service of SERVICES) {
-    for (const city of CITIES) {
-      localPages.push({
-        url: `${baseUrl}/${service.slug}-${city.slug}`,
-        lastModified: new Date(),
-        changeFrequency: 'monthly',
+    // Hierarchical service-areas pages: /service-areas/[state] and /service-areas/[state]/[city]
+    const statesWithCounts = getStatesWithCounts()
+    const serviceAreaPages: MetadataRoute.Sitemap = []
+    for (const state of statesWithCounts) {
+      serviceAreaPages.push({
+        url: `${baseUrl}/service-areas/${state.slug}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
         priority: 0.8,
       })
+      for (const city of state.cities) {
+        serviceAreaPages.push({
+          url: `${baseUrl}/service-areas/${state.slug}/${city.slug}`,
+          lastModified: now,
+          changeFrequency: 'monthly',
+          priority: 0.7,
+        })
+      }
     }
+
+    // Blog pages
+    const blogPosts = getAllPosts()
+    const blogPages: MetadataRoute.Sitemap = [
+      { url: `${baseUrl}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+      ...blogPosts.map(post => ({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: new Date(post.updated || post.date),
+        changeFrequency: 'monthly' as const,
+        priority: 0.7,
+      })),
+    ]
+
+    return [...corePages, ...serviceAreaPages, ...blogPages]
   }
 
-  // Blog pages
-  const blogPosts = getAllPosts()
-  const blogIndex: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-  ]
-  const blogPostPages: MetadataRoute.Sitemap = blogPosts.map(post => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.updated || post.date),
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }))
+  // Chunks 1..N: pSEO pages for one service × all cities
+  const serviceIndex = id - 1
+  const service = SERVICES[serviceIndex]
+  if (!service) return []
 
-  return [...corePages, ...blogIndex, ...blogPostPages, ...localPages]
+  const cities = getAllCities()
+  return cities.map(city => ({
+    url: `${baseUrl}/${service.slug}-${city.slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.8,
+  }))
 }
