@@ -24,7 +24,7 @@ function OrdersContent() {
 
   const loadOrders = async (showSpinner = false) => {
     if (showSpinner) setLoading(true)
-    setError('')
+    if (showSpinner) setError('')
     const token = getToken()
     if (!token) return
     try {
