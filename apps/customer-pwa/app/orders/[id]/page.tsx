@@ -166,9 +166,13 @@ export default function OrderDetailPage() {
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <h2 className="font-bold text-gray-900 mb-3">Your Driver</h2>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-lg">
-                {order.driver.name?.charAt(0) || 'D'}
-              </div>
+              {order.driver.selfie_url ? (
+                <img src={order.driver.selfie_url} alt={order.driver.name || 'Driver'} className="w-12 h-12 rounded-full object-cover" />
+              ) : (
+                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-lg">
+                  {order.driver.name?.charAt(0) || 'D'}
+                </div>
+              )}
               <div>
                 <p className="font-medium">{order.driver.name || 'Driver'}</p>
                 {order.driver.phone && (

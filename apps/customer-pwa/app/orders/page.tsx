@@ -17,12 +17,14 @@ function OrdersContent() {
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace('/auth'); return }
-    loadOrders()
+    loadOrders(true)
+    const interval = setInterval(() => loadOrders(false), 20000)
+    return () => clearInterval(interval)
   }, [tab, router])
 
-  const loadOrders = async () => {
-    setLoading(true)
-    setError('')
+  const loadOrders = async (showSpinner = false) => {
+    if (showSpinner) setLoading(true)
+    if (showSpinner) setError('')
     const token = getToken()
     if (!token) return
     try {
@@ -38,7 +40,7 @@ function OrdersContent() {
       console.error('Failed to load orders:', e)
       setError('Failed to connect to server')
     } finally {
-      setLoading(false)
+      if (showSpinner) setLoading(false)
     }
   }
 

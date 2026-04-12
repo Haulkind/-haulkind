@@ -78,14 +78,18 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
           </span>
         </div>
       </div>
-      {order.driver && (
-        <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
-          <span className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xs font-bold">
-            {order.driver.name?.charAt(0) || 'D'}
-          </span>
-          <span>Driver: {order.driver.name}</span>
-        </div>
-      )}
+        {order.driver && (
+          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
+            {order.driver.selfie_url ? (
+              <img src={order.driver.selfie_url} alt={order.driver.name || 'Driver'} className="w-6 h-6 rounded-full object-cover" />
+            ) : (
+              <span className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-xs font-bold">
+                {order.driver.name?.charAt(0) || 'D'}
+              </span>
+            )}
+            <span>Driver: {order.driver.name}</span>
+          </div>
+        )}
     </button>
   )
 }
