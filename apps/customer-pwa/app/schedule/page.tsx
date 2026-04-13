@@ -25,6 +25,29 @@ const VOLUME_TIERS = [
   { id: 'FULL', label: 'Full Truck', desc: 'Maximum capacity (16+ items)', price: 599 },
 ]
 
+// Junk Removal / Donation Pickup item-based calculator (matches website exactly)
+const JUNK_PRICED_ITEMS = [
+  { id: 'sofa', name: 'Sofa / Couch', icon: '\ud83d\udecb\ufe0f', price: 89 },
+  { id: 'sofa_set_2', name: 'Sofa Set (2-Piece)', icon: '\ud83d\udecb\ufe0f', price: 170 },
+  { id: 'sofa_set_3', name: 'Sofa Set (3-Piece)', icon: '\ud83d\udecb\ufe0f', price: 190 },
+  { id: 'mattress', name: 'Mattress', icon: '\ud83d\udecf\ufe0f', price: 75 },
+  { id: 'table', name: 'Table', icon: '\ud83e\ude91', price: 45 },
+  { id: 'chair', name: 'Chair', icon: '\ud83d\udcba', price: 25 },
+  { id: 'dresser', name: 'Dresser / Cabinet', icon: '\ud83d\uddc4\ufe0f', price: 65 },
+  { id: 'refrigerator', name: 'Refrigerator', icon: '\ud83e\uddca', price: 129 },
+  { id: 'washer', name: 'Washer / Dryer', icon: '\ud83e\uddf2', price: 99 },
+  { id: 'stove', name: 'Stove / Oven', icon: '\ud83c\udf73', price: 89 },
+  { id: 'tv', name: 'TV', icon: '\ud83d\udcfa', price: 45 },
+  { id: 'computer', name: 'Computer / Monitor', icon: '\ud83d\udda5\ufe0f', price: 35 },
+  { id: 'garage_small', name: 'Garage Cleanout (Small)', icon: '\ud83c\udfe0', price: 399 },
+  { id: 'garage_medium', name: 'Garage Cleanout (Medium)', icon: '\ud83c\udfe1', price: 499 },
+  { id: 'garage_large', name: 'Garage Cleanout (Large)', icon: '\ud83c\udfe0', price: 699 },
+  { id: 'yard_partial', name: 'Yard Debris (Partial)', icon: '\ud83c\udf3f', price: 299 },
+  { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '\ud83c\udf33', price: 899 },
+]
+const JUNK_MINIMUM_VISIT_FEE = 99
+const JUNK_MULTI_ITEM_DISCOUNT_PERCENT = 5
+
 const MATTRESS_SERVICES = [
   { id: 'swap-twin-full', label: 'Mattress Swap — Twin/Full', price: 99, desc: 'Remove old + set up new mattress (Twin or Full size)' },
   { id: 'swap-queen', label: 'Mattress Swap — Queen', price: 119, desc: 'Remove old + set up new mattress (Queen size)' },
@@ -138,6 +161,26 @@ function SchedulePageInner() {
   const [mattressQty, setMattressQty] = useState(1)
   const [assemblyItems, setAssemblyItems] = useState(1)
   const [pickupType, setPickupType] = useState<'IN_HOME' | 'CURBSIDE'>('IN_HOME')
+  // Junk Removal / Donation Pickup item calculator state
+  const [junkItemQuantities, setJunkItemQuantities] = useState<Record<string, number>>({})
+  const setJunkQty = (itemId: string, qty: number) => {
+    setJunkItemQuantities(prev => {
+      const next = { ...prev }
+      if (qty <= 0) { delete next[itemId] } else { next[itemId] = qty }
+      return next
+    })
+  }
+  const junkTotalItemCount = Object.values(junkItemQuantities).reduce((sum, qty) => sum + qty, 0)
+  const junkSubtotal = Object.entries(junkItemQuantities).reduce((sum, [id, qty]) => {
+    const item = JUNK_PRICED_ITEMS.find(i => i.id === id)
+    return sum + (item?.price || 0) * qty
+  }, 0)
+  const junkDiscountItems = Math.max(0, junkTotalItemCount - 1)
+  const junkDiscountPercent = junkDiscountItems * JUNK_MULTI_ITEM_DISCOUNT_PERCENT
+  const junkDiscountAmount = Math.round(junkSubtotal * (junkDiscountPercent / 100) * 100) / 100
+  const junkRawTotal = Math.round((junkSubtotal - junkDiscountAmount) * 100) / 100
+  const junkDisplayPrice = Math.max(junkRawTotal, junkTotalItemCount > 0 ? JUNK_MINIMUM_VISIT_FEE : 0)
+
   // Mattress Swap state
   const [mattressQuantities, setMattressQuantities] = useState<Record<string, number>>({})
   const [selectedMattressAddons, setSelectedMattressAddons] = useState<string[]>([])
@@ -294,6 +337,12 @@ function SchedulePageInner() {
     setLoading(true)
     setError('')
     try {
+      // Calculate local totals for junk removal / donation pickup
+      if (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') {
+        setQuoteTotal(junkDisplayPrice)
+        setStep('summary')
+        return
+      }
       // Calculate local totals for mattress swap and assembly
       if (serviceType === 'MATTRESS_SWAP') {
         setMattressQty(totalMattresses)
@@ -341,12 +390,14 @@ function SchedulePageInner() {
         pickupLng: lng,
         pickupAddress: fullAddress,
         scheduledFor,
-        volumeTier: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? volumeTier : undefined,
+        volumeTier: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') ? 'CUSTOM_ITEMS' : undefined,
         helperCount: serviceType === 'LABOR_ONLY' ? helperCount : undefined,
         estimatedHours: serviceType === 'LABOR_ONLY' ? estimatedHours : undefined,
         mattressQty: serviceType === 'MATTRESS_SWAP' ? totalMattresses : undefined,
         assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItemCount : undefined,
-        customerNotes: notes,
+        customerNotes: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP')
+          ? [notes, `Items: ${Object.entries(junkItemQuantities).map(([id, qty]) => { const item = JUNK_PRICED_ITEMS.find(i => i.id === id); return item ? `${item.name} x${qty} ($${item.price * qty})` : id }).join(', ')}${junkDiscountPercent > 0 ? ` | ${junkDiscountPercent}% discount: -$${junkDiscountAmount.toFixed(2)}` : ''} | Total: $${junkDisplayPrice.toFixed(2)}`].filter(Boolean).join(' | ')
+          : notes,
         customerName,
         customerPhone,
         customerEmail,
@@ -560,34 +611,71 @@ function SchedulePageInner() {
         {/* Step: Details */}
         {step === 'details' && (
           <div className="space-y-4">
-            {/* ─── JUNK REMOVAL / DONATION PICKUP ─── */}
+            {/* ─── JUNK REMOVAL / DONATION PICKUP — Item Calculator ─── */}
             {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') && (
               <div className="space-y-4">
-                <h2 className="text-lg font-bold text-gray-900">Select Volume</h2>
-                <p className="text-sm text-gray-500">How much junk do you need removed?</p>
-                <div className="space-y-2">
-                  {VOLUME_TIERS.map(v => (
-                    <button
-                      key={v.id}
-                      onClick={() => setVolumeTier(v.id)}
-                      className={`w-full p-4 rounded-xl border-2 text-left transition ${
-                        volumeTier === v.id
-                          ? 'border-primary-600 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-bold">{v.label}</div>
-                          <div className="text-sm text-gray-500">{v.desc}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xl font-bold text-primary-600">${v.price}</div>
-                          <div className="text-xs text-green-600 font-medium">Disposal included</div>
+                <h2 className="text-lg font-bold text-gray-900">Select Your Items</h2>
+                <p className="text-sm text-gray-500">Choose items and quantities below. Prices include disposal.</p>
+
+                {/* Multi-item discount banner */}
+                {junkTotalItemCount >= 1 && junkTotalItemCount < 2 && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                    <p className="text-xs text-green-800 font-medium">
+                      Add another item and save 5%! Discount increases with each additional item.
+                    </p>
+                  </div>
+                )}
+                {junkDiscountPercent > 0 && (
+                  <div className="bg-green-50 border border-green-300 rounded-xl p-3 flex items-center gap-2">
+                    <span className="text-xl">&#127881;</span>
+                    <div>
+                      <p className="font-semibold text-green-800 text-sm">{junkDiscountPercent}% multi-item discount applied!</p>
+                      <p className="text-xs text-green-700">You&apos;re saving ${junkDiscountAmount.toFixed(2)} on {junkTotalItemCount} items.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Items grid */}
+                <div className="grid grid-cols-3 gap-2">
+                  {JUNK_PRICED_ITEMS.map(item => {
+                    const qty = junkItemQuantities[item.id] || 0
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-xl border-2 p-2 text-center transition ${
+                          qty > 0
+                            ? 'border-teal-500 bg-teal-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="text-2xl mb-1">{item.icon}</div>
+                        <p className="text-xs font-semibold text-gray-800 leading-tight">{item.name}</p>
+                        <p className="text-xs font-bold text-teal-600">${item.price}</p>
+                        <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setJunkQty(item.id, qty - 1)}
+                            disabled={qty === 0}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                              qty === 0
+                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
+                            }`}
+                          >
+                            &#8722;
+                          </button>
+                          <span className="w-5 text-center text-sm font-bold text-gray-800">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => setJunkQty(item.id, qty + 1)}
+                            className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs font-bold hover:bg-teal-600 transition"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
-                    </button>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* In-Home vs Curbside */}
@@ -603,7 +691,7 @@ function SchedulePageInner() {
                       }`}
                     >
                       <div className="font-semibold text-sm">In-Home Pickup</div>
-                      <p className="text-xs text-gray-500 mt-0.5">We come inside & carry items out</p>
+                      <p className="text-xs text-gray-500 mt-0.5">We come inside &amp; carry items out</p>
                     </button>
                     <button
                       onClick={() => setPickupType('CURBSIDE')}
@@ -613,15 +701,35 @@ function SchedulePageInner() {
                           : 'border-gray-200 hover:border-green-300'
                       }`}
                     >
-                      <div className="font-semibold text-sm">Curbside Pickup <span className="text-green-600">— Save $5</span></div>
+                      <div className="font-semibold text-sm">Curbside Pickup <span className="text-green-600">&#8212; Save $5</span></div>
                       <p className="text-xs text-gray-500 mt-0.5">Items already outside at the curb</p>
                     </button>
                   </div>
                 </div>
 
+                {/* Total bar */}
+                {junkTotalItemCount > 0 && (
+                  <div className="bg-white rounded-xl p-3 border shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-gray-500">{junkTotalItemCount} item{junkTotalItemCount !== 1 ? 's' : ''} selected</p>
+                        {junkDiscountPercent > 0 ? (
+                          <>
+                            <p className="text-sm text-gray-400 line-through">${junkSubtotal.toFixed(2)}</p>
+                            <p className="text-xl font-bold text-gray-900">${junkDisplayPrice.toFixed(2)}</p>
+                          </>
+                        ) : (
+                          <p className="text-xl font-bold text-gray-900">${junkDisplayPrice.toFixed(2)}</p>
+                        )}
+                      </div>
+                      <p className="text-xs text-teal-600 font-medium">$99 min visit</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-3 bg-green-50 rounded-lg">
                   <p className="text-xs text-green-900">
-                    <strong>All-in pricing.</strong> Disposal fee included in every price above — paid directly to your driver. No per-mile charges. No surprises.
+                    <strong>All-in pricing.</strong> Disposal fee included in every price above. No per-mile charges. No surprises.
                   </p>
                 </div>
               </div>
@@ -1017,7 +1125,7 @@ function SchedulePageInner() {
               </button>
               <button
                 onClick={() => setStep('address')}
-                disabled={(serviceType === 'MATTRESS_SWAP' && totalMattresses === 0) || (serviceType === 'FURNITURE_ASSEMBLY' && assemblyItemCount === 0)}
+                disabled={(serviceType === 'HAUL_AWAY' && junkTotalItemCount === 0) || (serviceType === 'DONATION_PICKUP' && junkTotalItemCount === 0) || (serviceType === 'MATTRESS_SWAP' && totalMattresses === 0) || (serviceType === 'FURNITURE_ASSEMBLY' && assemblyItemCount === 0)}
                 className="flex-1 py-3 bg-primary-600 text-white rounded-lg font-medium disabled:opacity-50"
               >
                 Continue
@@ -1050,10 +1158,22 @@ function SchedulePageInner() {
                 </div>
                 {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') && (
                   <>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Volume</span>
-                      <span className="font-medium">{VOLUME_TIERS.find(v => v.id === volumeTier)?.label}</span>
-                    </div>
+                    {Object.entries(junkItemQuantities).map(([id, qty]) => {
+                      const item = JUNK_PRICED_ITEMS.find(i => i.id === id)
+                      if (!item) return null
+                      return (
+                        <div key={id} className="flex justify-between">
+                          <span className="text-gray-500">{item.name}{qty > 1 ? ` x${qty}` : ''}</span>
+                          <span className="font-medium">${item.price * qty}</span>
+                        </div>
+                      )
+                    })}
+                    {junkDiscountPercent > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>{junkDiscountPercent}% multi-item discount</span>
+                        <span className="font-medium">-${junkDiscountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-500">Pickup Type</span>
                       <span className="font-medium">{pickupType === 'CURBSIDE' ? 'Curbside (-$5)' : 'In-Home'}</span>
