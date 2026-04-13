@@ -78,9 +78,13 @@ export default function HaulAwayLocationPage() {
       try {
         const itemDetails = JSON.parse(storedItemDetails)
         const price = parseFloat(storedPrice)
+        const discountPercent = parseFloat(sessionStorage.getItem('hk_discount_percent') || '0')
+        const discountAmount = parseFloat(sessionStorage.getItem('hk_discount_amount') || '0')
         updateData({
           selectedItemDetails: itemDetails,
           calculatorPrice: price,
+          discountPercent,
+          discountAmount,
         })
       } catch (e) {
         console.warn('[LOCATION] Failed to parse calculator items:', e)
@@ -274,12 +278,16 @@ export default function HaulAwayLocationPage() {
       // Read calculator items from sessionStorage (stored by PriceCalculator)
       let selectedItemDetails = data.selectedItemDetails || []
       let calculatorPrice = data.calculatorPrice
+      let discountPercent = data.discountPercent || 0
+      let discountAmount = data.discountAmount || 0
       const storedItemDetails = sessionStorage.getItem('hk_item_details')
       const storedPrice = sessionStorage.getItem('hk_estimated_price')
       if (storedItemDetails && storedPrice) {
         try {
           selectedItemDetails = JSON.parse(storedItemDetails)
           calculatorPrice = parseFloat(storedPrice)
+          discountPercent = parseFloat(sessionStorage.getItem('hk_discount_percent') || '0')
+          discountAmount = parseFloat(sessionStorage.getItem('hk_discount_amount') || '0')
         } catch (e) {
           console.warn('[LOCATION] Failed to parse calculator items:', e)
         }
@@ -306,6 +314,8 @@ export default function HaulAwayLocationPage() {
         // Calculator items
         selectedItemDetails,
         calculatorPrice,
+        discountPercent,
+        discountAmount,
       })
 
       router.push('/quote/haul-away/summary')

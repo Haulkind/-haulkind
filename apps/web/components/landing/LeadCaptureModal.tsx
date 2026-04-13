@@ -6,7 +6,9 @@ interface LeadCaptureModalProps {
   selectedItems: string[]
   estimatedPrice: number
   serviceType: string
-  itemDetails: Array<{ id: string; name: string; price: number }>
+  itemDetails: Array<{ id: string; name: string; price: number; quantity?: number }>
+  discountPercent?: number
+  discountAmount?: number
   onClose: () => void
   onSuccess: () => void
 }
@@ -28,6 +30,8 @@ export default function LeadCaptureModal({
   estimatedPrice,
   serviceType,
   itemDetails,
+  discountPercent = 0,
+  discountAmount = 0,
   onClose,
   onSuccess,
 }: LeadCaptureModalProps) {
@@ -106,9 +110,14 @@ export default function LeadCaptureModal({
           </div>
           {/* Price summary */}
           <div className="mt-3 bg-teal-700/50 rounded-lg px-4 py-2">
-            <p className="text-xl font-bold">${estimatedPrice}</p>
+            <p className="text-xl font-bold">${estimatedPrice.toFixed(2)}</p>
+            {discountPercent > 0 && (
+              <p className="text-xs text-green-300 font-medium">
+                {discountPercent}% multi-item discount applied (-${discountAmount.toFixed(2)})
+              </p>
+            )}
             <p className="text-xs text-teal-200">
-              {itemDetails.length} item{itemDetails.length !== 1 ? 's' : ''} selected
+              {itemDetails.reduce((sum, i) => sum + (i.quantity || 1), 0)} item{itemDetails.reduce((sum, i) => sum + (i.quantity || 1), 0) !== 1 ? 's' : ''} selected
             </p>
           </div>
         </div>
