@@ -34,8 +34,26 @@ export default function HaulAwaySummaryPage() {
     return () => window.removeEventListener('pageshow', handlePageShow)
   }, [])
 
+  // Check if we have calculator items (QuoteKind flow) vs old volume flow
+  const hasCalculatorItems = data.selectedItemDetails && data.selectedItemDetails.length > 0 && data.calculatorPrice != null
+
   useEffect(() => {
-    fetchQuote()
+    if (hasCalculatorItems) {
+      // Use calculator pricing directly — no need to call getQuote API
+      const platformFee = Math.round(data.calculatorPrice! * 0.05 * 100) / 100
+      const total = Math.round((data.calculatorPrice! + platformFee) * 100) / 100
+      const breakdown = data.selectedItemDetails.map(item => ({
+        label: item.name,
+        amount: item.price,
+      }))
+      breakdown.push({ label: 'Platform Fee', amount: platformFee })
+      setQuote({ breakdown, total })
+      updateData({ quoteData: { breakdown, total } })
+      setLoading(false)
+    } else {
+      // Fallback: old volume-based pricing
+      fetchQuote()
+    }
   }, [])
 
   const fetchQuote = async () => {
@@ -114,6 +132,11 @@ export default function HaulAwaySummaryPage() {
     }, 20000)
 
     try {
+      // Build description from calculator items if available
+      const itemDescription = hasCalculatorItems
+        ? data.selectedItemDetails.map(i => i.name).join(', ')
+        : undefined
+
       const job = await createJob({
         serviceType: 'HAUL_AWAY',
         serviceAreaId: data.serviceAreaId!,
@@ -121,9 +144,11 @@ export default function HaulAwaySummaryPage() {
         pickupLng: data.pickupLng!,
         pickupAddress: data.pickupAddress,
         scheduledFor: data.scheduledFor,
-        volumeTier: data.volumeTier,
+        volumeTier: hasCalculatorItems ? undefined : data.volumeTier,
         addons: data.addons,
-        customerNotes: customerNotes,
+        customerNotes: itemDescription
+          ? `Items: ${itemDescription}${customerNotes ? '\n' + customerNotes : ''}`
+          : customerNotes,
         photoUrls: data.photoUrls,
         customerName: data.customerName,
         customerPhone: data.customerPhone,
@@ -210,15 +235,27 @@ export default function HaulAwaySummaryPage() {
                 <span>Time Window:</span>
                 <span className="font-medium">{getTimeWindowLabel()}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Volume:</span>
-                <span className="font-medium">{getVolumeLabel()}</span>
-              </div>
-              {data.addons.length > 0 && (
+              {/* Show selected items for calculator flow, volume for old flow */}
+              {hasCalculatorItems ? (
                 <div className="flex justify-between">
-                  <span>Add-ons:</span>
-                  <span className="font-medium">{data.addons.join(', ')}</span>
+                  <span>Items:</span>
+                  <span className="font-medium text-right max-w-[60%]">
+                    {data.selectedItemDetails.map(i => i.name).join(', ')}
+                  </span>
                 </div>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span>Volume:</span>
+                    <span className="font-medium">{getVolumeLabel()}</span>
+                  </div>
+                  {data.addons.length > 0 && (
+                    <div className="flex justify-between">
+                      <span>Add-ons:</span>
+                      <span className="font-medium">{data.addons.join(', ')}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

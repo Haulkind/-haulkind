@@ -97,6 +97,12 @@ export default function PriceCalculator() {
     // Store selections for the scheduling flow
     sessionStorage.setItem('hk_selected_items', JSON.stringify(selectedItems))
     sessionStorage.setItem('hk_estimated_price', String(displayPrice))
+    // Store full item details so summary page can show names + prices
+    const itemDetails = selectedItems.map(id => {
+      const item = PRICED_ITEMS.find(i => i.id === id)
+      return { id, name: item?.name || id, price: item?.price || 0 }
+    })
+    sessionStorage.setItem('hk_item_details', JSON.stringify(itemDetails))
     // Redirect to the scheduling/location page
     router.push('/quote/haul-away/location')
   }
