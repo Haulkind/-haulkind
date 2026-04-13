@@ -40,12 +40,23 @@ export default function HaulAwaySummaryPage() {
   useEffect(() => {
     if (hasCalculatorItems) {
       // Use calculator pricing directly — no need to call getQuote API
-      const platformFee = Math.round(data.calculatorPrice! * 0.05 * 100) / 100
-      const total = Math.round((data.calculatorPrice! + platformFee) * 100) / 100
-      const breakdown = data.selectedItemDetails.map(item => ({
-        label: item.name,
-        amount: item.price,
-      }))
+      const breakdown: Array<{ label: string; amount: number }> = []
+      data.selectedItemDetails.forEach(item => {
+        const qty = item.quantity || 1
+        if (qty > 1) {
+          breakdown.push({ label: `${item.name} x${qty}`, amount: item.price * qty })
+        } else {
+          breakdown.push({ label: item.name, amount: item.price })
+        }
+      })
+      // Add discount line if applicable
+      if (data.discountAmount > 0) {
+        breakdown.push({ label: `Multi-item discount (${data.discountPercent}%)`, amount: -data.discountAmount })
+      }
+      const subtotalBeforeDiscount = data.selectedItemDetails.reduce((sum, i) => sum + i.price * (i.quantity || 1), 0)
+      const afterDiscount = subtotalBeforeDiscount - data.discountAmount
+      const platformFee = Math.round(afterDiscount * 0.05 * 100) / 100
+      const total = Math.round((afterDiscount + platformFee) * 100) / 100
       breakdown.push({ label: 'Platform Fee', amount: platformFee })
       setQuote({ breakdown, total })
       updateData({ quoteData: { breakdown, total } })
@@ -134,7 +145,10 @@ export default function HaulAwaySummaryPage() {
     try {
       // Build description from calculator items if available
       const itemDescription = hasCalculatorItems
-        ? data.selectedItemDetails.map(i => i.name).join(', ')
+        ? data.selectedItemDetails.map(i => {
+            const qty = i.quantity || 1
+            return qty > 1 ? `${i.name} x${qty}` : i.name
+          }).join(', ')
         : undefined
 
       const job = await createJob({
@@ -240,7 +254,10 @@ export default function HaulAwaySummaryPage() {
                 <div className="flex justify-between">
                   <span>Items:</span>
                   <span className="font-medium text-right max-w-[60%]">
-                    {data.selectedItemDetails.map(i => i.name).join(', ')}
+                    {data.selectedItemDetails.map(i => {
+                      const qty = i.quantity || 1
+                      return qty > 1 ? `${i.name} x${qty}` : i.name
+                    }).join(', ')}
                   </span>
                 </div>
               ) : (

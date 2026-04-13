@@ -7,6 +7,8 @@ import LeadCaptureModal from './LeadCaptureModal'
 // Pricing table for Junk Removal & Donation Pickup
 const PRICED_ITEMS = [
   { id: 'sofa', name: 'Sofa / Couch', icon: '🛋️', price: 89 },
+  { id: 'sofa_set_2', name: 'Sofa Set (2-Piece)', icon: '🛋️', price: 170 },
+  { id: 'sofa_set_3', name: 'Sofa Set (3-Piece)', icon: '🛋️', price: 190 },
   { id: 'mattress', name: 'Mattress', icon: '🛏️', price: 75 },
   { id: 'table', name: 'Table', icon: '🪑', price: 45 },
   { id: 'chair', name: 'Chair', icon: '💺', price: 25 },
@@ -24,36 +26,59 @@ const PRICED_ITEMS = [
 ]
 
 const MINIMUM_VISIT_FEE = 99
+const MULTI_ITEM_DISCOUNT_PERCENT = 5
 
 export default function PriceCalculator() {
   const router = useRouter()
   const [serviceType, setServiceType] = useState<'junk-removal' | 'furniture-assembly' | 'mattress-swap' | 'labor' | 'donation'>('junk-removal')
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  // Quantity map: itemId -> quantity (0 means not selected)
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [showModal, setShowModal] = useState(false)
 
-  const toggleItem = useCallback((itemId: string) => {
-    setSelectedItems(prev => {
-      const next = prev.includes(itemId)
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
+  const setQuantity = useCallback((itemId: string, qty: number) => {
+    setItemQuantities(prev => {
+      const next = { ...prev }
+      if (qty <= 0) {
+        delete next[itemId]
+      } else {
+        next[itemId] = qty
+      }
       // GA4 event
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'item_selected', {
           item_id: itemId,
           item_name: PRICED_ITEMS.find(i => i.id === itemId)?.name || itemId,
-          selected: !prev.includes(itemId),
+          quantity: qty,
         })
       }
       return next
     })
   }, [])
 
-  // Calculate total price with $99 minimum
-  const rawTotal = selectedItems.reduce((sum, id) => {
+  // Count total number of individual items (sum of all quantities)
+  const totalItemCount = Object.values(itemQuantities).reduce((sum, qty) => sum + qty, 0)
+
+  // Calculate subtotal (before discount)
+  const subtotal = Object.entries(itemQuantities).reduce((sum, [id, qty]) => {
     const item = PRICED_ITEMS.find(i => i.id === id)
-    return sum + (item?.price || 0)
+    return sum + (item?.price || 0) * qty
   }, 0)
-  const displayPrice = Math.max(rawTotal, selectedItems.length > 0 ? MINIMUM_VISIT_FEE : 0)
+
+  // Calculate discount: 5% off for each additional item beyond the first
+  const discountItems = Math.max(0, totalItemCount - 1)
+  const discountPercent = discountItems * MULTI_ITEM_DISCOUNT_PERCENT
+  const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100
+  const rawTotal = Math.round((subtotal - discountAmount) * 100) / 100
+
+  const displayPrice = Math.max(rawTotal, totalItemCount > 0 ? MINIMUM_VISIT_FEE : 0)
+
+  // Build selected items list (for storage and display)
+  const selectedItemsList = Object.entries(itemQuantities)
+    .filter(([, qty]) => qty > 0)
+    .map(([id, qty]) => {
+      const item = PRICED_ITEMS.find(i => i.id === id)
+      return { id, name: item?.name || id, price: item?.price || 0, quantity: qty }
+    })
 
   const handleGetQuote = () => {
     // Fire Google Ads conversion event
@@ -67,7 +92,7 @@ export default function PriceCalculator() {
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'lead_capture_start', {
           service_type: serviceType,
-          items_count: selectedItems.length,
+          items_count: totalItemCount,
           estimated_price: displayPrice,
         })
       }
@@ -90,19 +115,27 @@ export default function PriceCalculator() {
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'lead_capture_success', {
         service_type: serviceType,
-        items_count: selectedItems.length,
+        items_count: totalItemCount,
         estimated_price: displayPrice,
       })
     }
-    // Store selections for the scheduling flow
-    sessionStorage.setItem('hk_selected_items', JSON.stringify(selectedItems))
+    // Store selections for the scheduling flow (backward compat: flat list of item IDs)
+    const flatSelectedIds = selectedItemsList.flatMap(item =>
+      Array(item.quantity).fill(item.id)
+    )
+    sessionStorage.setItem('hk_selected_items', JSON.stringify(flatSelectedIds))
     sessionStorage.setItem('hk_estimated_price', String(displayPrice))
-    // Store full item details so summary page can show names + prices
-    const itemDetails = selectedItems.map(id => {
-      const item = PRICED_ITEMS.find(i => i.id === id)
-      return { id, name: item?.name || id, price: item?.price || 0 }
-    })
+    // Store full item details with quantities so summary page can show names + prices + qty
+    const itemDetails = selectedItemsList.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    }))
     sessionStorage.setItem('hk_item_details', JSON.stringify(itemDetails))
+    // Store discount info
+    sessionStorage.setItem('hk_discount_percent', String(discountPercent))
+    sessionStorage.setItem('hk_discount_amount', String(discountAmount))
     // Redirect to the scheduling/location page
     router.push('/quote/haul-away/location')
   }
@@ -203,54 +236,106 @@ export default function PriceCalculator() {
             </div>
           </div>
 
-          {/* Items Selection with prices - only for Junk Removal & Donation */}
+          {/* Multi-item discount banner */}
+          {isJunkOrDonation && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+              <span className="text-lg">🏷️</span>
+              <p className="text-sm text-green-800 font-medium">
+                <strong>Multi-item discount:</strong> Save 5% for each additional item! The more you remove, the more you save.
+              </p>
+            </div>
+          )}
+
+          {/* Items Selection with prices and quantity - only for Junk Removal & Donation */}
           {isJunkOrDonation && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Items to Remove
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {PRICED_ITEMS.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleItem(item.id)}
-                    className={`p-3 rounded-lg border-2 text-center transition relative ${
-                      selectedItems.includes(item.id)
-                        ? 'border-teal-500 bg-teal-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {selectedItems.includes(item.id) && (
-                      <span className="absolute top-1 right-1 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </span>
-                    )}
-                    <div className="text-2xl mb-1">{item.icon}</div>
-                    <div className="text-xs font-medium text-gray-700">{item.name}</div>
-                    <div className="text-xs font-bold text-teal-600 mt-1">${item.price}</div>
-                  </button>
-                ))}
+                {PRICED_ITEMS.map((item) => {
+                  const qty = itemQuantities[item.id] || 0
+                  const isSelected = qty > 0
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-lg border-2 text-center transition relative ${
+                        isSelected
+                          ? 'border-teal-500 bg-teal-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="absolute top-1 right-1 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </span>
+                      )}
+                      <div className="text-2xl mb-1">{item.icon}</div>
+                      <div className="text-xs font-medium text-gray-700">{item.name}</div>
+                      <div className="text-xs font-bold text-teal-600 mt-1">${item.price}</div>
+
+                      {/* Quantity controls */}
+                      <div className="flex items-center justify-center gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setQuantity(item.id, qty - 1)}
+                          disabled={qty === 0}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition ${
+                            qty === 0
+                              ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                              : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
+                          }`}
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-sm font-bold text-gray-800">{qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => setQuantity(item.id, qty + 1)}
+                          className="w-7 h-7 rounded-full bg-teal-500 text-white flex items-center justify-center text-sm font-bold hover:bg-teal-600 transition"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
 
           {/* Live Price Display - only for Junk Removal & Donation */}
-          {isJunkOrDonation && selectedItems.length > 0 && (
+          {isJunkOrDonation && totalItemCount > 0 && (
             <div className="mb-4 p-4 bg-teal-50 border border-teal-200 rounded-lg text-center">
-              <p className="text-lg font-bold text-teal-800">
-                Estimated: ${displayPrice} <span className="text-sm font-normal text-teal-600">· $99 Minimum Visit</span>
-              </p>
+              {discountPercent > 0 ? (
+                <>
+                  <p className="text-sm text-gray-500 line-through mb-1">
+                    Subtotal: ${subtotal.toFixed(2)}
+                  </p>
+                  <p className="text-sm font-semibold text-green-600 mb-1">
+                    🏷️ {discountPercent}% multi-item discount: -${discountAmount.toFixed(2)}
+                  </p>
+                  <p className="text-lg font-bold text-teal-800">
+                    Total: ${displayPrice.toFixed(2)} <span className="text-sm font-normal text-teal-600">· $99 Minimum Visit</span>
+                  </p>
+                </>
+              ) : (
+                <p className="text-lg font-bold text-teal-800">
+                  Estimated: ${displayPrice.toFixed(2)} <span className="text-sm font-normal text-teal-600">· $99 Minimum Visit</span>
+                </p>
+              )}
               <p className="text-xs text-teal-600 mt-1">
-                {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected — disposal included, no hidden fees
+                {totalItemCount} item{totalItemCount !== 1 ? 's' : ''} selected — disposal included, no hidden fees
+                {totalItemCount === 1 && ' · Add more items to save 5% each!'}
               </p>
             </div>
           )}
 
           {/* CTA */}
           <div className="text-center pt-4 border-t">
-            {!isJunkOrDonation || selectedItems.length > 0 ? (
+            {!isJunkOrDonation || totalItemCount > 0 ? (
               <button
                 onClick={handleGetQuote}
                 className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
@@ -270,13 +355,17 @@ export default function PriceCalculator() {
     {/* Lead Capture Modal */}
     {showModal && (
       <LeadCaptureModal
-        selectedItems={selectedItems}
+        selectedItems={selectedItemsList.flatMap(item => Array(item.quantity).fill(item.id))}
         estimatedPrice={displayPrice}
         serviceType={serviceType === 'donation' ? 'DONATION_PICKUP' : 'HAUL_AWAY'}
-        itemDetails={selectedItems.map(id => {
-          const item = PRICED_ITEMS.find(i => i.id === id)
-          return { id, name: item?.name || id, price: item?.price || 0 }
-        })}
+        itemDetails={selectedItemsList.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        }))}
+        discountPercent={discountPercent}
+        discountAmount={discountAmount}
         onClose={() => setShowModal(false)}
         onSuccess={handleLeadSuccess}
       />
