@@ -65,11 +65,26 @@ export default function HaulAwayLocationPage() {
     setFormIsValid(valid)
   }, [fullName, phone, email, street, city, state, zip, serviceDate])
 
-  // TASK 2: Pre-fill ZIP from sessionStorage on mount
+  // TASK 2: Pre-fill ZIP and load calculator items from sessionStorage on mount
   useEffect(() => {
     const storedZip = sessionStorage.getItem('hk_zip')
     if (storedZip && !zip) {
       setZip(storedZip)
+    }
+    // Load calculator item details and price into QuoteContext
+    const storedItemDetails = sessionStorage.getItem('hk_item_details')
+    const storedPrice = sessionStorage.getItem('hk_estimated_price')
+    if (storedItemDetails && storedPrice) {
+      try {
+        const itemDetails = JSON.parse(storedItemDetails)
+        const price = parseFloat(storedPrice)
+        updateData({
+          selectedItemDetails: itemDetails,
+          calculatorPrice: price,
+        })
+      } catch (e) {
+        console.warn('[LOCATION] Failed to parse calculator items:', e)
+      }
     }
   }, [])
 
@@ -256,6 +271,20 @@ export default function HaulAwayLocationPage() {
       const effectiveDate = asap && !serviceDate ? new Date(Date.now() + 86400000).toISOString().split('T')[0] : serviceDate
       const preferredDateTime = `${effectiveDate}T${timeMap[timeWindow]}:00`
 
+      // Read calculator items from sessionStorage (stored by PriceCalculator)
+      let selectedItemDetails = data.selectedItemDetails || []
+      let calculatorPrice = data.calculatorPrice
+      const storedItemDetails = sessionStorage.getItem('hk_item_details')
+      const storedPrice = sessionStorage.getItem('hk_estimated_price')
+      if (storedItemDetails && storedPrice) {
+        try {
+          selectedItemDetails = JSON.parse(storedItemDetails)
+          calculatorPrice = parseFloat(storedPrice)
+        } catch (e) {
+          console.warn('[LOCATION] Failed to parse calculator items:', e)
+        }
+      }
+
       updateData({
         serviceType: 'HAUL_AWAY',
         // Customer info
@@ -274,6 +303,9 @@ export default function HaulAwayLocationPage() {
         asap,
         scheduledFor: preferredDateTime,
         preferredDateTime,
+        // Calculator items
+        selectedItemDetails,
+        calculatorPrice,
       })
 
       router.push('/quote/haul-away/summary')

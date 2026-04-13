@@ -28,6 +28,10 @@ interface QuoteData {
   addons: string[]
   photoUrls: string[]
   
+  // Calculator items (QuoteKind)
+  selectedItemDetails: Array<{ id: string; name: string; price: number }>
+  calculatorPrice: number | null
+  
   // Labor Only specific
   helperCount: number
   estimatedHours: number
@@ -64,6 +68,8 @@ const initialData: QuoteData = {
   volumeTier: '',
   addons: [],
   photoUrls: [],
+  selectedItemDetails: [],
+  calculatorPrice: null,
   helperCount: 1,
   estimatedHours: 2,
   customerNotes: '',
