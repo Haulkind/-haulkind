@@ -41,7 +41,7 @@ const JUNK_PRICED_ITEMS = [
   { id: 'computer', name: 'Computer / Monitor', icon: '\ud83d\udda5\ufe0f', price: 35 },
   { id: 'garage_small', name: 'Garage Cleanout (Small)', icon: '\ud83c\udfe0', price: 399 },
   { id: 'garage_medium', name: 'Garage Cleanout (Medium)', icon: '\ud83c\udfe1', price: 499 },
-  { id: 'garage_large', name: 'Garage Cleanout (Large)', icon: '\ud83c\udfe0', price: 699 },
+  { id: 'garage_large', name: 'Garage Cleanout (Large)', icon: '\ud83c\udfd8\ufe0f', price: 699 },
   { id: 'yard_partial', name: 'Yard Debris (Partial)', icon: '\ud83c\udf3f', price: 299 },
   { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '\ud83c\udf33', price: 899 },
 ]
