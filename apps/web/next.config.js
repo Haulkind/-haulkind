@@ -110,6 +110,9 @@ const nextConfig = {
       { source: '/drive', destination: '/become-a-driver', permanent: true },
       { source: '/jobs', destination: '/become-a-driver', permanent: true },
       { source: '/apply', destination: '/become-a-driver/apply', permanent: true },
+      // QuoteKind: redirect old volume quote pages to new calculator
+      { source: '/quote/haul-away/volume', destination: '/#calculator', permanent: true },
+      { source: '/quote/haul-away/volume/:path*', destination: '/#calculator', permanent: true },
     ]
   },
 };

@@ -1,0 +1,67 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+
+const RAILWAY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
+const TIMEOUT_MS = 15000;
+
+export async function POST(request: NextRequest) {
+  // Rate limit: 10 lead submissions per minute per IP
+  const ip = getClientIp(request.headers);
+  const rl = checkRateLimit(`leads:${ip}`, { limit: 10, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    console.log('[LEADS_PROXY] Request body:', JSON.stringify(body));
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    const response = await fetch(`${RAILWAY_BASE_URL}/api/leads`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log('[LEADS_PROXY] Railway response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[LEADS_PROXY] Railway error:', {
+        status: response.status,
+        body: errorText.substring(0, 500),
+      });
+      return NextResponse.json(
+        { error: 'Lead submission failed', details: errorText },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    console.log('[LEADS_PROXY] Railway success:', data);
+    return NextResponse.json(data);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error('[LEADS_PROXY] Timeout after', TIMEOUT_MS, 'ms');
+      return NextResponse.json(
+        { error: 'Lead submission timed out' },
+        { status: 504 }
+      );
+    }
+    console.error('[LEADS_PROXY] Error:', error.message);
+    return NextResponse.json(
+      { error: 'Lead submission failed', details: error.message },
+      { status: 500 }
+    );
+  }
+}

@@ -1,71 +1,82 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import LeadCaptureModal from './LeadCaptureModal'
 
-// Visual items for selection - NO PRICING LOGIC HERE
-// Actual pricing comes from backend via existing checkout flow
-const items = [
-  { id: 'sofa', name: 'Sofa/Couch', icon: '🛋️' },
-  { id: 'mattress', name: 'Mattress', icon: '🛏️' },
-  { id: 'table', name: 'Table', icon: '🪑' },
-  { id: 'chair', name: 'Chair', icon: '💺' },
-  { id: 'dresser', name: 'Dresser/Cabinet', icon: '🗄️' },
-  { id: 'refrigerator', name: 'Refrigerator', icon: '🧊' },
-  { id: 'washer', name: 'Washer/Dryer', icon: '🧺' },
-  { id: 'stove', name: 'Stove/Oven', icon: '🍳' },
-  { id: 'tv', name: 'TV (any size)', icon: '📺' },
-  { id: 'computer', name: 'Computer/Monitor', icon: '🖥️' },
+// Pricing table for Junk Removal & Donation Pickup
+const PRICED_ITEMS = [
+  { id: 'sofa', name: 'Sofa / Couch', icon: '🛋️', price: 89 },
+  { id: 'mattress', name: 'Mattress', icon: '🛏️', price: 75 },
+  { id: 'table', name: 'Table', icon: '🪑', price: 45 },
+  { id: 'chair', name: 'Chair', icon: '💺', price: 25 },
+  { id: 'dresser', name: 'Dresser / Cabinet', icon: '🗄️', price: 65 },
+  { id: 'refrigerator', name: 'Refrigerator', icon: '🧊', price: 129 },
+  { id: 'washer', name: 'Washer / Dryer', icon: '🧺', price: 99 },
+  { id: 'stove', name: 'Stove / Oven', icon: '🍳', price: 89 },
+  { id: 'tv', name: 'TV', icon: '📺', price: 45 },
+  { id: 'computer', name: 'Computer / Monitor', icon: '🖥️', price: 35 },
+  { id: 'garage_small', name: 'Garage Cleanout (Small)', icon: '🏠', price: 399 },
+  { id: 'garage_medium', name: 'Garage Cleanout (Medium)', icon: '🏡', price: 499 },
+  { id: 'garage_large', name: 'Garage Cleanout (Large)', icon: '🏘️', price: 699 },
+  { id: 'yard_partial', name: 'Yard Debris (Partial)', icon: '🌿', price: 299 },
+  { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '🌳', price: 899 },
 ]
 
-const loadSizes = [
-  { id: 'quarter', name: '1/4 Truck', description: '1-3 items' },
-  { id: 'half', name: '1/2 Truck', description: '4-8 items' },
-  { id: 'full', name: 'Full Truck', description: '9+ items' },
-]
+const MINIMUM_VISIT_FEE = 99
 
 export default function PriceCalculator() {
   const router = useRouter()
-  const [zipCode, setZipCode] = useState('')
-  const [zipValid, setZipValid] = useState<boolean | null>(null)
   const [serviceType, setServiceType] = useState<'junk-removal' | 'furniture-assembly' | 'mattress-swap' | 'labor' | 'donation'>('junk-removal')
-  const [loadSize, setLoadSize] = useState<string>('quarter')
   const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [showModal, setShowModal] = useState(false)
 
-  const handleZipCheck = () => {
-    // Simple validation - actual service area check happens in checkout
-    if (zipCode.length === 5) {
-      setZipValid(true)
-      sessionStorage.setItem('hk_zip', zipCode)
-    } else {
-      setZipValid(false)
-    }
-  }
-
-  const toggleItem = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
+  const toggleItem = useCallback((itemId: string) => {
+    setSelectedItems(prev => {
+      const next = prev.includes(itemId)
         ? prev.filter(id => id !== itemId)
         : [...prev, itemId]
-    )
-  }
+      // GA4 event
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'item_selected', {
+          item_id: itemId,
+          item_name: PRICED_ITEMS.find(i => i.id === itemId)?.name || itemId,
+          selected: !prev.includes(itemId),
+        })
+      }
+      return next
+    })
+  }, [])
+
+  // Calculate total price with $99 minimum
+  const rawTotal = selectedItems.reduce((sum, id) => {
+    const item = PRICED_ITEMS.find(i => i.id === id)
+    return sum + (item?.price || 0)
+  }, 0)
+  const displayPrice = Math.max(rawTotal, selectedItems.length > 0 ? MINIMUM_VISIT_FEE : 0)
 
   const handleGetQuote = () => {
     // Fire Google Ads conversion event
     if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {});
+      (window as any).gtag('event', 'ads_conversion_Solicitar_cota_o_1', {})
     }
-    // Store selections in sessionStorage for the checkout flow
-    sessionStorage.setItem('hk_zip', zipCode)
-    sessionStorage.setItem('hk_selected_items', JSON.stringify(selectedItems))
-    sessionStorage.setItem('hk_load_size', loadSize)
-    
-    // Redirect to existing checkout flow - backend handles all pricing
-    if (serviceType === 'junk-removal') {
-      router.push('/quote/haul-away/volume')
-    } else if (serviceType === 'donation') {
-      router.push('/quote/haul-away/volume')
-    } else if (serviceType === 'mattress-swap') {
+
+    // For Junk Removal & Donation: show Lead Capture Modal
+    if (serviceType === 'junk-removal' || serviceType === 'donation') {
+      // GA4: lead_capture_start
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'lead_capture_start', {
+          service_type: serviceType,
+          items_count: selectedItems.length,
+          estimated_price: displayPrice,
+        })
+      }
+      setShowModal(true)
+      return
+    }
+
+    // Other services redirect directly (unchanged behavior)
+    if (serviceType === 'mattress-swap') {
       router.push('/quote/mattress-swap')
     } else if (serviceType === 'furniture-assembly') {
       router.push('/quote/assembly')
@@ -74,68 +85,50 @@ export default function PriceCalculator() {
     }
   }
 
+  const handleLeadSuccess = () => {
+    // GA4: lead_capture_success
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'lead_capture_success', {
+        service_type: serviceType,
+        items_count: selectedItems.length,
+        estimated_price: displayPrice,
+      })
+    }
+    // Store selections for the scheduling flow
+    sessionStorage.setItem('hk_selected_items', JSON.stringify(selectedItems))
+    sessionStorage.setItem('hk_estimated_price', String(displayPrice))
+    // Redirect to the scheduling/location page
+    router.push('/quote/haul-away/location')
+  }
+
+  const isJunkOrDonation = serviceType === 'junk-removal' || serviceType === 'donation'
+
   return (
-    <section className="py-16 md:py-20 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Get Your Instant Quote
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Select items and get guaranteed pricing in 30 seconds. No hidden fees.
-          </p>
-        </div>
-
-        <div className="max-w-4xl mx-auto bg-gray-50 rounded-2xl p-6 md:p-8 shadow-lg">
-          {/* Header with price icon */}
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-            <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center">
-              <span className="text-2xl">💰</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900">Get Instant Quote</h3>
-              <p className="text-sm text-gray-500">Select your items and get transparent pricing in seconds</p>
-            </div>
+    <>
+      <section id="calculator" className="py-16 md:py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Get Your Instant Quote
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Select items and get guaranteed pricing in 30 seconds. No hidden fees.
+            </p>
           </div>
 
-          {/* ZIP Code */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Service Location
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={zipCode}
-                onChange={(e) => {
-                  setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))
-                  setZipValid(null)
-                }}
-                placeholder="Enter ZIP code (e.g., 10001)"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                maxLength={5}
-              />
-              <button
-                onClick={handleZipCheck}
-                className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition"
-              >
-                Check
-              </button>
+          <div className="max-w-4xl mx-auto bg-gray-50 rounded-2xl p-6 md:p-8 shadow-lg">
+            {/* Header with price icon */}
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+              <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">💰</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Get Instant Quote</h3>
+                <p className="text-sm text-gray-500">Select your items and get transparent pricing in seconds</p>
+              </div>
             </div>
-            {zipValid === true && (
-              <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                ZIP code saved
-              </p>
-            )}
-            {zipValid === false && (
-              <p className="text-red-600 text-sm mt-1">Please enter a valid 5-digit ZIP code</p>
-            )}
-          </div>
 
-          {/* Service Type */}
+            {/* Service Type */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Service Type
@@ -204,64 +197,59 @@ export default function PriceCalculator() {
             </div>
           </div>
 
-          {/* Load Size - only for Junk Removal */}
-          {(serviceType === 'junk-removal' || serviceType === 'donation') && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estimated Load Size
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {loadSizes.map((size) => (
-                  <button
-                    key={size.id}
-                    onClick={() => setLoadSize(size.id)}
-                    className={`p-4 rounded-lg border-2 text-center transition ${
-                      loadSize === size.id
-                        ? 'border-teal-500 bg-teal-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="font-semibold text-gray-900">{size.name}</div>
-                    <div className="text-sm text-gray-500">{size.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Items Selection - only for Junk Removal */}
-          {(serviceType === 'junk-removal' || serviceType === 'donation') && (
+          {/* Items Selection with prices - only for Junk Removal & Donation */}
+          {isJunkOrDonation && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Items to Remove
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {items.map((item) => (
+                {PRICED_ITEMS.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => toggleItem(item.id)}
-                    className={`p-3 rounded-lg border-2 text-center transition ${
+                    className={`p-3 rounded-lg border-2 text-center transition relative ${
                       selectedItems.includes(item.id)
                         ? 'border-teal-500 bg-teal-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
+                    {selectedItems.includes(item.id) && (
+                      <span className="absolute top-1 right-1 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                    )}
                     <div className="text-2xl mb-1">{item.icon}</div>
                     <div className="text-xs font-medium text-gray-700">{item.name}</div>
+                    <div className="text-xs font-bold text-teal-600 mt-1">${item.price}</div>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Live Price Display - only for Junk Removal & Donation */}
+          {isJunkOrDonation && selectedItems.length > 0 && (
+            <div className="mb-4 p-4 bg-teal-50 border border-teal-200 rounded-lg text-center">
+              <p className="text-lg font-bold text-teal-800">
+                Estimated: ${displayPrice} <span className="text-sm font-normal text-teal-600">· $99 Minimum Visit</span>
+              </p>
+              <p className="text-xs text-teal-600 mt-1">
+                {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected — disposal included, no hidden fees
+              </p>
+            </div>
+          )}
+
           {/* CTA */}
           <div className="text-center pt-4 border-t">
-            {!['junk-removal', 'donation'].includes(serviceType) || selectedItems.length > 0 ? (
+            {!isJunkOrDonation || selectedItems.length > 0 ? (
               <button
                 onClick={handleGetQuote}
                 className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
               >
-                {['junk-removal', 'donation'].includes(serviceType) ? 'Get My Instant Quote →' : 'Continue to Pricing →'}
+                {isJunkOrDonation ? 'Get My Instant Quote →' : 'Continue to Pricing →'}
               </button>
             ) : (
               <p className="text-gray-500 py-4">
@@ -272,5 +260,21 @@ export default function PriceCalculator() {
         </div>
       </div>
     </section>
+
+    {/* Lead Capture Modal */}
+    {showModal && (
+      <LeadCaptureModal
+        selectedItems={selectedItems}
+        estimatedPrice={displayPrice}
+        serviceType={serviceType === 'donation' ? 'DONATION_PICKUP' : 'HAUL_AWAY'}
+        itemDetails={selectedItems.map(id => {
+          const item = PRICED_ITEMS.find(i => i.id === id)
+          return { id, name: item?.name || id, price: item?.price || 0 }
+        })}
+        onClose={() => setShowModal(false)}
+        onSuccess={handleLeadSuccess}
+      />
+    )}
+  </>
   )
 }
