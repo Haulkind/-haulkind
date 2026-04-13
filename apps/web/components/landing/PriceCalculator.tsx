@@ -66,7 +66,7 @@ export default function PriceCalculator() {
 
   // Calculate discount: 5% off for each additional item beyond the first
   const discountItems = Math.max(0, totalItemCount - 1)
-  const discountPercent = discountItems * MULTI_ITEM_DISCOUNT_PERCENT
+  const discountPercent = Math.min(discountItems * MULTI_ITEM_DISCOUNT_PERCENT, 50)
   const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100
   const rawTotal = Math.round((subtotal - discountAmount) * 100) / 100
 

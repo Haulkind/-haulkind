@@ -176,7 +176,7 @@ function SchedulePageInner() {
     return sum + (item?.price || 0) * qty
   }, 0)
   const junkDiscountItems = Math.max(0, junkTotalItemCount - 1)
-  const junkDiscountPercent = junkDiscountItems * JUNK_MULTI_ITEM_DISCOUNT_PERCENT
+  const junkDiscountPercent = Math.min(junkDiscountItems * JUNK_MULTI_ITEM_DISCOUNT_PERCENT, 50)
   const junkDiscountAmount = Math.round(junkSubtotal * (junkDiscountPercent / 100) * 100) / 100
   const junkRawTotal = Math.round((junkSubtotal - junkDiscountAmount) * 100) / 100
   const junkDisplayPrice = Math.max(junkRawTotal, junkTotalItemCount > 0 ? JUNK_MINIMUM_VISIT_FEE : 0)
