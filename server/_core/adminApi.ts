@@ -23,6 +23,98 @@ async function getPgPool() {
   }
 }
 
+// ============================================================================
+// Lead Notification Helpers (Twilio SMS + Email)
+// ============================================================================
+
+async function sendLeadSmsNotification(name: string, phone: string, items: string, price: number) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  const toNumber = '+16094568188';
+
+  if (!accountSid || !authToken || !fromNumber) {
+    console.log('[Leads] Twilio not configured, skipping SMS notification');
+    return;
+  }
+
+  const message = `NEW INCOMPLETE LEAD: ${name}, ${phone}. Items: ${items}. Total: $${price}. Call them now to close!`;
+
+  try {
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+    const body = new URLSearchParams({
+      To: toNumber,
+      From: fromNumber,
+      Body: message,
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Leads] Twilio SMS error:', response.status, errorText);
+    } else {
+      console.log('[Leads] SMS notification sent to', toNumber);
+    }
+  } catch (e: any) {
+    console.error('[Leads] SMS send error:', e?.message);
+  }
+}
+
+async function sendLeadEmailNotification(name: string, phone: string, zip: string, items: string, price: number, serviceType: string) {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const fromEmail = process.env.SMTP_FROM || 'noreply@haulkind.com';
+  const toEmail = 'support@haulkind.com';
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    console.log('[Leads] SMTP not configured, skipping email notification');
+    return;
+  }
+
+  try {
+    const nodemailer = await import('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: parseInt(smtpPort || '587'),
+      secure: (smtpPort === '465'),
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: toEmail,
+      subject: `NEW LEAD: ${name} - $${price} ${serviceType}`,
+      html: `
+        <h2>New Incomplete Lead</h2>
+        <table style="border-collapse:collapse;width:100%">
+          <tr><td style="padding:8px;border:1px solid #ddd"><strong>Name</strong></td><td style="padding:8px;border:1px solid #ddd">${name}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd"><strong>Phone</strong></td><td style="padding:8px;border:1px solid #ddd">${phone}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd"><strong>ZIP</strong></td><td style="padding:8px;border:1px solid #ddd">${zip}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd"><strong>Service</strong></td><td style="padding:8px;border:1px solid #ddd">${serviceType}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd"><strong>Items</strong></td><td style="padding:8px;border:1px solid #ddd">${items}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd"><strong>Estimated Price</strong></td><td style="padding:8px;border:1px solid #ddd">$${price}</td></tr>
+        </table>
+        <p style="margin-top:16px;color:#e65100;font-weight:bold">Call them now to close the deal!</p>
+      `,
+    });
+
+    console.log('[Leads] Email notification sent to', toEmail);
+  } catch (e: any) {
+    console.error('[Leads] Email send error:', e?.message);
+  }
+}
+
 export function registerAdminApiRoutes(app: Express) {
   // ============================================================================
   // STATS
@@ -1113,6 +1205,216 @@ export function registerAdminApiRoutes(app: Express) {
       res.json({ order: result.rows[0] });
     } catch (err: any) {
       console.error('Reactivate order error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============================================================================
+  // LEADS (QuoteKind) - Public endpoint for lead capture + Admin endpoints
+  // ============================================================================
+
+  // Ensure leads table exists
+  async function ensureLeadsTable() {
+    const pool = await getPgPool();
+    if (!pool) return;
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS leads (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          phone VARCHAR(20) NOT NULL,
+          zip_code VARCHAR(10) NOT NULL,
+          items_selected JSONB DEFAULT '[]',
+          item_details JSONB DEFAULT '[]',
+          estimated_price DECIMAL(10,2) DEFAULT 0,
+          service_type VARCHAR(50) DEFAULT 'HAUL_AWAY',
+          tcpa_consent BOOLEAN DEFAULT false,
+          status VARCHAR(20) DEFAULT 'incomplete',
+          notes TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `);
+      // Add index on status for fast filtering
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC)
+      `);
+    } catch (e: any) {
+      console.error('[Leads] Failed to ensure leads table:', e?.message);
+    }
+  }
+
+  // Initialize leads table on startup
+  ensureLeadsTable();
+
+  // POST /api/leads - Public endpoint (no auth required) for lead capture
+  app.post('/api/leads', async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { name, phone, zip_code, items_selected, item_details, estimated_price, service_type, tcpa_consent } = req.body;
+
+      // Validation
+      if (!name || !phone || !zip_code) {
+        return res.status(400).json({ error: 'Name, phone, and ZIP code are required' });
+      }
+      if (phone.replace(/\D/g, '').length !== 10) {
+        return res.status(400).json({ error: 'Phone must be 10 digits' });
+      }
+      if (zip_code.length !== 5) {
+        return res.status(400).json({ error: 'ZIP code must be 5 digits' });
+      }
+
+      // Insert lead
+      const result = await pool.query(
+        `INSERT INTO leads (name, phone, zip_code, items_selected, item_details, estimated_price, service_type, tcpa_consent, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'incomplete')
+         RETURNING *`,
+        [
+          name,
+          phone.replace(/\D/g, ''),
+          zip_code,
+          JSON.stringify(items_selected || []),
+          JSON.stringify(item_details || []),
+          estimated_price || 0,
+          service_type || 'HAUL_AWAY',
+          tcpa_consent || false,
+        ]
+      );
+
+      const lead = result.rows[0];
+      console.log(`[Leads] NEW LEAD #${lead.id}: ${name}, ${phone}, ZIP ${zip_code}, $${estimated_price}`);
+
+      // Build item list for notification
+      const itemNames = (item_details || []).map((i: any) => i.name).join(', ') || 'No items';
+
+      // Send Twilio SMS notification (non-blocking)
+      sendLeadSmsNotification(name, phone, itemNames, estimated_price).catch((e: any) => {
+        console.error('[Leads] SMS notification failed:', e?.message);
+      });
+
+      // Send email notification (non-blocking)
+      sendLeadEmailNotification(name, phone, zip_code, itemNames, estimated_price, service_type).catch((e: any) => {
+        console.error('[Leads] Email notification failed:', e?.message);
+      });
+
+      res.json({ success: true, lead_id: lead.id });
+    } catch (err: any) {
+      console.error('Create lead error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /admin/leads - List leads (admin only)
+  app.get('/admin/leads', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { status, search, limit = 50, offset = 0 } = req.query;
+
+      let query = 'SELECT * FROM leads WHERE 1=1';
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      if (status) {
+        query += ` AND status = $${paramIndex++}`;
+        params.push(status);
+      }
+
+      if (search) {
+        query += ` AND (name ILIKE $${paramIndex++} OR phone ILIKE $${paramIndex++})`;
+        const searchPattern = `%${search}%`;
+        params.push(searchPattern, searchPattern);
+      }
+
+      query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+      params.push(limit, offset);
+
+      const result = await pool.query(query, params);
+
+      // Count
+      let countQuery = 'SELECT COUNT(*) as count FROM leads WHERE 1=1';
+      const countParams: any[] = [];
+      let countParamIndex = 1;
+
+      if (status) {
+        countQuery += ` AND status = $${countParamIndex++}`;
+        countParams.push(status);
+      }
+      if (search) {
+        countQuery += ` AND (name ILIKE $${countParamIndex++} OR phone ILIKE $${countParamIndex++})`;
+        const searchPattern = `%${search}%`;
+        countParams.push(searchPattern, searchPattern);
+      }
+
+      const countResult = await pool.query(countQuery, countParams);
+      const total = parseInt(countResult.rows[0]?.count || '0');
+
+      res.json({ leads: result.rows, total, limit: parseInt(limit as string), offset: parseInt(offset as string) });
+    } catch (err: any) {
+      console.error('Get leads error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /admin/leads/:id/status - Update lead status (admin only)
+  app.put('/admin/leads/:id/status', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const { status, notes } = req.body;
+      if (!['incomplete', 'contacted', 'converted', 'lost'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Must be: incomplete, contacted, converted, or lost' });
+      }
+
+      const fields = [`status = $1`, `updated_at = NOW()`];
+      const params: any[] = [status];
+      let paramIndex = 2;
+
+      if (notes !== undefined) {
+        fields.push(`notes = $${paramIndex++}`);
+        params.push(notes);
+      }
+
+      params.push(req.params.id);
+      const result = await pool.query(
+        `UPDATE leads SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+        params
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Lead not found' });
+      }
+
+      console.log(`[Leads] Lead #${req.params.id} status updated to: ${status}`);
+      res.json({ lead: result.rows[0] });
+    } catch (err: any) {
+      console.error('Update lead status error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /admin/leads/:id - Delete lead (admin only)
+  app.delete('/admin/leads/:id', requireAdmin, async (req, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+
+      const result = await pool.query('DELETE FROM leads WHERE id = $1 RETURNING id', [req.params.id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Lead not found' });
+      }
+
+      console.log(`[Leads] Lead #${req.params.id} DELETED`);
+      res.json({ success: true, deleted_id: req.params.id });
+    } catch (err: any) {
+      console.error('Delete lead error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

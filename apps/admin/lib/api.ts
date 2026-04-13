@@ -355,6 +355,25 @@ class ApiClient {
     return this.request('/admin/cashflow');
   }
 
+  // Leads
+  async getLeads(params?: { status?: string; search?: string; limit?: number; offset?: number }): Promise<{ leads: any[]; total: number; limit: number; offset: number }> {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin/leads${query ? `?${query}` : ''}`);
+  }
+
+  async updateLeadStatus(id: string, status: string, notes?: string): Promise<{ lead: any }> {
+    return this.request(`/admin/leads/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    });
+  }
+
+  async deleteLead(id: string): Promise<{ success: boolean; deleted_id: string }> {
+    return this.request(`/admin/leads/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Security
   async changePassword(current_password: string, new_password: string): Promise<{ success: boolean; message: string }> {
     return this.request('/admin/auth/change-password', {
