@@ -175,9 +175,25 @@ function SchedulePageInner() {
     const item = JUNK_PRICED_ITEMS.find(i => i.id === id)
     return sum + (item?.price || 0) * qty
   }, 0)
-  const junkDiscountItems = Math.max(0, junkTotalItemCount - 1)
-  const junkDiscountPercent = Math.min(junkDiscountItems * JUNK_MULTI_ITEM_DISCOUNT_PERCENT, 50)
-  const junkDiscountAmount = Math.round(junkSubtotal * (junkDiscountPercent / 100) * 100) / 100
+  // Per-item discount: each additional item beyond the first gets 5% off ITS OWN price
+  const junkAdditionalItemCount = Math.max(0, junkTotalItemCount - 1)
+  const junkDiscountAmount = (() => {
+    if (junkAdditionalItemCount === 0) return 0
+    // Sort items by price descending — first (most expensive) item pays full price
+    const allItems: { price: number }[] = []
+    Object.entries(junkItemQuantities).forEach(([id, qty]) => {
+      const item = JUNK_PRICED_ITEMS.find(i => i.id === id)
+      if (item) {
+        for (let i = 0; i < qty; i++) allItems.push({ price: item.price })
+      }
+    })
+    allItems.sort((a, b) => b.price - a.price)
+    let discount = 0
+    for (let i = 1; i < allItems.length; i++) {
+      discount += allItems[i].price * (JUNK_MULTI_ITEM_DISCOUNT_PERCENT / 100)
+    }
+    return Math.round(discount * 100) / 100
+  })()
   const junkRawTotal = Math.round((junkSubtotal - junkDiscountAmount) * 100) / 100
   const junkDisplayPrice = Math.max(junkRawTotal, junkTotalItemCount > 0 ? JUNK_MINIMUM_VISIT_FEE : 0)
 
@@ -396,7 +412,7 @@ function SchedulePageInner() {
         mattressQty: serviceType === 'MATTRESS_SWAP' ? totalMattresses : undefined,
         assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItemCount : undefined,
         customerNotes: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP')
-          ? [notes, `Items: ${Object.entries(junkItemQuantities).map(([id, qty]) => { const item = JUNK_PRICED_ITEMS.find(i => i.id === id); return item ? `${item.name} x${qty} ($${item.price * qty})` : id }).join(', ')}${junkDiscountPercent > 0 ? ` | ${junkDiscountPercent}% discount: -$${junkDiscountAmount.toFixed(2)}` : ''} | Total: $${junkDisplayPrice.toFixed(2)}`].filter(Boolean).join(' | ')
+          ? [notes, `Items: ${Object.entries(junkItemQuantities).map(([id, qty]) => { const item = JUNK_PRICED_ITEMS.find(i => i.id === id); return item ? `${item.name} x${qty} ($${item.price * qty})` : id }).join(', ')}${junkDiscountAmount > 0 ? ` | 5% per-item discount: -$${junkDiscountAmount.toFixed(2)}` : ''} | Total: $${junkDisplayPrice.toFixed(2)}`].filter(Boolean).join(' | ')
           : notes,
         customerName,
         customerPhone,
@@ -618,20 +634,20 @@ function SchedulePageInner() {
                 <p className="text-sm text-gray-500">Choose items and quantities below. Prices include disposal.</p>
 
                 {/* Multi-item discount banner */}
-                {junkTotalItemCount >= 1 && junkTotalItemCount < 2 && (
+                {junkTotalItemCount === 1 && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                     <p className="text-xs text-green-800 font-medium">
-                      Add another item and save 5%! Discount increases with each additional item.
+                      &#127881; Add another item and get <strong>5% off</strong> its price! Each extra item saves you 5%.
                     </p>
                   </div>
                 )}
-                {junkDiscountPercent > 0 && (
-                  <div className="bg-green-50 border border-green-300 rounded-xl p-3 flex items-center gap-2">
-                    <span className="text-xl">&#127881;</span>
-                    <div>
-                      <p className="font-semibold text-green-800 text-sm">{junkDiscountPercent}% multi-item discount applied!</p>
-                      <p className="text-xs text-green-700">You&apos;re saving ${junkDiscountAmount.toFixed(2)} on {junkTotalItemCount} items.</p>
+                {junkDiscountAmount > 0 && (
+                  <div className="bg-green-50 border-2 border-green-400 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">&#127881;</span>
+                      <p className="font-bold text-green-800 text-base">5% off each extra item!</p>
                     </div>
+                    <p className="text-sm text-green-700 font-medium">You&apos;re saving <strong>${junkDiscountAmount.toFixed(2)}</strong> — each item after the 1st gets 5% off its price.</p>
                   </div>
                 )}
 
@@ -709,17 +725,18 @@ function SchedulePageInner() {
 
                 {/* Total bar */}
                 {junkTotalItemCount > 0 && (
-                  <div className="bg-white rounded-xl p-3 border shadow-sm">
+                  <div className="bg-white rounded-xl p-4 border-2 border-teal-200 shadow-md">
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-xs text-gray-500">{junkTotalItemCount} item{junkTotalItemCount !== 1 ? 's' : ''} selected</p>
-                        {junkDiscountPercent > 0 ? (
+                        {junkDiscountAmount > 0 ? (
                           <>
                             <p className="text-sm text-gray-400 line-through">${junkSubtotal.toFixed(2)}</p>
-                            <p className="text-xl font-bold text-gray-900">${junkDisplayPrice.toFixed(2)}</p>
+                            <p className="text-xs text-green-600 font-semibold">-${junkDiscountAmount.toFixed(2)} (5% off each extra item)</p>
+                            <p className="text-2xl font-bold text-gray-900">${junkDisplayPrice.toFixed(2)}</p>
                           </>
                         ) : (
-                          <p className="text-xl font-bold text-gray-900">${junkDisplayPrice.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-gray-900">${junkDisplayPrice.toFixed(2)}</p>
                         )}
                       </div>
                       <p className="text-xs text-teal-600 font-medium">$99 min visit</p>
@@ -1168,9 +1185,9 @@ function SchedulePageInner() {
                         </div>
                       )
                     })}
-                    {junkDiscountPercent > 0 && (
+                    {junkDiscountAmount > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>{junkDiscountPercent}% multi-item discount</span>
+                        <span>5% off each extra item</span>
                         <span className="font-medium">-${junkDiscountAmount.toFixed(2)}</span>
                       </div>
                     )}

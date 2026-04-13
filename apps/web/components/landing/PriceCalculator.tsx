@@ -64,10 +64,27 @@ export default function PriceCalculator() {
     return sum + (item?.price || 0) * qty
   }, 0)
 
-  // Calculate discount: 5% off for each additional item beyond the first
-  const discountItems = Math.max(0, totalItemCount - 1)
-  const discountPercent = Math.min(discountItems * MULTI_ITEM_DISCOUNT_PERCENT, 50)
-  const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100
+  // Calculate discount: each additional item beyond the first gets 5% off ITS OWN price
+  // E.g. Sofa $89 (full) + Dresser $65 → $61.75 (5% off) + Fridge $129 → $122.55 (5% off)
+  const additionalItemCount = Math.max(0, totalItemCount - 1)
+  const discountAmount = (() => {
+    if (additionalItemCount === 0) return 0
+    // Sort items by price descending — first (most expensive) item pays full price
+    const allItems: { price: number }[] = []
+    Object.entries(itemQuantities).forEach(([id, qty]) => {
+      const item = PRICED_ITEMS.find(i => i.id === id)
+      if (item) {
+        for (let i = 0; i < qty; i++) allItems.push({ price: item.price })
+      }
+    })
+    allItems.sort((a, b) => b.price - a.price)
+    // First item = full price, all others get 5% off their own price
+    let discount = 0
+    for (let i = 1; i < allItems.length; i++) {
+      discount += allItems[i].price * (MULTI_ITEM_DISCOUNT_PERCENT / 100)
+    }
+    return Math.round(discount * 100) / 100
+  })()
   const rawTotal = Math.round((subtotal - discountAmount) * 100) / 100
 
   const displayPrice = Math.max(rawTotal, totalItemCount > 0 ? MINIMUM_VISIT_FEE : 0)
@@ -134,7 +151,7 @@ export default function PriceCalculator() {
     }))
     sessionStorage.setItem('hk_item_details', JSON.stringify(itemDetails))
     // Store discount info
-    sessionStorage.setItem('hk_discount_percent', String(discountPercent))
+    sessionStorage.setItem('hk_discount_percent', String(additionalItemCount > 0 ? MULTI_ITEM_DISCOUNT_PERCENT : 0))
     sessionStorage.setItem('hk_discount_amount', String(discountAmount))
     // Redirect to the scheduling/location page
     router.push('/quote/haul-away/location')
@@ -309,13 +326,13 @@ export default function PriceCalculator() {
           {/* Live Price Display - only for Junk Removal & Donation */}
           {isJunkOrDonation && totalItemCount > 0 && (
             <div className="mb-4 p-4 bg-teal-50 border border-teal-200 rounded-lg text-center">
-              {discountPercent > 0 ? (
+              {discountAmount > 0 ? (
                 <>
                   <p className="text-sm text-gray-500 line-through mb-1">
                     Subtotal: ${subtotal.toFixed(2)}
                   </p>
                   <p className="text-sm font-semibold text-green-600 mb-1">
-                    🏷️ {discountPercent}% multi-item discount: -${discountAmount.toFixed(2)}
+                    🏷️ 5% off each extra item: -${discountAmount.toFixed(2)}
                   </p>
                   <p className="text-lg font-bold text-teal-800">
                     Total: ${displayPrice.toFixed(2)} <span className="text-sm font-normal text-teal-600">· $99 Minimum Visit</span>
@@ -364,7 +381,7 @@ export default function PriceCalculator() {
           price: item.price,
           quantity: item.quantity,
         }))}
-        discountPercent={discountPercent}
+        discountPercent={additionalItemCount > 0 ? MULTI_ITEM_DISCOUNT_PERCENT : 0}
         discountAmount={discountAmount}
         onClose={() => setShowModal(false)}
         onSuccess={handleLeadSuccess}
