@@ -25,14 +25,14 @@ export default function Header() {
         </Link>
         
         <div className="hidden md:flex items-center space-x-6">
-          {/* Junk Removal dropdown */}
+          {/* Hauling Services dropdown */}
           <div
             className="relative"
             onMouseEnter={() => setJunkOpen(true)}
             onMouseLeave={() => setJunkOpen(false)}
           >
-            <button aria-label="Junk Removal menu" aria-expanded={junkOpen} className="text-gray-700 hover:text-primary-600 transition flex items-center gap-1">
-              Junk Removal
+            <button aria-label="Hauling Services menu" aria-expanded={junkOpen} className="text-gray-700 hover:text-primary-600 transition flex items-center gap-1">
+              Hauling Services
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
             {junkOpen && (
@@ -92,7 +92,7 @@ export default function Header() {
         <div className="md:hidden bg-white border-t px-4 pb-4">
           <div className="space-y-1 py-2">
             <p className="text-xs font-semibold text-gray-400 uppercase px-2 pt-2">Our Services</p>
-            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Junk Removal</Link>
+            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Junk Removal (PA Only)</Link>
             <Link href="/donation-pickup" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Donation Pickup</Link>
             <Link href="/assembly" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Furniture Assembly</Link>
             <Link href="/mattress-swap" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Mattress Swap</Link>

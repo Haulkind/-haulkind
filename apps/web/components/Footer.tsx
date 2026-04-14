@@ -19,7 +19,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm mb-4">
-              Fast local junk removal with transparent pricing in Pennsylvania, New Jersey &amp; New York. No memberships. Track your driver live.
+              Fast local hauling &amp; moving help with transparent pricing in Pennsylvania, New Jersey &amp; New York. No memberships. Track your driver live.
             </p>
             <a href="tel:+16094568188" className="text-teal-400 hover:text-teal-300 font-semibold text-sm transition">
               (609) 456-8188
@@ -86,7 +86,7 @@ export default function Footer() {
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <Link href="/junk-removal-philadelphia-pa" className="hover:text-white transition">Junk Removal Philadelphia</Link>
             <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Removal Philadelphia</Link>
-            <Link href="/junk-removal-camden-nj" className="hover:text-white transition">Junk Removal Camden NJ</Link>
+            <Link href="/donation-pickup-camden-nj" className="hover:text-white transition">Donation Pickup Camden NJ</Link>
             <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Removal Cherry Hill</Link>
             <Link href="/appliance-removal-trenton-nj" className="hover:text-white transition">Appliance Removal Trenton</Link>
             <Link href="/moving-help-princeton-nj" className="hover:text-white transition">Moving Help Princeton</Link>
@@ -97,6 +97,13 @@ export default function Footer() {
             <Link href="/become-a-driver" className="text-primary-400 hover:text-white transition font-medium">HaulKind Driver Jobs</Link>
             <Link href="/service-areas" className="text-primary-400 hover:text-white transition font-medium">View All Service Areas &rarr;</Link>
           </div>
+        </div>
+
+        {/* NJ Compliance Legal Disclaimer */}
+        <div className="border-t border-gray-800 mt-6 pt-6">
+          <p className="text-xs text-gray-500 leading-relaxed max-w-4xl mx-auto">
+            <strong className="text-gray-400">Legal Disclaimer:</strong> HaulKind&apos;s Junk Removal and Solid Waste Disposal services are exclusively available to residents within Pennsylvania. In New Jersey, we strictly operate as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs. We do not transport solid waste to NJ landfills.
+          </p>
         </div>
 
         <div className="border-t border-gray-800 mt-6 pt-6 text-sm text-center">

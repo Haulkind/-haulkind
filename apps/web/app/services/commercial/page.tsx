@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Commercial Junk Removal & Office Cleanouts | HaulKind',
-  description: 'Commercial junk removal for offices, warehouses, retail stores, and construction sites in PA, NY & NJ. Fast, insured, affordable. Get a free quote today.',
+  title: 'Commercial Hauling & Office Cleanouts | HaulKind',
+  description: 'Commercial hauling for offices, warehouses, retail stores, and construction sites in PA & NY. Furniture donation pickup & moving labor in NJ. Fast, insured, affordable.',
   alternates: { canonical: '/services/commercial' },
   openGraph: {
-    title: 'Commercial Junk Removal & Office Cleanouts | HaulKind',
-    description: 'Office furniture, warehouse cleanouts, construction debris. Professional commercial removal in PA, NY & NJ.',
+    title: 'Commercial Hauling & Office Cleanouts | HaulKind',
+    description: 'Office furniture, warehouse cleanouts, construction debris. Professional commercial services in PA, NY & NJ.',
     url: 'https://haulkind.com/services/commercial',
   },
 }
@@ -16,8 +16,8 @@ export default function CommercialPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Commercial Junk Removal & Office Cleanouts',
-    description: 'Professional commercial junk removal for offices, warehouses, retail stores, and construction sites.',
+    name: 'Commercial Hauling & Office Cleanouts',
+    description: 'Professional commercial hauling for offices, warehouses, retail stores, and construction sites.',
     provider: {
       '@type': 'LocalBusiness',
       name: 'HaulKind',
@@ -28,7 +28,7 @@ export default function CommercialPage() {
       { '@type': 'State', name: 'New York' },
       { '@type': 'State', name: 'New Jersey' },
     ],
-    serviceType: 'Commercial Junk Removal',
+    serviceType: 'Commercial Hauling',
     url: 'https://haulkind.com/services/commercial',
   }
 

@@ -7,8 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 const servicesList = [
   {
     id: 'haul-away',
-    title: 'Junk Removal',
-    desc: 'We haul away furniture, appliances, yard waste, and general junk fast.',
+    title: 'Junk Removal (PA Only)',
+    desc: 'We haul away furniture, appliances, yard waste, and general junk fast. PA residents only.',
     price: 'Starting at $99',
     priceNote: 'disposal included',
     colorBg: 'bg-teal-50',

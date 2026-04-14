@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'FAQ - Junk Removal & Moving Help Questions Answered',
-  description: 'Answers to common questions about HaulKind junk removal and moving services. Pricing, booking, tracking, cancellations, driver info & more.',
+  title: 'FAQ - Hauling & Moving Help Questions Answered',
+  description: 'Answers to common questions about HaulKind hauling and moving services. Pricing, booking, tracking, cancellations, driver info & more.',
   alternates: { canonical: '/faq' },
   openGraph: {
     title: 'Frequently Asked Questions | HaulKind',
-    description: 'Everything you need to know about HaulKind junk removal and moving help. Pricing, booking, tracking & more.',
+    description: 'Everything you need to know about HaulKind hauling and moving help. Pricing, booking, tracking & more.',
     url: 'https://haulkind.com/faq',
   },
 }

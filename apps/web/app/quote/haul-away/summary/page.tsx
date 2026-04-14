@@ -291,7 +291,7 @@ export default function HaulAwaySummaryPage() {
             <div className="space-y-2 text-gray-700">
               <div className="flex justify-between">
                 <span>Service Type:</span>
-                <span className="font-medium">Junk Removal (Haul Away)</span>
+                <span className="font-medium">Haul Away Service</span>
               </div>
               <div className="flex justify-between">
                 <span>Location:</span>
