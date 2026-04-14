@@ -422,7 +422,10 @@ export function HomeScreen({ navigation }) {
 
   const loadOrders = async (showLoading = false) => {
     // Prevent concurrent fetches that can cause flickering
-    if (isFetchingRef.current) return;
+    if (isFetchingRef.current) {
+      setRefreshing(false);
+      return;
+    }
     isFetchingRef.current = true;
     try {
       if (showLoading && isFirstLoadRef.current) setLoading(true);
