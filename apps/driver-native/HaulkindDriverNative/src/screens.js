@@ -378,21 +378,23 @@ export function PendingScreen({ navigation }) {
 export function HomeScreen({ navigation }) {
   const [isOnline, setIsOnline] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start true for initial load
   const [refreshing, setRefreshing] = useState(false);
   const [driverName, setDriverName] = useState('Driver');
   const [stats, setStats] = useState({ todayEarnings: 0, completedToday: 0, totalCompleted: 0 });
+  const isFirstLoadRef = useRef(true);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     loadDriverData();
-    loadOrders();
+    loadOrders(true); // initial load
     loadDriverProfile();
   }, []);
 
   // Auto-refresh orders every 15 seconds (always poll, even when toggled offline)
   useEffect(() => {
     const interval = setInterval(() => {
-      loadOrders();
+      loadOrders(false); // silent poll — don't show loading
     }, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -403,7 +405,7 @@ export function HomeScreen({ navigation }) {
       const driver = data.driver || data;
       if (driver.is_online) {
         setIsOnline(true);
-        loadOrders();
+        // Don't call loadOrders again — initial mount already does it
       }
     } catch (e) {}
   };
@@ -418,18 +420,30 @@ export function HomeScreen({ navigation }) {
     } catch (e) {}
   };
 
-  const loadOrders = async () => {
+  const loadOrders = async (showLoading = false) => {
+    // Prevent concurrent fetches that can cause flickering
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
-      setLoading(true);
+      if (showLoading && isFirstLoadRef.current) setLoading(true);
       const data = await apiGet('/driver/orders/available');
-      const ordersList = data.orders || data || [];
-      setOrders(Array.isArray(ordersList) ? ordersList : []);
+      const ordersList = data?.orders;
+      // Only update state if we got a valid array with data (or confirmed empty from server)
+      if (Array.isArray(ordersList)) {
+        setOrders(ordersList);
+      } else if (Array.isArray(data)) {
+        // Fallback: some endpoints return array directly
+        setOrders(data);
+      }
+      // If response was neither array, keep existing orders (don't clear on bad response)
+      isFirstLoadRef.current = false;
     } catch (e) {
       console.log('loadOrders error:', e.message);
-      // Do nothing on error — keep showing last known orders
+      // Keep showing last known orders on error
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -438,10 +452,10 @@ export function HomeScreen({ navigation }) {
     setIsOnline(newOnline);
     try {
       await apiPostAuth('/driver/online', { online: newOnline });
-      if (newOnline) loadOrders();
+      if (newOnline) loadOrders(true);
     } catch (e) {
       // API call failed but keep the toggle state
-      if (newOnline) loadOrders();
+      if (newOnline) loadOrders(true);
     }
   };
 
