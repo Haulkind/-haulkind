@@ -438,16 +438,10 @@ export function HomeScreen({ navigation }) {
     setIsOnline(newOnline);
     try {
       await apiPostAuth('/driver/online', { online: newOnline });
-      if (newOnline) {
-        loadOrders();
-      } else {
-        setOrders([]);
-      }
+      if (newOnline) loadOrders();
     } catch (e) {
       // API call failed but keep the toggle state
-      if (newOnline) {
-        loadOrders();
-      }
+      if (newOnline) loadOrders();
     }
   };
 
