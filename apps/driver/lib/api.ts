@@ -34,7 +34,7 @@ export interface OnboardingData {
 
 export interface Job {
   id: number
-  serviceType: 'HAUL_AWAY' | 'LABOR_ONLY'
+  serviceType: 'HAUL_AWAY' | 'LABOR_ONLY' | 'MATTRESS_SWAP' | 'FURNITURE_ASSEMBLY' | 'DUMPSTER_RENTAL' | 'DONATION_PICKUP'
   pickupAddress: string
   pickupLat: number
   pickupLng: number
@@ -48,6 +48,14 @@ export interface Job {
   estimatedHours?: number
   customerNotes?: string
   photoUrls?: string[]
+  description?: string
+  items_json?: string
+  customer_name?: string
+  pickup_address?: string
+  scheduled_for?: string
+  service_type?: string
+  driver_earnings?: number
+  estimated_price?: number | string
 }
 
 export interface Offer {
@@ -177,6 +185,57 @@ export async function streamLocation(token: string, jobId: number, lat: number, 
   })
   if (!response.ok) {
     throw new Error('Failed to stream location')
+  }
+}
+
+export async function getAvailableOrders(token: string): Promise<{ orders: Job[] }> {
+  const response = await fetch(`${API_BASE_URL}/driver/orders/available`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Failed to get available orders')
+  }
+  return response.json()
+}
+
+export async function getMyOrders(token: string, filter?: string): Promise<{ orders: Job[] }> {
+  const url = filter
+    ? `${API_BASE_URL}/driver/orders/my-orders?filter=${filter}`
+    : `${API_BASE_URL}/driver/orders/my-orders`
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Failed to get my orders')
+  }
+  return response.json()
+}
+
+export async function acceptOrder(token: string, orderId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/driver/orders/${orderId}/accept`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Failed to accept order')
+  }
+}
+
+export async function rejectOrder(token: string, orderId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/driver/orders/${orderId}/reject`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Failed to reject order')
   }
 }
 
