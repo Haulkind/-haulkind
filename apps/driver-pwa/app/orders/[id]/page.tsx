@@ -233,20 +233,76 @@ export default function OrderDetailPage() {
         {/* Details Card */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Order Details</h3>
-          <InfoRow label="Type" value={order.service_type || order.serviceType || 'Junk Removal'} />
+          <InfoRow label="Type" value={formatServiceType(order.service_type || order.serviceType || 'HAUL_AWAY')} />
           <InfoRow label="Address" value={order.pickup_address || order.pickupAddress || 'N/A'} />
           <InfoRow label="Scheduled" value={formatDate(order)} />
-          {order.time_window && <InfoRow label="Window" value={order.time_window} />}
+          {(order.time_window || order.pickup_time_window) && <InfoRow label="Window" value={formatTimeWindow(order.time_window || order.pickup_time_window || '')} />}
           {order.volume_tier && <InfoRow label="Volume" value={order.volume_tier} />}
           {order.estimated_hours && <InfoRow label="Est. Hours" value={`${order.estimated_hours}h`} />}
+          {order.helper_count && Number(order.helper_count) > 0 && <InfoRow label="Helpers" value={`${order.helper_count} person${Number(order.helper_count) > 1 ? 's' : ''}`} />}
           {order.customer_name && <InfoRow label="Customer" value={order.customer_name} />}
-          {order.customer_notes && (
-            <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
-              <p className="text-xs font-semibold text-yellow-800 mb-1">Customer Notes:</p>
-              <p className="text-sm text-yellow-900">{order.customer_notes}</p>
-            </div>
-          )}
         </div>
+
+        {/* Service-Specific Items Card */}
+        {(() => {
+          const items = parseItemsJson(order.items_json)
+          const description = order.description || order.customer_notes || ''
+          const serviceType = (order.service_type || order.serviceType || '').toUpperCase()
+
+          // Parse description to extract items list and customer notes separately
+          let itemsFromDescription: string[] = []
+          let customerNoteText = description
+          if (description.startsWith('Items:')) {
+            const parts = description.split('\n')
+            const itemLine = parts[0].replace('Items:', '').trim()
+            itemsFromDescription = itemLine.split(',').map(s => s.trim()).filter(Boolean)
+            customerNoteText = parts.slice(1).join('\n').trim()
+          }
+
+          // Combine items from items_json and description
+          const allItems = items.length > 0 ? items : itemsFromDescription
+
+          const hasContent = allItems.length > 0 || customerNoteText
+          if (!hasContent) return null
+
+          return (
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
+                {serviceType === 'HAUL_AWAY' ? 'Items to Remove' :
+                 serviceType === 'LABOR_ONLY' ? 'Job Details' :
+                 serviceType === 'MATTRESS_SWAP' ? 'Mattress Swap Details' :
+                 serviceType === 'FURNITURE_ASSEMBLY' ? 'Assembly Details' :
+                 serviceType === 'DUMPSTER_RENTAL' ? 'Dumpster Rental Details' :
+                 'Service Details'}
+              </h3>
+
+              {/* Items list */}
+              {allItems.length > 0 && (
+                <div className="space-y-1.5 mb-3">
+                  {allItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 py-1.5 px-3 bg-gray-50 rounded-lg">
+                      <span className="text-base">
+                        {serviceType === 'HAUL_AWAY' ? '🗑️' :
+                         serviceType === 'FURNITURE_ASSEMBLY' ? '🔧' :
+                         serviceType === 'MATTRESS_SWAP' ? '🛏️' :
+                         serviceType === 'LABOR_ONLY' ? '💪' : '📦'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Customer notes */}
+              {customerNoteText && (
+                <div className="p-3 bg-yellow-50 rounded-lg">
+                  <p className="text-xs font-semibold text-yellow-800 mb-1">Customer Notes:</p>
+                  <p className="text-sm text-yellow-900 whitespace-pre-wrap">{customerNoteText}</p>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Customer Photos Section */}
         {(() => {
@@ -464,4 +520,44 @@ function formatDate(order: Order): string {
       weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     })
   } catch { return 'N/A' }
+}
+
+function formatServiceType(type: string): string {
+  const labels: Record<string, string> = {
+    'HAUL_AWAY': 'Junk Removal',
+    'LABOR_ONLY': 'Moving Labor',
+    'MATTRESS_SWAP': 'Mattress Swap',
+    'FURNITURE_ASSEMBLY': 'Furniture Assembly',
+    'DUMPSTER_RENTAL': 'Dumpster Rental',
+    'DONATION_PICKUP': 'Donation Pickup',
+  }
+  return labels[type.toUpperCase()] || type.replace(/_/g, ' ')
+}
+
+function formatTimeWindow(window: string): string {
+  const labels: Record<string, string> = {
+    'ALL_DAY': 'All Day (8AM - 8PM)',
+    'MORNING': 'Morning (8AM - 12PM)',
+    'AFTERNOON': 'Afternoon (12PM - 4PM)',
+    'EVENING': 'Evening (4PM - 8PM)',
+  }
+  return labels[window.toUpperCase()] || window.replace(/_/g, ' ')
+}
+
+function parseItemsJson(itemsJson: string | undefined): string[] {
+  if (!itemsJson) return []
+  try {
+    const parsed = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((item: any) => {
+      if (typeof item === 'string') return item
+      if (item && item.name) {
+        const qty = item.quantity || 1
+        return qty > 1 ? `${item.name} x${qty}` : item.name
+      }
+      return String(item)
+    }).filter(Boolean)
+  } catch {
+    return []
+  }
 }

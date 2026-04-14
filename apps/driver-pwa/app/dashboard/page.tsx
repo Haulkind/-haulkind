@@ -404,13 +404,18 @@ export default function DashboardPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+              className={`relative px-5 py-2 rounded-full text-sm font-semibold transition ${
                 tab === t
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'new' && nearbyCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {nearbyCount}
+                </span>
+              )}
             </button>
           ))}
           <span className="ml-auto text-xs text-gray-400">Within 80 mi</span>
@@ -435,12 +440,15 @@ export default function DashboardPage() {
                   className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {tab === 'new' && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">NEW</span>
+                      )}
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusColor(order.status)}`}>
                         {order.status?.replace(/_/g, ' ').toUpperCase()}
                       </span>
-                      <span className="text-xs text-gray-400 ml-2">
-                        {order.service_type || order.serviceType || 'HAUL_AWAY'}
+                      <span className="text-xs text-gray-400">
+                        {formatServiceTypeShort(order.service_type || order.serviceType || 'HAUL_AWAY')}
                       </span>
                     </div>
                     <span className="text-lg font-bold text-green-600">
@@ -453,6 +461,28 @@ export default function DashboardPage() {
                   {order.customer_name && (
                     <p className="text-xs text-gray-500 mt-1">Customer: {order.customer_name}</p>
                   )}
+                  {/* Show brief item preview from description or items_json */}
+                  {(() => {
+                    const desc = (order as any).description || order.customer_notes || ''
+                    if (desc.startsWith('Items:')) {
+                      const itemLine = desc.split('\n')[0].replace('Items:', '').trim()
+                      if (itemLine) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {itemLine}</p>
+                    }
+                    const ij = (order as any).items_json
+                    if (ij) {
+                      try {
+                        const arr = typeof ij === 'string' ? JSON.parse(ij) : ij
+                        if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] !== 'string') {
+                          const names = arr.map((i: any) => {
+                            const qty = i.quantity || 1
+                            return qty > 1 ? `${i.name} x${qty}` : i.name
+                          }).join(', ')
+                          if (names) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {names}</p>
+                        }
+                      } catch {}
+                    }
+                    return null
+                  })()
                   {(() => {
                     const pu = (order as any).photo_urls || (order as any).photos
                     if (!pu) return null
@@ -555,6 +585,18 @@ function formatPayout(order: Order): string {
   const price = order.price || order.total || 0
   if (Number(price) > 0) return Number(price).toFixed(2)
   return '0.00'
+}
+
+function formatServiceTypeShort(type: string): string {
+  const labels: Record<string, string> = {
+    'HAUL_AWAY': 'Junk Removal',
+    'LABOR_ONLY': 'Moving Labor',
+    'MATTRESS_SWAP': 'Mattress Swap',
+    'FURNITURE_ASSEMBLY': 'Assembly',
+    'DUMPSTER_RENTAL': 'Dumpster',
+    'DONATION_PICKUP': 'Donation',
+  }
+  return labels[type.toUpperCase()] || type.replace(/_/g, ' ')
 }
 
 function formatTime(order: Order): string {

@@ -192,7 +192,13 @@ export default function JobDetailScreen() {
       {/* Job Info */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>
-          {job.serviceType === 'HAUL_AWAY' ? '🚚 Junk Removal' : '💪 Labor Only'}
+          {job.serviceType === 'HAUL_AWAY' ? '🚚 Junk Removal' :
+           job.serviceType === 'LABOR_ONLY' ? '💪 Moving Labor' :
+           job.serviceType === 'MATTRESS_SWAP' ? '🛏️ Mattress Swap' :
+           job.serviceType === 'FURNITURE_ASSEMBLY' ? '🔧 Furniture Assembly' :
+           job.serviceType === 'DUMPSTER_RENTAL' ? '🗑️ Dumpster Rental' :
+           job.serviceType === 'DONATION_PICKUP' ? '📦 Donation Pickup' :
+           '💪 Labor Only'}
         </Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Status:</Text>
@@ -212,7 +218,77 @@ export default function JobDetailScreen() {
             {new Date(job.scheduledFor).toLocaleString()}
           </Text>
         </View>
+        {(job as any).estimated_hours && Number((job as any).estimated_hours) > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Est. Hours:</Text>
+            <Text style={styles.infoValue}>{(job as any).estimated_hours}h</Text>
+          </View>
+        )}
+        {(job as any).helper_count && Number((job as any).helper_count) > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Helpers:</Text>
+            <Text style={styles.infoValue}>{(job as any).helper_count} person{Number((job as any).helper_count) > 1 ? 's' : ''}</Text>
+          </View>
+        )}
       </View>
+
+      {/* Service-Specific Items */}
+      {(() => {
+        const description = (job as any).description || ''
+        const itemsJson = (job as any).items_json || (job as any).itemsJson || ''
+        let items: string[] = []
+        let customerNotes = description
+
+        // Parse items from description (format: "Items: Sofa, Fridge\nCustomer notes")
+        if (description.startsWith('Items:')) {
+          const parts = description.split('\n')
+          const itemLine = parts[0].replace('Items:', '').trim()
+          items = itemLine.split(',').map((s: string) => s.trim()).filter(Boolean)
+          customerNotes = parts.slice(1).join('\n').trim()
+        }
+
+        // Parse items from items_json if no items from description
+        if (items.length === 0 && itemsJson) {
+          try {
+            const parsed = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson
+            if (Array.isArray(parsed)) {
+              items = parsed.map((item: any) => {
+                if (typeof item === 'string') return item
+                if (item && item.name) {
+                  const qty = item.quantity || 1
+                  return qty > 1 ? `${item.name} x${qty}` : item.name
+                }
+                return String(item)
+              }).filter(Boolean)
+            }
+          } catch {}
+        }
+
+        if (items.length === 0 && !customerNotes) return null
+
+        return (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
+              {job.serviceType === 'HAUL_AWAY' ? '🗑️ Items to Remove' :
+               job.serviceType === 'FURNITURE_ASSEMBLY' ? '🔧 Assembly Details' :
+               job.serviceType === 'MATTRESS_SWAP' ? '🛏️ Mattress Details' :
+               '📋 Job Details'}
+            </Text>
+            {items.map((item, idx) => (
+              <View key={idx} style={styles.itemRow}>
+                <Text style={styles.itemBullet}>•</Text>
+                <Text style={styles.itemText}>{item}</Text>
+              </View>
+            ))}
+            {customerNotes ? (
+              <View style={styles.notesBox}>
+                <Text style={styles.notesLabel}>Customer Notes:</Text>
+                <Text style={styles.notesText}>{customerNotes}</Text>
+              </View>
+            ) : null}
+          </View>
+        )
+      })()}
 
       {/* Navigation */}
       {['ACCEPTED', 'EN_ROUTE'].includes(job.status) && (
@@ -378,5 +454,42 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 40,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  itemBullet: {
+    fontSize: 16,
+    color: '#4f46e5',
+    marginRight: 8,
+    fontWeight: 'bold',
+  },
+  itemText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+    flex: 1,
+  },
+  notesBox: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#fefce8',
+    borderRadius: 8,
+  },
+  notesLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#854d0e',
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#713f12',
   },
 })
