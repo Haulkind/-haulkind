@@ -168,6 +168,7 @@ export default function HaulAwaySummaryPage() {
         customerPhone: data.customerPhone,
         customerEmail: data.customerEmail,
         timeWindow: data.timeWindow,
+        total: quote?.total,
       }, controller.signal)
 
       clearTimeout(safetyTimer)
@@ -184,7 +185,7 @@ export default function HaulAwaySummaryPage() {
       setError('Payment failed. Please try again.')
       setPaying(false)
     }
-  }, [paying, customerNotes, data, updateData])
+  }, [paying, customerNotes, data, updateData, quote])
 
   if (loading) {
     return (
