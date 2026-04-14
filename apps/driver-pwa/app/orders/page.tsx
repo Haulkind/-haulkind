@@ -103,7 +103,7 @@ export default function OrdersPage() {
                       {order.status?.replace(/_/g, ' ')}
                     </span>
                     <span className="text-xs text-gray-400 ml-2">
-                      {order.service_type || order.serviceType || ''}
+                      {formatServiceTypeShort(order.service_type || order.serviceType || '')}
                     </span>
                   </div>
                   <span className="text-lg font-bold text-green-600">
@@ -116,6 +116,15 @@ export default function OrdersPage() {
                 {order.customer_name && (
                   <p className="text-xs text-gray-500 mt-1">Customer: {order.customer_name}</p>
                 )}
+                {/* Item preview */}
+                {(() => {
+                  const desc = order.description || order.customer_notes || ''
+                  if (desc.startsWith('Items:')) {
+                    const itemLine = desc.split('\n')[0].replace('Items:', '').trim()
+                    if (itemLine) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {itemLine}</p>
+                  }
+                  return null
+                })()}
                 {(() => {
                   const pu = (order as any).photo_urls || (order as any).photos
                   if (!pu) return null
@@ -176,6 +185,18 @@ function formatPayout(order: Order): string {
   const price = order.price || order.total || 0
   if (Number(price) > 0) return Number(price).toFixed(2)
   return '0.00'
+}
+
+function formatServiceTypeShort(type: string): string {
+  const labels: Record<string, string> = {
+    'HAUL_AWAY': 'Junk Removal',
+    'LABOR_ONLY': 'Moving Labor',
+    'MATTRESS_SWAP': 'Mattress Swap',
+    'FURNITURE_ASSEMBLY': 'Assembly',
+    'DUMPSTER_RENTAL': 'Dumpster',
+    'DONATION_PICKUP': 'Donation',
+  }
+  return labels[type.toUpperCase()] || type.replace(/_/g, ' ')
 }
 
 function formatDate(order: Order): string {

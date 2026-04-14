@@ -284,6 +284,10 @@ export interface Order {
   updated_at?: string
   time_window?: string
   pricing_json?: string
+  description?: string
+  items_json?: string
+  estimated_price?: number | string
+  pickup_time_window?: string
 }
 
 export interface EarningsData {
