@@ -170,7 +170,7 @@ function CheckoutInner() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full text-center">
           <p className="text-red-600 font-medium mb-2">{error}</p>
-          <p className="text-gray-500 text-sm mb-4">If the problem persists, please call us at (978) 515-4980</p>
+          <p className="text-gray-500 text-sm mb-4">If the problem persists, please call us at (609) 456-8188</p>
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => redirectToHostedCheckout()}
