@@ -35,13 +35,49 @@ export default function HaulAwaySummaryPage() {
   }, [])
 
   // Check if we have calculator items (QuoteKind flow) vs old volume flow
+  // Try context first, then sessionStorage as fallback (context may not have hydrated yet)
+  const getCalculatorItems = () => {
+    // 1. Try QuoteContext
+    if (data.selectedItemDetails && data.selectedItemDetails.length > 0 && data.calculatorPrice != null) {
+      return {
+        items: data.selectedItemDetails,
+        price: data.calculatorPrice,
+        discountPercent: data.discountPercent || 0,
+        discountAmount: data.discountAmount || 0,
+      }
+    }
+    // 2. Fallback: read directly from sessionStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const storedItems = sessionStorage.getItem('hk_item_details')
+        const storedPrice = sessionStorage.getItem('hk_estimated_price')
+        if (storedItems && storedPrice) {
+          const items = JSON.parse(storedItems)
+          if (items && items.length > 0) {
+            return {
+              items,
+              price: parseFloat(storedPrice),
+              discountPercent: parseFloat(sessionStorage.getItem('hk_discount_percent') || '0'),
+              discountAmount: parseFloat(sessionStorage.getItem('hk_discount_amount') || '0'),
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[SUMMARY] Failed to read calculator items from sessionStorage:', e)
+      }
+    }
+    return null
+  }
+
   const hasCalculatorItems = data.selectedItemDetails && data.selectedItemDetails.length > 0 && data.calculatorPrice != null
 
   useEffect(() => {
-    if (hasCalculatorItems) {
+    const calcData = getCalculatorItems()
+    if (calcData) {
       // Use calculator pricing directly — no need to call getQuote API
+      const { items, discountPercent, discountAmount } = calcData
       const breakdown: Array<{ label: string; amount: number }> = []
-      data.selectedItemDetails.forEach(item => {
+      items.forEach((item: any) => {
         const qty = item.quantity || 1
         if (qty > 1) {
           breakdown.push({ label: `${item.name} x${qty}`, amount: item.price * qty })
@@ -50,16 +86,27 @@ export default function HaulAwaySummaryPage() {
         }
       })
       // Add discount line if applicable
-      if (data.discountAmount > 0) {
-        breakdown.push({ label: `Multi-item discount (${data.discountPercent}%)`, amount: -data.discountAmount })
+      if (discountAmount > 0) {
+        breakdown.push({ label: `Multi-item discount (${discountPercent}%)`, amount: -discountAmount })
       }
-      const subtotalBeforeDiscount = data.selectedItemDetails.reduce((sum, i) => sum + i.price * (i.quantity || 1), 0)
-      const afterDiscount = subtotalBeforeDiscount - data.discountAmount
+      const subtotalBeforeDiscount = items.reduce((sum: number, i: any) => sum + i.price * (i.quantity || 1), 0)
+      const afterDiscount = subtotalBeforeDiscount - discountAmount
       const platformFee = Math.round(afterDiscount * 0.05 * 100) / 100
       const total = Math.round((afterDiscount + platformFee) * 100) / 100
       breakdown.push({ label: 'Platform Fee', amount: platformFee })
       setQuote({ breakdown, total })
-      updateData({ quoteData: { breakdown, total } })
+      // Also update context so customer details and other fields display correctly
+      if (!hasCalculatorItems) {
+        updateData({
+          selectedItemDetails: items,
+          calculatorPrice: calcData.price,
+          discountPercent,
+          discountAmount,
+          quoteData: { breakdown, total },
+        })
+      } else {
+        updateData({ quoteData: { breakdown, total } })
+      }
       setLoading(false)
     } else {
       // Fallback: old volume-based pricing
@@ -143,9 +190,10 @@ export default function HaulAwaySummaryPage() {
     }, 20000)
 
     try {
-      // Build description from calculator items if available
-      const itemDescription = hasCalculatorItems
-        ? data.selectedItemDetails.map(i => {
+      // Build description from calculator items if available (use sessionStorage fallback)
+      const calcData = getCalculatorItems()
+      const itemDescription = calcData
+        ? calcData.items.map((i: any) => {
             const qty = i.quantity || 1
             return qty > 1 ? `${i.name} x${qty}` : i.name
           }).join(', ')
@@ -158,7 +206,7 @@ export default function HaulAwaySummaryPage() {
         pickupLng: data.pickupLng!,
         pickupAddress: data.pickupAddress,
         scheduledFor: data.scheduledFor,
-        volumeTier: hasCalculatorItems ? undefined : data.volumeTier,
+        volumeTier: calcData ? undefined : data.volumeTier,
         addons: data.addons,
         customerNotes: itemDescription
           ? `Items: ${itemDescription}${customerNotes ? '\n' + customerNotes : ''}`

@@ -1,6 +1,8 @@
 'use client'
 
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
+
+const STORAGE_KEY = 'hk_quote_context'
 
 interface QuoteData {
   // Service
@@ -83,15 +85,61 @@ const initialData: QuoteData = {
 
 const QuoteContext = createContext<QuoteContextType | undefined>(undefined)
 
+function loadFromStorage(): QuoteData {
+  if (typeof window === 'undefined') return initialData
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return { ...initialData, ...parsed }
+    }
+  } catch (e) {
+    console.warn('[QuoteContext] Failed to load from sessionStorage:', e)
+  }
+  return initialData
+}
+
+function saveToStorage(data: QuoteData) {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (e) {
+    console.warn('[QuoteContext] Failed to save to sessionStorage:', e)
+  }
+}
+
 export function QuoteProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<QuoteData>(initialData)
+  const initialized = useRef(false)
+
+  // Hydrate from sessionStorage on mount (client-side only)
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true
+      const stored = loadFromStorage()
+      setData(stored)
+    }
+  }, [])
+
+  // Persist to sessionStorage on every data change (skip initial render)
+  useEffect(() => {
+    if (initialized.current) {
+      saveToStorage(data)
+    }
+  }, [data])
 
   const updateData = (updates: Partial<QuoteData>) => {
-    setData(prev => ({ ...prev, ...updates }))
+    setData(prev => {
+      const next = { ...prev, ...updates }
+      return next
+    })
   }
 
   const resetData = () => {
     setData(initialData)
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.removeItem(STORAGE_KEY) } catch {}
+    }
   }
 
   return (
