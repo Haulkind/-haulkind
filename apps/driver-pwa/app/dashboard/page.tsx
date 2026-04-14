@@ -495,11 +495,15 @@ export default function DashboardPage() {
                     return null
                   })()}
                   {/* Distance from driver */}
-                  {lat && lng && order.pickup_lat && order.pickup_lng && (
-                    <p className="text-xs text-blue-500 mt-1">
-                      📍 {getDistanceMiles(lat, lng, Number(order.pickup_lat), Number(order.pickup_lng)).toFixed(1)} mi away
-                    </p>
-                  )}
+                  {(() => {
+                    const oLat = Number(order.pickup_lat)
+                    const oLng = Number(order.pickup_lng)
+                    if (lat && lng && oLat && oLng) {
+                      const dist = getDistanceMiles(lat, lng, oLat, oLng)
+                      return <p className="text-xs text-blue-500 mt-1">📍 {dist.toFixed(1)} mi away</p>
+                    }
+                    return null
+                  })()}
                   <p className="text-xs text-gray-400 mt-1">{formatTime(order)}</p>
 
                           {/* Action buttons for new/available orders */}
