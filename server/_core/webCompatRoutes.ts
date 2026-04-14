@@ -222,6 +222,29 @@ export function registerWebCompatRoutes(app: Express) {
         console.warn("[WebCompat] POST /jobs - WARNING: no customer_account_id found for email:", customerEmail);
       }
 
+      // Geocode address if coordinates are missing
+      let finalLat = pickupLat || 0;
+      let finalLng = pickupLng || 0;
+      if ((!finalLat || !finalLng) && pickupAddress) {
+        try {
+          const addr = encodeURIComponent(pickupAddress);
+          const geoResp = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${addr}&limit=1`,
+            { headers: { "User-Agent": "Haulkind/1.0" } }
+          );
+          if (geoResp.ok) {
+            const geoData = await geoResp.json();
+            if (Array.isArray(geoData) && geoData.length > 0) {
+              finalLat = parseFloat(geoData[0].lat) || 0;
+              finalLng = parseFloat(geoData[0].lon) || 0;
+              console.log("[WebCompat] POST /jobs - geocoded address:", finalLat, finalLng);
+            }
+          }
+        } catch (geoErr) {
+          console.warn("[WebCompat] POST /jobs - geocoding failed:", geoErr);
+        }
+      }
+
       // Insert into jobs table (single source of truth for driver + admin)
       const result = await pool.query(
         `INSERT INTO jobs (
@@ -241,8 +264,8 @@ export function registerWebCompatRoutes(app: Express) {
           customerAccountId,
           serviceType || "HAUL_AWAY",
           pickupAddress || "",
-          pickupLat || 0,
-          pickupLng || 0,
+          finalLat,
+          finalLng,
           customerNotes || "",
           totalAmount,
           itemsJson,
