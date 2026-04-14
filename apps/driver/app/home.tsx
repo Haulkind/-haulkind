@@ -46,7 +46,7 @@ function formatServiceType(type: string): string {
 export default function HomeScreen() {
   const router = useRouter()
   const { token, driver, logout } = useAuth()
-  const [isOnline, setIsOnline] = useState(true)
+  const [isOnline, setIsOnline] = useState(false)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [availableOrders, setAvailableOrders] = useState<Job[]>([])
@@ -65,14 +65,17 @@ export default function HomeScreen() {
       ])
       setAvailableOrders(available.orders || [])
       setMyOrders(my.orders || [])
-      if (active) setActiveJob(active)
+      setActiveJob(active)
     } catch (error) {
       console.error('Failed to fetch orders:', error)
     }
   }, [token])
 
-  // Initial load + polling every 10 seconds
+  // Auto-go-online on mount + start polling
   useEffect(() => {
+    if (token) {
+      goOnline(token).then(() => setIsOnline(true)).catch(() => {})
+    }
     fetchOrders()
     pollRef.current = setInterval(fetchOrders, 10000)
     return () => {
