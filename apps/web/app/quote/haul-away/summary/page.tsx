@@ -91,8 +91,15 @@ export default function HaulAwaySummaryPage() {
       }
       const subtotalBeforeDiscount = items.reduce((sum: number, i: any) => sum + i.price * (i.quantity || 1), 0)
       const afterDiscount = subtotalBeforeDiscount - discountAmount
-      const platformFee = Math.round(afterDiscount * 0.05 * 100) / 100
-      const total = Math.round((afterDiscount + platformFee) * 100) / 100
+      // Enforce $99 minimum visit fee (same as calculator)
+      const MINIMUM_VISIT_FEE = 99
+      const afterMinimum = Math.max(afterDiscount, MINIMUM_VISIT_FEE)
+      // Show minimum fee adjustment in breakdown if it was applied
+      if (afterDiscount < MINIMUM_VISIT_FEE) {
+        breakdown.push({ label: 'Minimum Visit Fee adjustment', amount: MINIMUM_VISIT_FEE - afterDiscount })
+      }
+      const platformFee = Math.round(afterMinimum * 0.05 * 100) / 100
+      const total = Math.round((afterMinimum + platformFee) * 100) / 100
       breakdown.push({ label: 'Platform Fee', amount: platformFee })
       setQuote({ breakdown, total })
       // Also update context so customer details and other fields display correctly
