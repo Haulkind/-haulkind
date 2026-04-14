@@ -3,11 +3,11 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Contact HaulKind - Get in Touch | PA, NY & NJ',
-  description: 'Contact HaulKind for junk removal and moving help in Pennsylvania, New York & New Jersey. Email, phone, or get a free quote online. We respond fast.',
+  description: 'Contact HaulKind for hauling and moving help in Pennsylvania, New York & New Jersey. Email, phone, or get a free quote online. We respond fast.',
   alternates: { canonical: '/contact' },
   openGraph: {
     title: 'Contact HaulKind | PA, NY & NJ',
-    description: 'Questions about junk removal or moving help? Contact HaulKind. Fast response, transparent pricing. Serving PA, NY & NJ.',
+    description: 'Questions about hauling or moving help? Contact HaulKind. Fast response, transparent pricing. Serving PA, NY & NJ.',
     url: 'https://haulkind.com/contact',
   },
 }
@@ -17,7 +17,7 @@ export default function ContactPage() {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'HaulKind',
-    description: 'Fast local junk removal and moving help with transparent pricing.',
+    description: 'Fast local hauling and moving help with transparent pricing.',
     url: 'https://haulkind.com',
     email: 'support@haulkind.com',
     telephone: '+1-800-555-1234',
@@ -180,7 +180,7 @@ export default function ContactPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            The fastest way to get junk removed is to get a quote. See your exact price in seconds — no phone call, no waiting.
+            The fastest way to get started is to get a quote. See your exact price in seconds — no phone call, no waiting.
           </p>
           <Link
             href="/quote"
