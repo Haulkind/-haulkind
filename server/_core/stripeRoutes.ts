@@ -451,13 +451,19 @@ export function registerStripeRoutes(app: Express) {
         return res.status(400).json({ error: "Order amount too low (minimum $0.50)" });
       }
 
+      // Enforce $99 minimum visit fee on the server side (safety net)
+      const MINIMUM_CENTS = 9900; // $99.00
+      if (totalCents < MINIMUM_CENTS) {
+        console.log("[Stripe] Enforcing $99 minimum: original=" + totalCents + " cents, adjusted to " + MINIMUM_CENTS);
+        totalCents = MINIMUM_CENTS;
+      }
+
       // Determine if embedded mode is requested
       const uiMode = req.body.uiMode === "embedded" ? "embedded" : "hosted";
       const returnUrl = req.body.returnUrl;
 
       // Build session options
       const sessionOptions: any = {
-        payment_method_types: ["card"],
         line_items: [
           {
             price_data: {
@@ -482,8 +488,10 @@ export function registerStripeRoutes(app: Express) {
 
       if (uiMode === "embedded") {
         sessionOptions.ui_mode = "embedded";
+        sessionOptions.automatic_payment_methods = { enabled: true };
         sessionOptions.return_url = returnUrl || `https://app.haulkind.com/orders?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       } else {
+        sessionOptions.payment_method_types = ["card"];
         sessionOptions.success_url = successUrl || `https://app.haulkind.com/orders?payment=success&session_id={CHECKOUT_SESSION_ID}`;
         sessionOptions.cancel_url = cancelUrl || `https://app.haulkind.com/orders?payment=cancel`;
       }
@@ -525,8 +533,13 @@ export function registerStripeRoutes(app: Express) {
 
       res.json(response);
     } catch (error: any) {
-      console.error("[Stripe] Checkout create error:", error);
-      res.status(500).json({ error: "Failed to create checkout session", details: error?.message });
+      console.error("[Stripe] Checkout create error:", error?.type, error?.message, error?.code);
+      const statusCode = error?.statusCode || 500;
+      res.status(statusCode).json({
+        error: "Failed to create checkout session",
+        details: error?.message,
+        code: error?.code,
+      });
     }
   });
 
