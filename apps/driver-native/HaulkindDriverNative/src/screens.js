@@ -426,9 +426,7 @@ export function HomeScreen({ navigation }) {
       setOrders(Array.isArray(ordersList) ? ordersList : []);
     } catch (e) {
       console.log('loadOrders error:', e.message);
-      // Don't clear orders on error — keep showing last known orders
-      // Only clear if we have no orders yet
-      if (orders.length === 0) setOrders([]);
+      // Do nothing on error — keep showing last known orders
     } finally {
       setLoading(false);
       setRefreshing(false);
