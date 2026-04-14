@@ -4,6 +4,14 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import LeadCaptureModal from './LeadCaptureModal'
 
+// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
+function isNJZip(zip: string): boolean {
+  const z = zip.replace(/\D/g, '').slice(0, 5)
+  if (z.length !== 5) return false
+  const num = parseInt(z, 10)
+  return num >= 7001 && num <= 8999
+}
+
 // Pricing table for Junk Removal & Donation Pickup
 const PRICED_ITEMS = [
   { id: 'sofa', name: 'Sofa / Couch', icon: '🛋️', price: 89 },
@@ -34,6 +42,10 @@ export default function PriceCalculator() {
   // Quantity map: itemId -> quantity (0 means not selected)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [showModal, setShowModal] = useState(false)
+  // NJ ZIP code compliance check
+  const [userZip, setUserZip] = useState('')
+  const isNJ = isNJZip(userZip)
+  const junkRemovalBlocked = isNJ
 
   const setQuantity = useCallback((itemId: string, qty: number) => {
     setItemQuantities(prev => {
@@ -184,6 +196,37 @@ export default function PriceCalculator() {
               </div>
             </div>
 
+            {/* ZIP Code Check */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your ZIP Code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={5}
+              value={userZip}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 5)
+                setUserZip(val)
+                // Auto-switch away from junk-removal if NJ ZIP detected
+                if (isNJZip(val) && serviceType === 'junk-removal') {
+                  setServiceType('donation')
+                  setItemQuantities({})
+                }
+              }}
+              placeholder="Enter your ZIP code"
+              className="w-full sm:w-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+            />
+            {junkRemovalBlocked && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                <p className="text-sm text-amber-800 font-medium">
+                  ⚠️ Junk Removal service is currently exclusive to Pennsylvania. Please select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.
+                </p>
+              </div>
+            )}
+          </div>
+
             {/* Service Type */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -191,16 +234,20 @@ export default function PriceCalculator() {
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <button
-                onClick={() => setServiceType('junk-removal')}
+                onClick={() => { if (!junkRemovalBlocked) setServiceType('junk-removal') }}
+                disabled={junkRemovalBlocked}
                 className={`relative p-4 rounded-lg border-2 text-left transition ${
-                  serviceType === 'junk-removal'
-                    ? 'border-teal-500 bg-teal-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                  junkRemovalBlocked
+                    ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                    : serviceType === 'junk-removal'
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Most Popular</span>
+                <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
                 <div className="font-semibold text-gray-900">Junk Removal <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
                 <div className="text-sm text-gray-500">Remove old furniture, appliances, and unwanted items</div>
+                {junkRemovalBlocked && <div className="text-xs text-red-500 mt-1 font-medium">Not available for NJ addresses</div>}
               </button>
               <button
                 onClick={() => setServiceType('donation')}
