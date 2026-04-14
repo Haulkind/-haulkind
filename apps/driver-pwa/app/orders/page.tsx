@@ -118,7 +118,7 @@ export default function OrdersPage() {
                 )}
                 {/* Item preview */}
                 {(() => {
-                  const desc = (order as any).description || order.customer_notes || ''
+                  const desc = order.description || order.customer_notes || ''
                   if (desc.startsWith('Items:')) {
                     const itemLine = desc.split('\n')[0].replace('Items:', '').trim()
                     if (itemLine) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {itemLine}</p>

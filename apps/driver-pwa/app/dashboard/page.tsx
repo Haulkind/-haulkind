@@ -463,12 +463,12 @@ export default function DashboardPage() {
                   )}
                   {/* Show brief item preview from description or items_json */}
                   {(() => {
-                    const desc = (order as any).description || order.customer_notes || ''
+                    const desc = order.description || order.customer_notes || ''
                     if (desc.startsWith('Items:')) {
                       const itemLine = desc.split('\n')[0].replace('Items:', '').trim()
                       if (itemLine) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {itemLine}</p>
                     }
-                    const ij = (order as any).items_json
+                    const ij = order.items_json
                     if (ij) {
                       try {
                         const arr = typeof ij === 'string' ? JSON.parse(ij) : ij
@@ -482,9 +482,9 @@ export default function DashboardPage() {
                       } catch {}
                     }
                     return null
-                  })()
+                  })()}
                   {(() => {
-                    const pu = (order as any).photo_urls || (order as any).photos
+                    const pu = order.photo_urls || order.photos
                     if (!pu) return null
                     let arr: string[] = []
                     try { arr = typeof pu === 'string' ? JSON.parse(pu) : pu } catch {}
