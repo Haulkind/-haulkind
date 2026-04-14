@@ -185,7 +185,7 @@ export default function HaulAwaySummaryPage() {
       setError('Payment failed. Please try again.')
       setPaying(false)
     }
-  }, [paying, customerNotes, data, updateData])
+  }, [paying, customerNotes, data, updateData, quote])
 
   if (loading) {
     return (
