@@ -389,16 +389,13 @@ export function HomeScreen({ navigation }) {
     loadDriverProfile();
   }, []);
 
-  // Auto-refresh orders every 15 seconds when online
+  // Auto-refresh orders every 15 seconds (always poll, even when toggled offline)
   useEffect(() => {
-    let interval;
-    if (isOnline) {
-      interval = setInterval(() => {
-        loadOrders();
-      }, 15000);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [isOnline]);
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const loadDriverProfile = async () => {
     try {
@@ -429,7 +426,9 @@ export function HomeScreen({ navigation }) {
       setOrders(Array.isArray(ordersList) ? ordersList : []);
     } catch (e) {
       console.log('loadOrders error:', e.message);
-      setOrders([]);
+      // Don't clear orders on error — keep showing last known orders
+      // Only clear if we have no orders yet
+      if (orders.length === 0) setOrders([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -572,16 +571,14 @@ export function HomeScreen({ navigation }) {
           {isOnline ? 'Available Orders' : 'Go Online to See Orders'}
         </Text>
 
-        {!isOnline ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>...</Text>
-            <Text style={{ fontSize: 16, color: COLORS.gray, textAlign: 'center' }}>Toggle the switch above to go online and start receiving orders</Text>
-          </View>
-        ) : loading ? (
+        {loading && orders.length === 0 ? (
           <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
         ) : orders.length === 0 ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, color: COLORS.gray, textAlign: 'center' }}>No orders available right now.{'\n'}Pull down to refresh.</Text>
+            <Text style={{ fontSize: 16, color: COLORS.gray, textAlign: 'center' }}>
+              {isOnline ? 'No orders available right now.' : 'Go online to receive orders.'}
+              {'\n'}Pull down to refresh.
+            </Text>
           </View>
         ) : (
           <FlatList
