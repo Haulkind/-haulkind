@@ -472,11 +472,12 @@ export default function DashboardPage() {
                     if (ij) {
                       try {
                         const arr = typeof ij === 'string' ? JSON.parse(ij) : ij
-                        if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] !== 'string') {
+                        if (Array.isArray(arr) && arr.length > 0) {
                           const names = arr.map((i: any) => {
+                            if (typeof i === 'string') return i
                             const qty = i.quantity || 1
                             return qty > 1 ? `${i.name} x${qty}` : i.name
-                          }).join(', ')
+                          }).filter(Boolean).join(', ')
                           if (names) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {names}</p>
                         }
                       } catch {}
