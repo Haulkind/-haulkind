@@ -246,7 +246,7 @@ export default function OrderDetailPage() {
         {/* Service-Specific Items Card */}
         {(() => {
           const items = parseItemsJson(order.items_json)
-          const description = order.description || order.customer_notes || ''
+          const description = stripPricing(order.description || order.customer_notes || '')
           const serviceType = (order.service_type || order.serviceType || '').toUpperCase()
 
           // Parse description to extract items list and customer notes separately
@@ -287,7 +287,7 @@ export default function OrderDetailPage() {
                          serviceType === 'MATTRESS_SWAP' ? '🛏️' :
                          serviceType === 'LABOR_ONLY' ? '💪' : '📦'}
                       </span>
-                      <span className="text-sm font-medium text-gray-800">{item}</span>
+                      <span className="text-sm font-medium text-gray-800">{stripPricing(item)}</span>
                     </div>
                   ))}
                 </div>
@@ -542,6 +542,20 @@ function formatTimeWindow(window: string): string {
     'EVENING': 'Evening (4PM - 8PM)',
   }
   return labels[window.toUpperCase()] || window.replace(/_/g, ' ')
+}
+
+// Strip pricing info from description — drivers should only see items, not prices/discounts/totals
+function stripPricing(text: string): string {
+  if (!text) return ''
+  // Remove "($XX.XX)" price tags after items
+  let cleaned = text.replace(/\s*\(\$[\d,.]+\)/g, '')
+  // Remove "| 5% per-item discount: -$XX.XX" or similar discount lines
+  cleaned = cleaned.replace(/\s*\|\s*\d+%\s*(?:per-item\s+)?discount:\s*-?\$[\d,.]+/gi, '')
+  // Remove "| Total: $XX.XX" 
+  cleaned = cleaned.replace(/\s*\|\s*Total:\s*\$[\d,.]+/gi, '')
+  // Clean up trailing pipes and whitespace
+  cleaned = cleaned.replace(/\s*\|\s*$/, '').trim()
+  return cleaned
 }
 
 function parseItemsJson(itemsJson: string | undefined): string[] {

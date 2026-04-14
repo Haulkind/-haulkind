@@ -118,7 +118,7 @@ export default function OrdersPage() {
                 )}
                 {/* Item preview */}
                 {(() => {
-                  const desc = order.description || order.customer_notes || ''
+                  const desc = stripDriverPricing(order.description || order.customer_notes || '')
                   if (desc.startsWith('Items:')) {
                     const itemLine = desc.split('\n')[0].replace('Items:', '').trim()
                     if (itemLine) return <p className="text-xs text-indigo-600 mt-1 truncate">📋 {itemLine}</p>
@@ -197,6 +197,16 @@ function formatServiceTypeShort(type: string): string {
     'DONATION_PICKUP': 'Donation',
   }
   return labels[type.toUpperCase()] || type.replace(/_/g, ' ')
+}
+
+// Strip pricing info — drivers should only see items, not prices/discounts/totals
+function stripDriverPricing(text: string): string {
+  if (!text) return ''
+  let cleaned = text.replace(/\s*\(\$[\d,.]+\)/g, '')
+  cleaned = cleaned.replace(/\s*\|\s*\d+%\s*(?:per-item\s+)?discount:\s*-?\$[\d,.]+/gi, '')
+  cleaned = cleaned.replace(/\s*\|\s*Total:\s*\$[\d,.]+/gi, '')
+  cleaned = cleaned.replace(/\s*\|\s*$/, '').trim()
+  return cleaned
 }
 
 function formatDate(order: Order): string {

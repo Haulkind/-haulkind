@@ -412,7 +412,7 @@ function SchedulePageInner() {
         mattressQty: serviceType === 'MATTRESS_SWAP' ? totalMattresses : undefined,
         assemblyItems: serviceType === 'FURNITURE_ASSEMBLY' ? assemblyItemCount : undefined,
         customerNotes: (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP')
-          ? [notes, `Items: ${Object.entries(junkItemQuantities).map(([id, qty]) => { const item = JUNK_PRICED_ITEMS.find(i => i.id === id); return item ? `${item.name} x${qty} ($${item.price * qty})` : id }).join(', ')}${junkDiscountAmount > 0 ? ` | 5% per-item discount: -$${junkDiscountAmount.toFixed(2)}` : ''} | Total: $${junkDisplayPrice.toFixed(2)}`].filter(Boolean).join(' | ')
+          ? [notes, `Items: ${Object.entries(junkItemQuantities).map(([id, qty]) => { const item = JUNK_PRICED_ITEMS.find(i => i.id === id); return item ? (qty > 1 ? `${item.name} x${qty}` : item.name) : id }).join(', ')}`].filter(Boolean).join(' | ')
           : notes,
         customerName,
         customerPhone,

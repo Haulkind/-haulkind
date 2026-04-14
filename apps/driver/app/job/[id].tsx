@@ -234,9 +234,11 @@ export default function JobDetailScreen() {
 
       {/* Service-Specific Items */}
       {(() => {
-        const description = (job as any).description || ''
+        const rawDescription = (job as any).description || ''
         const itemsJson = (job as any).items_json || (job as any).itemsJson || ''
         let items: string[] = []
+        // Strip pricing info — drivers should only see items, not prices/discounts/totals
+        const description = stripDriverPricing(rawDescription)
         let customerNotes = description
 
         // Parse items from description (format: "Items: Sofa, Fridge\nCustomer notes")
@@ -277,7 +279,7 @@ export default function JobDetailScreen() {
             {items.map((item, idx) => (
               <View key={idx} style={styles.itemRow}>
                 <Text style={styles.itemBullet}>•</Text>
-                <Text style={styles.itemText}>{item}</Text>
+                <Text style={styles.itemText}>{stripDriverPricing(item)}</Text>
               </View>
             ))}
             {customerNotes ? (
@@ -343,6 +345,20 @@ export default function JobDetailScreen() {
       <View style={styles.spacer} />
     </ScrollView>
   )
+}
+
+// Strip pricing info from description — drivers should only see items, not prices/discounts/totals
+function stripDriverPricing(text: string): string {
+  if (!text) return ''
+  // Remove "($XX.XX)" price tags after items
+  let cleaned = text.replace(/\s*\(\$[\d,.]+\)/g, '')
+  // Remove "| 5% per-item discount: -$XX.XX" or similar discount lines
+  cleaned = cleaned.replace(/\s*\|\s*\d+%\s*(?:per-item\s+)?discount:\s*-?\$[\d,.]+/gi, '')
+  // Remove "| Total: $XX.XX"
+  cleaned = cleaned.replace(/\s*\|\s*Total:\s*\$[\d,.]+/gi, '')
+  // Clean up trailing pipes and whitespace
+  cleaned = cleaned.replace(/\s*\|\s*$/, '').trim()
+  return cleaned
 }
 
 const styles = StyleSheet.create({
