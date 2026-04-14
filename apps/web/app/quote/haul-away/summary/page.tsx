@@ -168,6 +168,7 @@ export default function HaulAwaySummaryPage() {
         customerPhone: data.customerPhone,
         customerEmail: data.customerEmail,
         timeWindow: data.timeWindow,
+        total: quote?.total,
       }, controller.signal)
 
       clearTimeout(safetyTimer)
