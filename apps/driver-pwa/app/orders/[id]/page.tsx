@@ -120,8 +120,14 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleDecline = () => {
+  const handleDecline = async () => {
+    if (!token || !order) return
     if (confirm('Are you sure you want to decline this order?')) {
+      try {
+        await rejectOrder(token, String(order.id))
+      } catch (err) {
+        // Non-fatal — still navigate back
+      }
       router.back()
     }
   }
