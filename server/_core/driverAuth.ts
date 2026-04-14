@@ -37,7 +37,18 @@ function applyDriverCommissionToList(orders: any[]): any[] {
 // Use raw pg connection since DATABASE_URL is PostgreSQL
 let pgPool: any = null;
 async function getPgPool() {
-  if (pgPool) return pgPool;
+  // If we have a pool, validate it's still alive
+  if (pgPool) {
+    try {
+      const client = await pgPool.connect();
+      client.release();
+      return pgPool;
+    } catch (e) {
+      console.warn('[DriverAuth] Pool stale, recreating...', (e as any)?.message);
+      try { pgPool.end(); } catch (_) {}
+      pgPool = null;
+    }
+  }
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) return null;
   
@@ -1015,7 +1026,7 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // GET /driver/orders/available - Get available orders for driver
-  // Queries BOTH jobs table and orders table to include web-created orders
+  // Queries jobs table (single source of truth)
   app.get('/driver/orders/available', async (req, res) => {
     try {
       const decoded = verifyToken(req);
@@ -1025,38 +1036,43 @@ export function registerDriverAuthRoutes(app: Express) {
 
       const pool = await getPgPool();
       if (!pool) {
-        return res.status(500).json({ error: 'Database not available' });
+        console.error('[DriverAuth] GET /driver/orders/available - DATABASE NOT AVAILABLE');
+        return res.status(500).json({ error: 'Database not available', orders: [] });
       }
 
-      // Get pending orders from jobs table (primary)
+      // Get pending orders from jobs table (primary + single source of truth)
       // Include 'paid' status so Stripe-paid orders (mattress swap, assembly) are visible to drivers
-      const jobsResult = await pool.query(
-        `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
-                pickup_address, pickup_lat::double precision as pickup_lat, pickup_lng::double precision as pickup_lng,
-                description, estimated_price,
-                items_json, scheduled_for, pickup_time_window, photo_urls, created_at
-         FROM jobs WHERE status IN ('pending', 'dispatching', 'paid') AND assigned_driver_id IS NULL
-         ORDER BY created_at DESC LIMIT 20`
-      );
-
-      // Also check orders table for any pending orders (legacy/web compat)
-      let ordersRows: any[] = [];
-      try {
-        const ordersResult = await pool.query(
-          `SELECT id::text, customer_name, phone as customer_phone, email as customer_email,
-                  service_type, status, street as pickup_address,
-                  lat::double precision as pickup_lat, lng::double precision as pickup_lng,
-                  '' as description,
-                  COALESCE((pricing_json::jsonb->>'total')::numeric, 0) as estimated_price,
-                  items_json::text, pickup_date as scheduled_for, created_at
-           FROM orders WHERE status IN ('pending', 'dispatching', 'paid') AND assigned_driver_id IS NULL
-           ORDER BY created_at DESC LIMIT 20`
-        );
-        ordersRows = ordersResult.rows || [];
-      } catch (e) {
-        // orders table may not exist or have different schema
-        console.warn('[DriverAuth] Could not query orders table:', (e as any)?.message);
+      // Include 'scheduled' status for admin-scheduled orders
+      let jobsResult: any;
+      let retries = 0;
+      while (retries < 2) {
+        try {
+          jobsResult = await pool.query(
+            `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
+                    pickup_address, pickup_lat::double precision as pickup_lat, pickup_lng::double precision as pickup_lng,
+                    description, estimated_price,
+                    items_json, scheduled_for, pickup_time_window, photo_urls, created_at
+             FROM jobs WHERE status IN ('pending', 'dispatching', 'paid', 'scheduled') AND assigned_driver_id IS NULL
+             ORDER BY created_at DESC LIMIT 50`
+          );
+          break; // success
+        } catch (queryErr: any) {
+          retries++;
+          console.error(`[DriverAuth] Jobs query FAILED (attempt ${retries}):`, queryErr?.message);
+          if (retries >= 2) {
+            // Pool might be stale — force reconnect on next request
+            try { pgPool?.end(); } catch (_) {}
+            pgPool = null;
+            console.error('[DriverAuth] GET /driver/orders/available - RETURNING 500 after retries');
+            return res.status(500).json({ error: 'Database query failed', orders: [] });
+          }
+          // Brief pause before retry
+          await new Promise(r => setTimeout(r, 500));
+        }
       }
+
+      // orders VIEW is a mirror of jobs table, no need to query it separately
+      let ordersRows: any[] = [];
 
       const allOrders = [...(jobsResult.rows || []), ...ordersRows];
       // Sort by created_at descending
@@ -1103,8 +1119,9 @@ export function registerDriverAuthRoutes(app: Express) {
 
       res.json({ orders: applyDriverCommissionToList(allOrders) });
     } catch (err: any) {
-      console.error('Get available orders error:', err);
-      res.json({ orders: [] });
+      console.error('[DriverAuth] GET /driver/orders/available CRITICAL ERROR:', err?.message, err?.stack);
+      // Return 500 so apps know there's an error (don't silently return empty)
+      return res.status(500).json({ error: 'Failed to fetch orders', orders: [] });
     }
   });
 
@@ -1666,8 +1683,8 @@ export function registerDriverAuthRoutes(app: Express) {
 
       res.json({ orders: applyDriverCommissionToList(allOrders) });
     } catch (err: any) {
-      console.error('My orders error:', err);
-      res.json({ orders: [] });
+      console.error('[DriverAuth] GET /driver/orders/my-orders CRITICAL ERROR:', err?.message, err?.stack);
+      return res.status(500).json({ error: 'Failed to fetch my orders', orders: [] });
     }
   });
 
