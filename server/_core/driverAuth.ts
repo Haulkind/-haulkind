@@ -1061,45 +1061,41 @@ export function registerDriverAuthRoutes(app: Express) {
       // Sort by created_at descending
       allOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      // Geocode up to 3 orders per request that are missing coordinates.
+      // Geocode at most 1 order per request to respect Nominatim rate limit (1 req/sec).
       // Orders should already be geocoded at creation time, but this is a fallback
       // for any that slipped through (e.g. old orders, failed geocoding at creation).
-      const needsGeocodeList = allOrders.filter(o => {
+      const needsGeocode = allOrders.find(o => {
         const lat = parseFloat(o.pickup_lat);
         const lng = parseFloat(o.pickup_lng);
         return (!lat || !lng) && o.pickup_address;
-      }).slice(0, 3);
-
-      // Geocode them in parallel for speed
-      if (needsGeocodeList.length > 0) {
-        await Promise.all(needsGeocodeList.map(async (order) => {
-          try {
-            const addr = encodeURIComponent(order.pickup_address);
-            const geoResp = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${addr}&limit=1`,
-              { headers: { 'User-Agent': 'Haulkind/1.0' } }
-            );
-            if (geoResp.ok) {
-              const geoData = await geoResp.json();
-              if (Array.isArray(geoData) && geoData.length > 0) {
-                const newLat = parseFloat(geoData[0].lat);
-                const newLng = parseFloat(geoData[0].lon);
-                if (newLat && newLng) {
-                  order.pickup_lat = newLat;
-                  order.pickup_lng = newLng;
-                  // Persist to DB so future requests have coords
-                  await pool.query(
-                    'UPDATE jobs SET pickup_lat = $1, pickup_lng = $2 WHERE id = $3',
-                    [newLat, newLng, order.id]
-                  ).catch(() => {});
-                  console.log(`[DriverAuth] Geocoded order ${order.id}: ${newLat},${newLng}`);
-                }
+      });
+      if (needsGeocode) {
+        try {
+          const addr = encodeURIComponent(needsGeocode.pickup_address);
+          const geoResp = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${addr}&limit=1`,
+            { headers: { 'User-Agent': 'Haulkind/1.0' } }
+          );
+          if (geoResp.ok) {
+            const geoData = await geoResp.json();
+            if (Array.isArray(geoData) && geoData.length > 0) {
+              const newLat = parseFloat(geoData[0].lat);
+              const newLng = parseFloat(geoData[0].lon);
+              if (newLat && newLng) {
+                needsGeocode.pickup_lat = newLat;
+                needsGeocode.pickup_lng = newLng;
+                // Persist to DB so future requests have coords
+                await pool.query(
+                  'UPDATE jobs SET pickup_lat = $1, pickup_lng = $2 WHERE id = $3',
+                  [newLat, newLng, needsGeocode.id]
+                ).catch(() => {});
+                console.log(`[DriverAuth] Geocoded order ${needsGeocode.id}: ${newLat},${newLng}`);
               }
             }
-          } catch (geoErr) {
-            // Non-fatal — order still returned without coords
           }
-        }));
+        } catch (geoErr) {
+          // Non-fatal — order still returned without coords
+        }
       }
 
       console.log('[DriverAuth] GET /driver/orders/available - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length + ' total:' + allOrders.length);
