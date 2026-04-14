@@ -9,6 +9,14 @@ import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protectio
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
+// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
+function isNJZip(zipCode: string): boolean {
+  const z = zipCode.replace(/\D/g, '').slice(0, 5)
+  if (z.length !== 5) return false
+  const num = parseInt(z, 10)
+  return num >= 7001 && num <= 8999
+}
+
 export default function HaulAwayLocationPage() {
   const router = useRouter()
   const { data, updateData } = useQuote()
@@ -129,9 +137,22 @@ export default function HaulAwayLocationPage() {
     setError('') // Clear error when user edits address
   }
 
+  const [njBlocked, setNjBlocked] = useState(false)
+  // Read service type from sessionStorage to distinguish HAUL_AWAY vs DONATION_PICKUP
+  const isJunkRemovalFlow = typeof window !== 'undefined'
+    ? (sessionStorage.getItem('hk_service_type') || 'HAUL_AWAY') === 'HAUL_AWAY'
+    : true
+
   const handleZipChange = (value: string) => {
-    setZip(value.replace(/\D/g, '').slice(0, 5))
-    setError('') // Clear error when user edits address
+    const cleaned = value.replace(/\D/g, '').slice(0, 5)
+    setZip(cleaned)
+    setError('')
+    // NJ compliance: only block if this is Junk Removal (HAUL_AWAY), not Donation Pickup
+    if (isJunkRemovalFlow && cleaned.length === 5 && isNJZip(cleaned)) {
+      setNjBlocked(true)
+    } else {
+      setNjBlocked(false)
+    }
   }
 
   // Unlock fields for editing
@@ -193,6 +214,12 @@ export default function HaulAwayLocationPage() {
     
     if (!zip.trim() || zip.length !== 5) {
       setError('Please enter a valid 5-digit ZIP code')
+      return
+    }
+
+    // NJ compliance: block Junk Removal (HAUL_AWAY) for NJ ZIP codes — Donation Pickup is allowed
+    if (isJunkRemovalFlow && isNJZip(zip)) {
+      setError('Junk Removal service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.')
       return
     }
     
@@ -442,6 +469,14 @@ export default function HaulAwayLocationPage() {
                     />
                   </div>
                 </div>
+
+                {njBlocked && (
+                  <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                    <p className="text-sm text-amber-800 font-medium">
+                      ⚠️ Junk Removal service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.
+                    </p>
+                  </div>
+                )}
 
                 <p className="text-[11px] text-gray-400">
                   We will check if we serve your area

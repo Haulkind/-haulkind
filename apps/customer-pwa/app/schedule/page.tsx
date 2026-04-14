@@ -9,6 +9,14 @@ type Step = 'service' | 'address' | 'schedule' | 'details' | 'summary' | 'confir
 
 type ServiceType = 'HAUL_AWAY' | 'LABOR_ONLY' | 'DONATION_PICKUP' | 'MATTRESS_SWAP' | 'FURNITURE_ASSEMBLY'
 
+// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
+function isNJZip(zip: string): boolean {
+  const z = zip.replace(/\D/g, '').slice(0, 5)
+  if (z.length !== 5) return false
+  const num = parseInt(z, 10)
+  return num >= 7001 && num <= 8999
+}
+
 const SERVICE_OPTIONS = [
   { id: 'HAUL_AWAY' as ServiceType, label: 'Junk Removal (PA Only)', emoji: '🚛', desc: 'We haul away your unwanted items', price: 'Starting at $99' },
   { id: 'LABOR_ONLY' as ServiceType, label: 'Moving Labor', emoji: '💪', desc: 'Helpers for moving, loading, or cleanup', price: 'Starting at $79/hr' },
@@ -300,6 +308,11 @@ function SchedulePageInner() {
     if (!city.trim()) { setError('Please enter a city'); return }
     if (!state.trim()) { setError('Please enter a state'); return }
     if (!zipCode.trim()) { setError('Please enter a zip code'); return }
+    // NJ compliance: block HAUL_AWAY for NJ ZIP codes
+    if (serviceType === 'HAUL_AWAY' && isNJZip(zipCode)) {
+      setError('Junk Removal service is currently exclusive to Pennsylvania. Please go back and select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -562,6 +575,13 @@ function SchedulePageInner() {
                 />
               </div>
             </div>
+            {serviceType === 'HAUL_AWAY' && zipCode.length === 5 && isNJZip(zipCode) && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                <p className="text-sm text-amber-800 font-medium">
+                  ⚠️ Junk Removal service is currently exclusive to Pennsylvania. Please go back and select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.
+                </p>
+              </div>
+            )}
             <div className="flex gap-3">
               <button onClick={() => setStep('details')} className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
                 Back
