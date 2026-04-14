@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import {
   getOrderDetail, startTrip, markArrived, startWork, completeOrder,
-  cancelOrder, uploadOrderPhoto, streamLocation, type Order,
+  cancelOrder, acceptOrder, rejectOrder, uploadOrderPhoto, streamLocation, type Order,
 } from '@/lib/api'
 
 const STATUS_FLOW = ['accepted', 'assigned', 'en_route', 'arrived', 'started', 'completed']
@@ -75,6 +75,9 @@ export default function OrderDetailPage() {
     setActing(true)
     try {
       switch (action) {
+        case 'accept':
+          await acceptOrder(token, String(order.id))
+          break
         case 'start-trip':
           await startTrip(token, String(order.id))
           break
@@ -114,6 +117,12 @@ export default function OrderDetailPage() {
       alert(err.message || 'Action failed')
     } finally {
       setActing(false)
+    }
+  }
+
+  const handleDecline = () => {
+    if (confirm('Are you sure you want to decline this order?')) {
+      router.back()
     }
   }
 
@@ -179,6 +188,7 @@ export default function OrderDetailPage() {
   const status = order.status?.toLowerCase() || ''
   const isCompleted = status === 'completed'
   const isCancelled = status === 'cancelled'
+  const isPending = status === 'pending' || status === 'available' || status === 'open'
   const isFinished = isCompleted || isCancelled
 
   return (
@@ -398,24 +408,46 @@ export default function OrderDetailPage() {
         {/* Action Buttons */}
         {!isFinished && (
           <div className="space-y-3 pb-4">
-            {getNextAction(status) && (
-              <button
-                onClick={() => handleAction(getNextAction(status)!)}
-                disabled={acting}
-                className="w-full py-4 bg-green-600 text-white rounded-xl text-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
-              >
-                {acting ? 'Processing...' : getActionLabel(status)}
-              </button>
-            )}
+            {/* Accept/Decline for pending (available) orders */}
+            {isPending ? (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDecline}
+                  disabled={acting}
+                  className="flex-1 py-4 border-2 border-red-500 text-red-500 rounded-xl font-bold text-lg hover:bg-red-50 transition disabled:opacity-50"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => handleAction('accept')}
+                  disabled={acting}
+                  className="flex-[2] py-4 bg-green-600 text-white rounded-xl text-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {acting ? 'Processing...' : 'Accept Order'}
+                </button>
+              </div>
+            ) : (
+              <>
+                {getNextAction(status) && (
+                  <button
+                    onClick={() => handleAction(getNextAction(status)!)}
+                    disabled={acting}
+                    className="w-full py-4 bg-green-600 text-white rounded-xl text-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
+                  >
+                    {acting ? 'Processing...' : getActionLabel(status)}
+                  </button>
+                )}
 
-            {!isFinished && status !== 'completed' && (
-              <button
-                onClick={() => handleAction('cancel')}
-                disabled={acting}
-                className="w-full py-3 border-2 border-red-500 text-red-500 rounded-xl font-semibold hover:bg-red-50 transition disabled:opacity-50"
-              >
-                Cancel Order
-              </button>
+                {status !== 'completed' && (
+                  <button
+                    onClick={() => handleAction('cancel')}
+                    disabled={acting}
+                    className="w-full py-3 border-2 border-red-500 text-red-500 rounded-xl font-semibold hover:bg-red-50 transition disabled:opacity-50"
+                  >
+                    Cancel Order
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
