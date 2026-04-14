@@ -291,7 +291,11 @@ export default function HaulAwaySummaryPage() {
             <div className="space-y-2 text-gray-700">
               <div className="flex justify-between">
                 <span>Service Type:</span>
-                <span className="font-medium">Haul Away Service</span>
+                <span className="font-medium">
+                  {typeof window !== 'undefined' && sessionStorage.getItem('hk_service_type') === 'DONATION_PICKUP'
+                    ? 'Donation Pickup Service'
+                    : 'Hauling & Removal Service'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Location:</span>

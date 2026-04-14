@@ -165,6 +165,8 @@ export default function PriceCalculator() {
     // Store discount info
     sessionStorage.setItem('hk_discount_percent', String(additionalItemCount > 0 ? MULTI_ITEM_DISCOUNT_PERCENT : 0))
     sessionStorage.setItem('hk_discount_amount', String(discountAmount))
+    // Store service type so location page can distinguish HAUL_AWAY vs DONATION_PICKUP
+    sessionStorage.setItem('hk_service_type', serviceType === 'donation' ? 'DONATION_PICKUP' : 'HAUL_AWAY')
     // Redirect to the scheduling/location page
     router.push('/quote/haul-away/location')
   }
