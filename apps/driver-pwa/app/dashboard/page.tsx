@@ -347,8 +347,8 @@ export default function DashboardPage() {
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Map (full screen) */}
-      <MapView lat={lat} lng={lng} orders={currentOrders} />
+      {/* Map (full screen) — always show available orders so drivers see nearby jobs */}
+      <MapView lat={lat} lng={lng} orders={availableOrders} />
 
       {/* Top bar overlay */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-primary-900/95 backdrop-blur-sm">

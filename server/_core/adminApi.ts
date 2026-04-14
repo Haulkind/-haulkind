@@ -1040,6 +1040,29 @@ export function registerAdminApiRoutes(app: Express) {
         return res.status(400).json({ error: 'Customer name and phone are required' });
       }
 
+      // Geocode address if provided
+      let pickupLat = 0;
+      let pickupLng = 0;
+      if (pickup_address) {
+        try {
+          const addr = encodeURIComponent(pickup_address);
+          const geoResp = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${addr}&limit=1`,
+            { headers: { 'User-Agent': 'Haulkind/1.0' } }
+          );
+          if (geoResp.ok) {
+            const geoData = await geoResp.json();
+            if (Array.isArray(geoData) && geoData.length > 0) {
+              pickupLat = parseFloat(geoData[0].lat) || 0;
+              pickupLng = parseFloat(geoData[0].lon) || 0;
+              console.log(`[Admin] Geocoded address: ${pickupLat},${pickupLng}`);
+            }
+          }
+        } catch (geoErr) {
+          console.warn('[Admin] Geocoding failed:', geoErr);
+        }
+      }
+
       // Determine initial status
       let status = 'pending';
       if (mark_completed) status = 'completed';
@@ -1058,10 +1081,11 @@ export function registerAdminApiRoutes(app: Express) {
           estimated_price, scheduled_for, pickup_time_window,
           photo_urls, signature_data,
           assigned_driver_id, status,
+          pickup_lat, pickup_lng,
           price_total_cents, platform_fee_cents, driver_earnings_cents, paid_at,
           created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
         ) RETURNING *`,
         [
           customer_name, customer_phone, customer_email || null,
@@ -1069,6 +1093,7 @@ export function registerAdminApiRoutes(app: Express) {
           estimated_price || '0', scheduled_for || null, pickup_time_window || null,
           photo_urls || null, signature_data || null,
           assign_driver_id || null, status,
+          pickupLat, pickupLng,
           priceTotalCents, platformFeeCents, driverEarningsCents, paidAt
         ]
       );
