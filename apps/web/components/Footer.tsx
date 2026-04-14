@@ -88,7 +88,7 @@ export default function Footer() {
             <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Removal Philadelphia</Link>
             <Link href="/donation-pickup-camden-nj" className="hover:text-white transition">Donation Pickup Camden NJ</Link>
             <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Removal Cherry Hill</Link>
-            <Link href="/appliance-removal-trenton-nj" className="hover:text-white transition">Appliance Removal Trenton</Link>
+            <Link href="/appliance-removal-trenton-nj" className="hover:text-white transition">Appliance Delivery Trenton</Link>
             <Link href="/moving-help-princeton-nj" className="hover:text-white transition">Moving Help Princeton</Link>
             <Link href="/garage-cleanout-mount-laurel-nj" className="hover:text-white transition">Garage Cleanout Mount Laurel</Link>
             <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Removal Philadelphia</Link>

@@ -15,13 +15,17 @@ export function generateMetadata({ params }: PageProps): Metadata {
   const state = getStateBySlug(params.state)
   if (!state) return {}
 
+  const isNJ = state.slug === 'new-jersey'
+  const serviceDesc = isNJ ? 'moving labor, furniture assembly, and donation pickup' : 'junk removal, furniture removal, cleanouts, and moving help'
+  const serviceDescShort = isNJ ? 'moving labor, assembly, and donation pickup' : 'junk removal and moving help'
+
   return {
-    title: `Junk Removal & Moving Help in ${state.name} | HaulKind`,
-    description: `Professional junk removal, furniture removal, cleanouts, and moving help across ${state.name}. Serving ${state.cities.length} cities with transparent pricing and same-day service. Book online in 60 seconds.`,
+    title: isNJ ? `HaulKind | Moving Labor, Assembly & Hauling in ${state.name}` : `Junk Removal & Moving Help in ${state.name} | HaulKind`,
+    description: `Professional ${serviceDesc} across ${state.name}. Serving ${state.cities.length} cities with transparent pricing and same-day service. Book online in 60 seconds.`,
     alternates: { canonical: `/service-areas/${state.slug}` },
     openGraph: {
-      title: `HaulKind Service Areas in ${state.name}`,
-      description: `Professional junk removal and moving help in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`,
+      title: isNJ ? `HaulKind | Moving Labor, Assembly & Hauling in ${state.name}` : `HaulKind Service Areas in ${state.name}`,
+      description: `Professional ${serviceDescShort} in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`,
       url: `https://haulkind.com/service-areas/${state.slug}`,
     },
   }
@@ -65,10 +69,10 @@ export default function StatePage({ params }: PageProps) {
         <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-20">
           <div className="container mx-auto px-4 text-center max-w-4xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Junk Removal &amp; Moving Help in {state.name}
+              {state.slug === 'new-jersey' ? 'Moving Labor, Assembly & Hauling' : 'Junk Removal & Moving Help'} in {state.name}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor across {state.cities.length} cities in {state.name}. Find your city below and book online in 60 seconds.
+              HaulKind provides professional {state.slug === 'new-jersey' ? 'moving labor, furniture assembly, donation pickup, and hauling services' : 'junk removal, furniture removal, cleanout services, and moving labor'} across {state.cities.length} cities in {state.name}. Find your city below and book online in 60 seconds.
             </p>
             <Link
               href="/quote"
