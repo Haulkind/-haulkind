@@ -4,12 +4,12 @@ import { SERVICES } from '@/lib/seo-data'
 import { getStatesWithCounts } from '@/lib/seo-data-national'
 
 export const metadata: Metadata = {
-  title: 'Service Areas - Nationwide Junk Removal & Moving Help | HaulKind',
-  description: 'HaulKind serves cities across all 50 states. Professional junk removal, furniture removal, cleanouts, and moving help. Get a free quote.',
+  title: 'Service Areas - Nationwide Hauling & Moving Help | HaulKind',
+  description: 'HaulKind serves cities across all 50 states. Professional hauling, furniture removal, cleanouts, and moving help. Get a free quote.',
   alternates: { canonical: '/service-areas' },
   openGraph: {
     title: 'HaulKind Service Areas - Nationwide Coverage',
-    description: 'Professional junk removal and moving help across all 50 states. Book online in 60 seconds.',
+    description: 'Professional hauling and moving help across all 50 states. Book online in 60 seconds.',
     url: 'https://haulkind.com/service-areas',
   },
 }
@@ -48,10 +48,10 @@ export default function ServiceAreas() {
         <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-20">
           <div className="container mx-auto px-4 text-center max-w-4xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Junk Removal &amp; Moving Help Service Areas
+              Hauling &amp; Moving Help Service Areas
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional junk removal, furniture removal, cleanout services, and moving labor nationwide. Find your state and city below and book online in 60 seconds.
+              HaulKind provides professional hauling, furniture removal, cleanout services, and moving labor nationwide. Find your state and city below and book online in 60 seconds.
             </p>
             <Link
               href="/quote"
