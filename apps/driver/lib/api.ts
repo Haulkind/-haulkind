@@ -47,6 +47,7 @@ export interface Job {
   helperCount?: number
   estimatedHours?: number
   customerNotes?: string
+  customer_notes?: string
   photoUrls?: string[]
   description?: string
   items_json?: string

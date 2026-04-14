@@ -161,7 +161,7 @@ export default function HomeScreen() {
     const serviceType = order.service_type || order.serviceType || 'HAUL_AWAY'
     const address = order.pickup_address || order.pickupAddress || 'Address not available'
     const payout = formatPayout(order)
-    const desc = stripPricing(order.description || order.customerNotes || '')
+    const desc = stripPricing(order.description || order.customer_notes || order.customerNotes || '')
     let itemPreview = ''
     if (desc.startsWith('Items:')) {
       itemPreview = desc.split('\n')[0].replace('Items:', '').trim()
