@@ -8,6 +8,18 @@ import {
   cancelOrder, acceptOrder, rejectOrder, uploadOrderPhoto, streamLocation, type Order,
 } from '@/lib/api'
 
+// Haversine distance in miles
+function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3958.8
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 const STATUS_FLOW = ['accepted', 'assigned', 'en_route', 'arrived', 'started', 'completed']
 
 export default function OrderDetailPage() {
@@ -24,10 +36,98 @@ export default function OrderDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [photoType, setPhotoType] = useState<'before' | 'after'>('before')
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
+  const [driverLat, setDriverLat] = useState<number | null>(null)
+  const [driverLng, setDriverLng] = useState<number | null>(null)
+  const detailMapRef = useRef<HTMLDivElement>(null)
+  const detailMapInstanceRef = useRef<any>(null)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
   }, [token, isLoading, router])
+
+  // Get driver's current position for distance calculation
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setDriverLat(pos.coords.latitude)
+        setDriverLng(pos.coords.longitude)
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [])
+
+  // Initialize mini-map on order detail page showing pickup location
+  useEffect(() => {
+    if (!order || !detailMapRef.current || detailMapInstanceRef.current) return
+    const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
+    const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
+    // Use pickup coords, or driver coords, or default NJ
+    const centerLat = oLat || driverLat || 40.0583
+    const centerLng = oLng || driverLng || -74.4057
+
+    const initDetailMap = async () => {
+      const L = (await import('leaflet')).default
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link')
+        link.id = 'leaflet-css'
+        link.rel = 'stylesheet'
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        document.head.appendChild(link)
+      }
+      if (detailMapInstanceRef.current) return
+
+      const map = L.map(detailMapRef.current!, {
+        zoomControl: false,
+        attributionControl: false,
+      }).setView([centerLat, centerLng], 13)
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(map)
+
+      // Pickup location marker (red pin with price)
+      if (oLat && oLng) {
+        const price = formatPayout(order)
+        const icon = L.divIcon({
+          className: 'order-detail-pin',
+          html: `<div style="background:#ef4444;color:#fff;padding:6px 12px;border-radius:10px;font-weight:bold;font-size:14px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:2px solid #fff;">$${price}</div>`,
+          iconSize: [80, 34],
+          iconAnchor: [40, 34],
+        })
+        L.marker([oLat, oLng], { icon }).addTo(map)
+      }
+
+      // Driver location marker (blue dot)
+      if (driverLat && driverLng) {
+        const driverIcon = L.divIcon({
+          className: 'driver-marker',
+          html: '<div style="width:14px;height:14px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        })
+        L.marker([driverLat, driverLng], { icon: driverIcon }).addTo(map)
+      }
+
+      // Fit bounds to show both driver and pickup
+      if (oLat && oLng && driverLat && driverLng) {
+        map.fitBounds([[oLat, oLng], [driverLat, driverLng]], { padding: [30, 30] })
+      }
+
+      detailMapInstanceRef.current = map
+      setTimeout(() => map.invalidateSize(), 100)
+    }
+
+    initDetailMap()
+
+    return () => {
+      if (detailMapInstanceRef.current) {
+        detailMapInstanceRef.current.remove()
+        detailMapInstanceRef.current = null
+      }
+    }
+  }, [order, driverLat, driverLng])
 
   const fetchOrder = useCallback(async () => {
     if (!token || !id) return
@@ -243,6 +343,29 @@ export default function OrderDetailPage() {
           )}
         </div>
       )}
+
+      {/* Mini Map showing pickup location */}
+      {(() => {
+        const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
+        const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
+        const dist = (driverLat && driverLng && oLat && oLng)
+          ? getDistanceMiles(driverLat, driverLng, oLat, oLng).toFixed(1)
+          : null
+        return (
+          <div className="relative">
+            <div
+              ref={detailMapRef}
+              className="w-full bg-gray-200"
+              style={{ height: 200 }}
+            />
+            {dist && (
+              <div className="absolute bottom-3 left-3 bg-primary-900/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg z-[1000]">
+                {dist} mi away
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Order Info */}
       <div className="px-5 py-4 space-y-4">
@@ -474,6 +597,12 @@ export default function OrderDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Map marker styles */}
+      <style jsx global>{`
+        .order-detail-pin { background: none !important; border: none !important; }
+        .driver-marker { background: none !important; border: none !important; }
+      `}</style>
 
       {/* Lightbox Photo Viewer */}
       {lightboxPhoto && (
