@@ -86,13 +86,13 @@ export default function Footer() {
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <Link href="/junk-removal-philadelphia-pa" className="hover:text-white transition">Junk Removal Philadelphia</Link>
             <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Removal Philadelphia</Link>
-            <Link href="/donation-pickup-camden-nj" className="hover:text-white transition">Donation Pickup Camden NJ</Link>
-            <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Removal Cherry Hill</Link>
+            <Link href="/donation-pickup-camden-nj" className="hover:text-white transition">Donation Delivery Camden</Link>
+            <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Swap Cherry Hill</Link>
             <Link href="/appliance-removal-trenton-nj" className="hover:text-white transition">Appliance Delivery Trenton</Link>
             <Link href="/moving-help-princeton-nj" className="hover:text-white transition">Moving Help Princeton</Link>
-            <Link href="/garage-cleanout-mount-laurel-nj" className="hover:text-white transition">Garage Cleanout Mount Laurel</Link>
+            <Link href="/garage-cleanout-mount-laurel-nj" className="hover:text-white transition">Moving Help Mount Laurel</Link>
             <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Removal Philadelphia</Link>
-            <Link href="/basement-cleanout-camden-nj" className="hover:text-white transition">Basement Cleanout Camden</Link>
+            <Link href="/basement-cleanout-camden-nj" className="hover:text-white transition">Furniture Assembly Camden</Link>
             <Link href="/donation-pickup-cherry-hill-nj" className="hover:text-white transition">Donation Pickup Cherry Hill</Link>
             <Link href="/become-a-driver" className="text-primary-400 hover:text-white transition font-medium">HaulKind Driver Jobs</Link>
             <Link href="/service-areas" className="text-primary-400 hover:text-white transition font-medium">View All Service Areas &rarr;</Link>
