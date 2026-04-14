@@ -199,7 +199,7 @@ export default function PriceCalculator() {
                 }`}
               >
                 <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Most Popular</span>
-                <div className="font-semibold text-gray-900">Junk Removal</div>
+                <div className="font-semibold text-gray-900">Junk Removal <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
                 <div className="text-sm text-gray-500">Remove old furniture, appliances, and unwanted items</div>
               </button>
               <button

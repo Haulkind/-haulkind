@@ -350,7 +350,7 @@ export default function HaulAwayLocationPage() {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-[760px]">
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h1 className="text-2xl font-bold mb-2">Junk Removal - Location & Time</h1>
+          <h1 className="text-2xl font-bold mb-2">Haul Away - Location & Time</h1>
           <p className="text-sm text-gray-600 mb-5">Where and when do you need service?</p>
 
           {/* TASK 3: Only show error after user has attempted to continue */}

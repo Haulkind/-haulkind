@@ -18,10 +18,15 @@ export function generateCityDescription(city: GeoCity): string {
   const pop = formatPopulation(city.population)
   const neighborhoodList = city.neighborhoods.slice(0, 4).join(', ')
 
+  // NJ compliance: No "Junk Removal" or "Solid Waste Disposal" wording for New Jersey cities
+  const isNJ = city.stateAbbr === 'NJ'
+  const serviceLabel = isNJ ? 'furniture donation pickup, moving labor, and furniture assembly' : 'junk removal and hauling services'
+  const serviceLabel2 = isNJ ? 'furniture donation pickup, moving labor, and furniture assembly' : 'same-day junk removal, furniture pickup, and moving help'
+
   const templates = [
-    `With a population of ${pop}, ${city.name} is a vibrant community in ${city.county}, ${city.state}. From ${neighborhoodList} and beyond, residents and businesses need reliable junk removal and hauling services they can trust. HaulKind provides fast, affordable pickup and moving help throughout ${city.name} and surrounding ${city.stateAbbr} areas.`,
+    `With a population of ${pop}, ${city.name} is a vibrant community in ${city.county}, ${city.state}. From ${neighborhoodList} and beyond, residents and businesses need reliable ${serviceLabel} they can trust. HaulKind provides fast, affordable pickup and moving help throughout ${city.name} and surrounding ${city.stateAbbr} areas.`,
     `${city.name}, ${city.stateAbbr} is home to ${pop} residents across diverse neighborhoods including ${neighborhoodList}. Whether you are moving, decluttering, or renovating, HaulKind delivers professional hauling, cleanout, and moving labor services with transparent pricing and live GPS tracking.`,
-    `Located in ${city.county}, ${city.name} is one of ${city.state}'s thriving communities with ${pop} residents. From ${city.neighborhoods[0]} to ${city.neighborhoods[Math.min(city.neighborhoods.length - 1, 5)]}, HaulKind provides same-day junk removal, furniture pickup, and moving help across the entire ${city.name} area.`,
+    `Located in ${city.county}, ${city.name} is one of ${city.state}'s thriving communities with ${pop} residents. From ${city.neighborhoods[0]} to ${city.neighborhoods[Math.min(city.neighborhoods.length - 1, 5)]}, HaulKind provides ${serviceLabel2} across the entire ${city.name} area.`,
   ]
 
   // Use city slug hash to pick a template deterministically

@@ -10,7 +10,7 @@ type Step = 'service' | 'address' | 'schedule' | 'details' | 'summary' | 'confir
 type ServiceType = 'HAUL_AWAY' | 'LABOR_ONLY' | 'DONATION_PICKUP' | 'MATTRESS_SWAP' | 'FURNITURE_ASSEMBLY'
 
 const SERVICE_OPTIONS = [
-  { id: 'HAUL_AWAY' as ServiceType, label: 'Junk Removal', emoji: '🚛', desc: 'We haul away your unwanted items', price: 'Starting at $99' },
+  { id: 'HAUL_AWAY' as ServiceType, label: 'Junk Removal (PA Only)', emoji: '🚛', desc: 'We haul away your unwanted items', price: 'Starting at $99' },
   { id: 'LABOR_ONLY' as ServiceType, label: 'Moving Labor', emoji: '💪', desc: 'Helpers for moving, loading, or cleanup', price: 'Starting at $79/hr' },
   { id: 'DONATION_PICKUP' as ServiceType, label: 'Donation Pickup', emoji: '❤️', desc: 'We pick up and deliver to a local charity', price: 'Starting at $109' },
   { id: 'MATTRESS_SWAP' as ServiceType, label: 'Mattress Swap', emoji: '🛏️', desc: 'Remove your old mattress & set up the new one', price: 'Starting at $99' },

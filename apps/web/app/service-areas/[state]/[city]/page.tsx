@@ -27,12 +27,12 @@ export function generateMetadata({ params }: PageProps): Metadata {
   const { city } = result
 
   return {
-    title: `Junk Removal & Moving Help in ${city.name}, ${city.stateAbbr} | HaulKind`,
-    description: `Professional junk removal, furniture removal, cleanouts, and moving help in ${city.name}, ${city.stateAbbr}. Serving ${city.neighborhoods.length}+ neighborhoods. Transparent pricing, same-day service. Book online.`,
+    title: `${city.stateAbbr === 'NJ' ? 'Furniture Donation Pickup & Moving Help' : 'Junk Removal & Moving Help'} in ${city.name}, ${city.stateAbbr} | HaulKind`,
+    description: `Professional ${city.stateAbbr === 'NJ' ? 'furniture donation pickup, moving labor, furniture assembly' : 'junk removal, furniture removal, cleanouts'}, and moving help in ${city.name}, ${city.stateAbbr}. Serving ${city.neighborhoods.length}+ neighborhoods. Transparent pricing, same-day service. Book online.`,
     alternates: { canonical: `/service-areas/${city.stateSlug}/${city.slug}` },
     openGraph: {
       title: `HaulKind Services in ${city.name}, ${city.stateAbbr}`,
-      description: `All HaulKind services available in ${city.name}, ${city.stateAbbr}. Junk removal, moving help, cleanouts and more.`,
+      description: `All HaulKind services available in ${city.name}, ${city.stateAbbr}. ${city.stateAbbr === 'NJ' ? 'Furniture donation pickup, moving labor, furniture assembly' : 'Junk removal, moving help, cleanouts'} and more.`,
       url: `https://haulkind.com/service-areas/${city.stateSlug}/${city.slug}`,
     },
   }
@@ -108,7 +108,7 @@ export default function CityPage({ params }: PageProps) {
               HaulKind Services in {city.name}, {city.stateAbbr}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              Professional junk removal, furniture removal, cleanout services, and moving labor in {city.name}. Serving {city.neighborhoods.length}+ neighborhoods with transparent pricing and same-day availability.
+              Professional {city.stateAbbr === 'NJ' ? 'furniture donation pickup, moving labor, and furniture assembly' : 'junk removal, furniture removal, cleanout services, and moving labor'} in {city.name}. Serving {city.neighborhoods.length}+ neighborhoods with transparent pricing and same-day availability.
             </p>
             <Link
               href="/quote"

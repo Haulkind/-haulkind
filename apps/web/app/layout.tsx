@@ -18,20 +18,21 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'HaulKind - Fast Local Junk Removal & Moving Help | PA, NY, NJ',
+    default: 'HaulKind - Fast Local Hauling & Moving Help | PA, NY, NJ',
     template: '%s | HaulKind',
   },
-  description: 'Affordable junk removal & moving labor in PA, NY & NJ. All-in pricing from $99, disposal included. Same-day service. Get a free quote now!',
+  description: 'Affordable hauling, moving labor & furniture donation pickup in PA, NY & NJ. All-in pricing from $99. Same-day service. Get a free quote now!',
   keywords: [
     'junk removal', 'junk hauling', 'trash removal', 'furniture removal',
     'appliance removal', 'moving help', 'labor only moving',
     'junk removal near me', 'cheap junk removal',
-    'junk removal Philadelphia', 'junk removal NYC', 'junk removal New Jersey',
+    'junk removal Philadelphia', 'junk removal NYC',
     'same day junk removal', 'furniture pickup', 'mattress removal',
     'yard waste removal', 'construction debris removal',
     'local moving help', 'loading unloading help',
-    'Pennsylvania junk removal', 'New York junk removal', 'New Jersey junk removal',
-    'transparent pricing junk removal', 'track driver live',
+    'Pennsylvania junk removal', 'New York junk removal',
+    'furniture donation pickup NJ', 'moving labor New Jersey',
+    'transparent pricing', 'track driver live',
     'HaulKind', 'haul away service',
   ],
   metadataBase: new URL('https://haulkind.com'),
@@ -43,21 +44,21 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haulkind.com',
     siteName: 'HaulKind',
-    title: 'HaulKind — Fast, Fair Junk Removal',
-    description: 'Same-day junk removal, donation pickup & furniture assembly in PA, NJ & NY. Upfront pricing, GPS tracking, licensed & insured. Call (609) 456-8188',
+    title: 'HaulKind — Fast, Fair Hauling & Moving Help',
+    description: 'Same-day hauling, donation pickup & furniture assembly in PA, NJ & NY. Upfront pricing, GPS tracking, licensed & insured. Call (609) 456-8188',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'HaulKind — Fast, Fair Junk Removal',
+        alt: 'HaulKind — Fast, Fair Hauling & Moving Help',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HaulKind — Fast, Fair Junk Removal',
-    description: 'Same-day junk removal in PA, NJ & NY. Upfront pricing, GPS tracking.',
+    title: 'HaulKind — Fast, Fair Hauling & Moving Help',
+    description: 'Same-day hauling & moving help in PA, NJ & NY. Upfront pricing, GPS tracking.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -87,7 +88,7 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'HaulKind',
-    description: 'Fast local junk removal and moving help with transparent pricing. Serving Pennsylvania, New York, and New Jersey.',
+    description: 'Fast local hauling, moving labor, and furniture donation pickup with transparent pricing. Serving Pennsylvania, New York, and New Jersey.',
     url: 'https://haulkind.com',
     logo: 'https://haulkind.com/logo-full.svg',
     image: 'https://haulkind.com/og-image.png',
@@ -109,7 +110,7 @@ export default function RootLayout({
       { '@type': 'State', name: 'New York' },
       { '@type': 'State', name: 'New Jersey' },
     ],
-    serviceType: ['Junk Removal', 'Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal', 'Donation Pickup', 'Furniture Assembly'],
+    serviceType: ['Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal', 'Donation Pickup', 'Furniture Assembly', 'Junk Removal (PA Only)'],
     priceRange: '$79 - $529',
     openingHours: 'Mo-Su 07:00-19:00',
     aggregateRating: {
@@ -121,14 +122,14 @@ export default function RootLayout({
     sameAs: [],
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'Junk Removal & Moving Services',
+      name: 'Hauling & Moving Services',
       itemListElement: [
         {
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Junk Removal (Haul Away)',
-            description: 'Professional junk removal service. We load, haul, and dispose of your items.',
+            name: 'Junk Removal / Haul Away (PA Only)',
+            description: 'Professional haul away service. We load, haul, and dispose of your items. Available in Pennsylvania only.',
           },
           priceSpecification: {
             '@type': 'PriceSpecification',
