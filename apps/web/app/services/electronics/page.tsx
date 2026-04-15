@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Electronics Pickup & E-Waste Recycling | HaulKind',
-    description: 'Old TV, computer, or printer? We remove and recycle electronics responsibly. Fast, affordable, insured.',
+    description: 'Old TV, computer, or printer? We pick up and recycle electronics responsibly. Fast, affordable, insured. Serving PA.',
   },
 }
 
