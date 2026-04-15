@@ -33,8 +33,9 @@ function isNJZip(zip: string): boolean {
   return num >= 7001 && num <= 8999
 }
 
-// Items allowed for NJ ZIP codes (non-regulated services)
-const NJ_ALLOWED_ITEM_IDS = new Set([
+// Items BLOCKED for NJ ZIP codes (solid waste / entulho — regulated by NJDEP)
+// Furniture, appliances, electronics are ALLOWED because they are donation-eligible
+const NJ_BLOCKED_ITEM_IDS = new Set([
   'garage_small', 'garage_medium', 'garage_large',
   'yard_partial', 'yard_full',
 ])
@@ -60,7 +61,7 @@ export default function LeadCaptureModal({
   const phoneDigits = unformatPhone(phone)
   const isNJ = isNJZip(zip)
   // Check if any selected items are regulated (not allowed in NJ)
-  const hasRegulatedItems = isNJ && itemDetails.some(item => !NJ_ALLOWED_ITEM_IDS.has(item.id))
+  const hasRegulatedItems = isNJ && itemDetails.some(item => NJ_BLOCKED_ITEM_IDS.has(item.id))
   const isValid = name.trim().length > 0 && phoneDigits.length === 10 && zip.length === 5 && tcpaConsent && !hasRegulatedItems
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,7 +195,7 @@ export default function LeadCaptureModal({
             {hasRegulatedItems && (
               <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg">
                 <p className="text-sm text-red-700 font-medium">
-                  We do not handle hauling or solid waste removal in New Jersey. Your selected items include regulated services not available in NJ. Please go back and select only Yard Debris or Garage Clearing items.
+                  We do not handle solid waste removal (Yard Debris, Garage Clearing) in New Jersey. Please go back and remove those items. Furniture, appliances, and electronics are available for Donation Pickup in NJ.
                 </p>
               </div>
             )}
