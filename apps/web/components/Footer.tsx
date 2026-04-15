@@ -88,11 +88,11 @@ export default function Footer() {
             <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Pickup Philadelphia</Link>
             <Link href="/donation-pickup-camden-nj" className="hover:text-white transition">Donation Delivery Camden</Link>
             <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Swap Cherry Hill</Link>
-            <Link href="/appliance-pickup-trenton-nj" className="hover:text-white transition">Appliance Pickup Trenton</Link>
+            <Link href="/donation-pickup-trenton-nj" className="hover:text-white transition">Donation Pickup Trenton</Link>
             <Link href="/moving-help-princeton-nj" className="hover:text-white transition">Moving Help Princeton</Link>
             <Link href="/moving-help-mount-laurel-nj" className="hover:text-white transition">Moving Help Mount Laurel</Link>
             <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Pickup Philadelphia</Link>
-            <Link href="/furniture-assembly-camden-nj" className="hover:text-white transition">Furniture Assembly Camden</Link>
+            <Link href="/moving-help-camden-nj" className="hover:text-white transition">Moving Help Camden</Link>
             <Link href="/donation-pickup-cherry-hill-nj" className="hover:text-white transition">Donation Pickup Cherry Hill</Link>
             <Link href="/become-a-driver" className="text-primary-400 hover:text-white transition font-medium">HaulKind Driver Jobs</Link>
             <Link href="/service-areas" className="text-primary-400 hover:text-white transition font-medium">View All Service Areas &rarr;</Link>
