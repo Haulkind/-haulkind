@@ -33,8 +33,6 @@ export default function WhatWeTakePage() {
     },
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
-      { '@type': 'State', name: 'New Jersey' },
-      { '@type': 'State', name: 'New York' },
     ],
     serviceType: 'Hauling',
     url: 'https://haulkind.com/services/what-we-take',
