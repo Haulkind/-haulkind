@@ -23,17 +23,13 @@ export const metadata: Metadata = {
   },
   description: 'Affordable hauling, moving labor & furniture donation pickup in PA, NY & NJ. All-in pricing from $99. Same-day service. Get a free quote now!',
   keywords: [
-    'junk removal', 'junk hauling', 'trash removal', 'furniture removal',
-    'appliance removal', 'moving help', 'labor only moving',
-    'junk removal near me', 'cheap junk removal',
-    'junk removal Philadelphia', 'junk removal NYC',
-    'same day junk removal', 'furniture pickup', 'mattress removal',
-    'yard waste removal', 'construction debris removal',
+    'hauling service', 'moving help', 'labor only moving',
+    'furniture pickup', 'mattress swap',
     'local moving help', 'loading unloading help',
-    'Pennsylvania junk removal', 'New York junk removal',
-    'furniture donation pickup NJ', 'moving labor New Jersey',
+    'furniture donation pickup', 'moving labor',
+    'furniture assembly', 'donation pickup',
     'transparent pricing', 'track driver live',
-    'HaulKind', 'haul away service',
+    'HaulKind', 'same day service',
   ],
   metadataBase: new URL('https://haulkind.com'),
   alternates: {
@@ -110,7 +106,7 @@ export default function RootLayout({
       { '@type': 'State', name: 'New York' },
       { '@type': 'State', name: 'New Jersey' },
     ],
-    serviceType: ['Hauling', 'Moving Labor', 'Furniture Removal', 'Appliance Removal', 'Donation Pickup', 'Furniture Assembly', 'Junk Removal (PA Only)'],
+    serviceType: ['Hauling', 'Moving Labor', 'Donation Pickup', 'Furniture Assembly', 'Mattress Swap', 'Loading & Unloading'],
     priceRange: '$79 - $529',
     openingHours: 'Mo-Su 07:00-19:00',
     aggregateRating: {
@@ -128,8 +124,8 @@ export default function RootLayout({
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Junk Removal / Haul Away (PA Only)',
-            description: 'Professional haul away service. We load, haul, and dispose of your items. Available in Pennsylvania only.',
+            name: 'Hauling Service',
+            description: 'Professional hauling service. We load, transport, and handle your items with care.',
           },
           priceSpecification: {
             '@type': 'PriceSpecification',

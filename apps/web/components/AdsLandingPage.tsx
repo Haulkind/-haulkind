@@ -66,19 +66,19 @@ export default function AdsLandingPage({ city, state, h1, subtitle, neighborhood
       <section className="py-12 md:py-16">
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">
-            What We Remove in {city}, {state}
+            What We Haul in {city}, {state}
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               'Old Furniture (sofas, mattresses, tables)',
               'Appliances (fridges, washers, dryers)',
               'Yard Waste & Debris',
-              'Garage & Basement Cleanouts',
+              'Garage & Basement Clearing',
               'Construction Debris',
               'Electronics & E-Waste',
               'Hot Tubs & Play Sets',
               'Office Furniture & Equipment',
-              'General Household Junk',
+              'General Household Items',
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 bg-gray-50 p-4 rounded-lg">
                 <span className="text-primary-600 font-bold">&#10003;</span>
@@ -146,7 +146,7 @@ export default function AdsLandingPage({ city, state, h1, subtitle, neighborhood
             Ready to Clear the Clutter?
           </h2>
           <p className="text-gray-300 mb-8">
-            Book your {city} junk removal in under 60 seconds.
+            Book your {city} hauling service in under 60 seconds.
           </p>
           <Link
             href="/quote?service=haul-away"

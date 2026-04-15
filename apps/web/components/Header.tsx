@@ -37,11 +37,11 @@ export default function Header() {
             </button>
             {junkOpen && (
               <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-xl border py-2 z-50">
-                <Link href="/services/furniture" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Furniture Removal</Link>
-                <Link href="/services/appliances" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Appliance Removal</Link>
-                <Link href="/services/cleanout" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Property Cleanout</Link>
+                <Link href="/services/furniture" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Furniture Pickup</Link>
+                <Link href="/services/appliances" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Appliance Pickup</Link>
+                <Link href="/services/cleanout" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Property Clearing</Link>
                 <Link href="/services/commercial" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Commercial</Link>
-                <Link href="/services/electronics" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Electronics Disposal</Link>
+                <Link href="/services/electronics" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">Electronics Recycling</Link>
                 <Link href="/services/what-we-take" className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">What We Take</Link>
               </div>
             )}
@@ -92,7 +92,7 @@ export default function Header() {
         <div className="md:hidden bg-white border-t px-4 pb-4">
           <div className="space-y-1 py-2">
             <p className="text-xs font-semibold text-gray-400 uppercase px-2 pt-2">Our Services</p>
-            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Junk Removal (PA Only)</Link>
+            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Hauling (PA Only)</Link>
             <Link href="/donation-pickup" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Donation Pickup</Link>
             <Link href="/assembly" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Furniture Assembly</Link>
             <Link href="/mattress-swap" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Mattress Swap</Link>

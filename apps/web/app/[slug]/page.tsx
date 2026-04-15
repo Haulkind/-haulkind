@@ -204,7 +204,7 @@ export default function LocalSEOPage({ params }: PageProps) {
                       <span className="text-green-300">&#10003;</span> Professional, insured crew
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-green-300">&#10003;</span> Eco-friendly disposal
+                      <span className="text-green-300">&#10003;</span> Eco-friendly recycling
                     </div>
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export default function LocalSEOPage({ params }: PageProps) {
                 <span className="text-2xl" aria-hidden="true">&#x1F4CB;</span>
                 <div>
                   <p className="font-semibold text-gray-900">Local Regulations</p>
-                  <p className="text-sm text-gray-600">In {city.name}, {city.stateAbbr}, bulk trash rules vary. We ensure compliant disposal.</p>
+                  <p className="text-sm text-gray-600">In {city.name}, {city.stateAbbr}, bulk item rules vary. We ensure compliant handling.</p>
                 </div>
               </div>
             </div>

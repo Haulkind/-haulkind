@@ -8,7 +8,7 @@ import StatusTimeline from '@/components/StatusTimeline'
 import DriverTrackingMap from '@/components/DriverTrackingMap'
 
 const SERVICE_LABELS: Record<string, string> = {
-  HAUL_AWAY: 'Junk Removal',
+  HAUL_AWAY: 'Hauling',
   LABOR_ONLY: 'Moving Labor',
   DONATION_PICKUP: 'Donation Pickup',
   MATTRESS_SWAP: 'Mattress Swap',

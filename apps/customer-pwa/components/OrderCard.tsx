@@ -6,7 +6,7 @@ interface OrderCardProps {
 }
 
 const SERVICE_LABELS: Record<string, { emoji: string; label: string }> = {
-  HAUL_AWAY: { emoji: '🚛', label: 'Junk Removal' },
+  HAUL_AWAY: { emoji: '🚛', label: 'Hauling' },
   LABOR_ONLY: { emoji: '💪', label: 'Moving Labor' },
   DONATION_PICKUP: { emoji: '❤️', label: 'Donation Pickup' },
   MATTRESS_SWAP: { emoji: '🛏️', label: 'Mattress Swap' },

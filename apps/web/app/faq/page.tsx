@@ -18,7 +18,7 @@ export default function FAQ() {
       questions: [
         {
           q: 'What is Haulkind?',
-          a: 'Haulkind is a platform that connects customers who need junk removed or moving help with local drivers who have trucks and vans. We offer transparent pricing, real-time tracking, and fair pay for drivers (60% of service price).',
+          a: 'Haulkind is a platform that connects customers who need items hauled or moving help with local drivers who have trucks and vans. We offer transparent pricing, real-time tracking, and fair pay for drivers (60% of service price).',
         },
         {
           q: 'What areas do you serve?',
@@ -35,11 +35,11 @@ export default function FAQ() {
       questions: [
         {
           q: 'How does pricing work?',
-          a: 'For Junk Removal (Haul Away), pricing is all-in based on volume: $99 (1/8 truck) to $529 (full truck). Disposal is already included. For Labor Only, it is $79/hr for 1 helper or $129/hr for 2 helpers (2 hour minimum). You see your total price before booking — no hidden fees.',
+          a: 'For Hauling (Haul Away), pricing is all-in based on volume: $99 (1/8 truck) to $529 (full truck). Everything is included. For Labor Only, it is $79/hr for 1 helper or $129/hr for 2 helpers (2 hour minimum). You see your total price before booking — no hidden fees.',
         },
         {
-          q: 'Are disposal fees included in the price?',
-          a: 'Yes — always. Every HaulKind price includes a fixed disposal fee based on your load size: 1-2 items ($10), 3-5 items ($20), 6-10 items ($35), 11-15 items ($50), Full truck ($70). The disposal fee is paid directly to your driver to cover certified facility disposal. You pay one price at checkout — nothing changes when the driver arrives.',
+          q: 'Are handling fees included in the price?',
+          a: 'Yes — always. Every HaulKind price includes a fixed handling fee based on your load size: 1-2 items ($10), 3-5 items ($20), 6-10 items ($35), 11-15 items ($50), Full truck ($70). The handling fee is paid directly to your driver. You pay one price at checkout — nothing changes when the driver arrives.',
         },
         {
           q: 'When do I pay?',
@@ -51,20 +51,20 @@ export default function FAQ() {
         },
           {
             q: 'Do you charge extra for distance or mileage?',
-            a: 'No. HaulKind does not charge per mile. Your price covers transportation to the disposal facility. No mileage fees. The only thing that affects your price is the volume of your load and whether any items are heavy or require stairs.',
+            a: 'No. HaulKind does not charge per mile. Your price covers transportation. No mileage fees. The only thing that affects your price is the volume of your load and whether any items are heavy or require stairs.',
           },
           {
-            q: 'Why is the disposal fee separate from the base price?',
-            a: 'It isn\'t — it\'s already included. The price you see in your quote is your all-in total. We show the disposal amount separately only so you understand exactly where your money goes: part covers labor, part covers the certified disposal of your items. No surprises.',
+            q: 'Why is the handling fee separate from the base price?',
+            a: 'It isn\'t — it\'s already included. The price you see in your quote is your all-in total. We show the handling amount separately only so you understand exactly where your money goes: part covers labor, part covers the handling of your items. No surprises.',
           },
           {
-            q: 'How does HaulKind compare to other junk removal services?',
-            a: 'Many traditional junk companies don\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $279 all-in vs $400-600 with traditional companies. Online-only platforms may offer similar pricing but don\'t provide GPS tracking or local driver verification.',
+            q: 'How does HaulKind compare to other hauling services?',
+            a: 'Many traditional hauling companies don\'t show you a price until their truck is in your driveway — you can only get an estimate onsite. HaulKind gives you your exact price online before you book. For a half-truck load, HaulKind typically costs $279 all-in vs $400-600 with traditional companies. Online-only platforms may offer similar pricing but don\'t provide GPS tracking or local driver verification.',
           },
       ],
     },
     {
-      category: 'Junk Removal (Haul Away)',
+      category: 'Hauling (Haul Away)',
       questions: [
         {
           q: 'What can you haul away?',
@@ -72,7 +72,7 @@ export default function FAQ() {
         },
         {
           q: 'How do I know what volume to choose?',
-          a: 'Use our volume guide: 1/8 truck = 1-2 items, 1/4 truck = couch or 5-8 items, 1/2 truck = room cleanout (10-15 items), 3/4 truck = large furniture set (15-20 items), Full truck = whole house cleanout (20+ items). You can adjust volume with the driver if needed.',
+          a: 'Use our volume guide: 1/8 truck = 1-2 items, 1/4 truck = couch or 5-8 items, 1/2 truck = room clearing (10-15 items), 3/4 truck = large furniture set (15-20 items), Full truck = whole house clearing (20+ items). You can adjust volume with the driver if needed.',
         },
         {
           q: 'Do I need to be present?',
@@ -93,11 +93,11 @@ export default function FAQ() {
       questions: [
         {
           q: 'What does Labor Only include?',
-          a: 'Helpers to lift and move items. Perfect for moving furniture within your home, loading/unloading a moving truck you rented, or rearranging heavy items. Does NOT include transportation or disposal.',
+          a: 'Helpers to lift and move items. Perfect for moving furniture within your home, loading/unloading a moving truck you rented, or rearranging heavy items. Does NOT include transportation or hauling away.',
         },
         {
           q: 'Do I need to provide a truck?',
-          a: 'Yes. Labor Only is for when you have your own truck or just need help moving items within your home. If you need items hauled away, use our Junk Removal (Haul Away) service instead.',
+          a: 'Yes. Labor Only is for when you have your own truck or just need help moving items within your home. If you need items hauled away, use our Hauling (Haul Away) service instead.',
         },
         {
           q: 'How is time calculated?',
@@ -152,7 +152,7 @@ export default function FAQ() {
       questions: [
         {
           q: 'How much do drivers earn?',
-          a: 'Drivers keep 60% of the service price. That\'s $59-$419 per haul-away job, or $47-$77 per labor hour. Every job also includes a fixed disposal fee ($10-$70) paid directly to the driver.',
+          a: 'Drivers keep 60% of the service price. That\'s $59-$419 per haul-away job, or $47-$77 per labor hour. Every job also includes a fixed handling fee ($10-$70) paid directly to the driver.',
         },
         {
           q: 'What do I need to become a driver?',
@@ -164,7 +164,7 @@ export default function FAQ() {
         },
         {
           q: 'How do I get paid?',
-          a: 'Weekly direct deposit. Earnings are tracked in real-time in the driver app. Payment includes your 60% share plus the disposal fee, which goes directly to you.',
+          a: 'Weekly direct deposit. Earnings are tracked in real-time in the driver app. Payment includes your 60% share plus the handling fee, which goes directly to you.',
         },
         {
           q: 'Can I work part-time?',

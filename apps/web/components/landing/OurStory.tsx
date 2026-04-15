@@ -17,7 +17,7 @@ export default function OurStory() {
           <div className="bg-gray-50 rounded-2xl p-8 md:p-10">
             <div className="prose prose-lg max-w-none text-gray-700">
               <p className="text-lg leading-relaxed mb-4">
-                {"HaulKind was founded by Daniel, a former junk removal driver who spent years working for the big national chains. He saw firsthand how they operate: inflated quotes, hidden fees, and crews that were overworked and underpaid."}
+                {"HaulKind was founded by Daniel, a former hauling driver who spent years working for the big national chains. He saw firsthand how they operate: inflated quotes, hidden fees, and crews that were overworked and underpaid."}
               </p>
               <p className="text-lg leading-relaxed mb-4">
                 {"He knew there was a better way. So he built HaulKind — a local service that treats customers AND crews right. Fair, upfront pricing. Real-time GPS tracking so you're never left waiting. And drivers who earn what they deserve."}

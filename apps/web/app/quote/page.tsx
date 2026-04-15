@@ -7,10 +7,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 const servicesList = [
   {
     id: 'haul-away',
-    title: 'Junk Removal (PA Only)',
-    desc: 'We haul away furniture, appliances, yard waste, and general junk fast. PA residents only.',
+    title: 'Hauling (Haul Away)',
+    desc: 'We haul away furniture, appliances, yard waste, and more. Fast and affordable.',
     price: 'Starting at $99',
-    priceNote: 'disposal included',
+    priceNote: 'all-in pricing',
     colorBg: 'bg-teal-50',
     colorBorder: 'border-teal-500',
     colorText: 'text-teal-600',
@@ -133,7 +133,7 @@ function QuotePageInner() {
             Get a Free Quote and Book Fast
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-4">
-            Trusted local pros for junk removal, moving help, mattress swaps, donation pickup, and furniture assembly. No hidden fees.
+            Trusted local pros for hauling, moving help, mattress swaps, donation pickup, and furniture assembly. No hidden fees.
           </p>
           <a
             href="tel:+16094568188"

@@ -119,9 +119,9 @@ export default function OnboardingScreen() {
           <Text style={styles.sectionTitle}>Services You Can Provide</Text>
           <View style={styles.toggle}>
             <View style={styles.toggleContent}>
-              <Text style={styles.toggleLabel}>Junk Removal (Haul Away)</Text>
+              <Text style={styles.toggleLabel}>Hauling (Haul Away)</Text>
               <Text style={styles.toggleDescription}>
-                Pick up and dispose of junk
+                Pick up and haul away items
               </Text>
             </View>
             <Switch

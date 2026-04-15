@@ -2,8 +2,8 @@ import Link from 'next/link'
 
 const services = [
   {
-    title: 'Junk Removal (PA Only)',
-    description: 'We haul away furniture, appliances, yard waste, and general junk. Same-day available. PA residents only.',
+    title: 'Hauling (Haul Away)',
+    description: 'We pick up and haul away furniture, appliances, and other items. Same-day available. PA haul-away includes full service.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -46,7 +46,7 @@ const services = [
     href: '/quote?service=labor-only',
   },
   {
-    title: 'Property Cleanout',
+    title: 'Property Clearing',
     description: 'Complete property clearing from individual rooms to full estates. Residential & commercial.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,8 +56,8 @@ const services = [
     href: '/quote?service=haul-away',
   },
   {
-    title: 'Electronics Disposal',
-    description: 'Certified e-waste recycling for computers, TVs, and appliances with secure data destruction.',
+    title: 'Electronics Recycling',
+    description: 'Certified e-waste recycling for computers, TVs, and appliances with secure data handling.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

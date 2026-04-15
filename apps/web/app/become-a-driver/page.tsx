@@ -3,18 +3,18 @@ import Link from 'next/link'
 import Script from 'next/script'
 
 export const metadata: Metadata = {
-  title: 'Become a HaulKind Driver | Apply for Local Moving & Junk Removal Jobs',
-  description: 'Join HaulKind as a driver and get access to local junk removal, moving labor, and hauling jobs. Apply today.',
+  title: 'Become a HaulKind Driver | Apply for Local Hauling & Moving Jobs',
+  description: 'Join HaulKind as a driver and get access to local hauling, moving labor, and delivery jobs. Apply today.',
   alternates: { canonical: '/become-a-driver' },
   openGraph: {
-    title: 'Become a HaulKind Driver | Apply for Local Moving & Junk Removal Jobs',
-    description: 'Join HaulKind as a driver and get access to local junk removal, moving labor, and hauling jobs. Apply today.',
+    title: 'Become a HaulKind Driver | Apply for Local Hauling & Moving Jobs',
+    description: 'Join HaulKind as a driver and get access to local hauling, moving labor, and delivery jobs. Apply today.',
     url: 'https://haulkind.com/become-a-driver',
   },
   keywords: [
     'HaulKind driver', 'become a HaulKind driver', 'driver jobs',
-    'moving jobs', 'junk removal jobs', 'independent driver opportunities',
-    'local hauling jobs', 'hauling jobs near me', 'junk removal driver',
+    'moving jobs', 'hauling jobs', 'independent driver opportunities',
+    'local hauling jobs', 'hauling jobs near me', 'hauling driver',
     'moving labor jobs', 'truck driver jobs', 'delivery driver jobs',
   ],
 }
@@ -29,7 +29,7 @@ export default function BecomeADriver() {
             Become a HaulKind Driver
           </h1>
           <p className="text-xl md:text-2xl text-secondary-100 mb-8 max-w-3xl mx-auto">
-            HaulKind drivers earn $25–$45/hr picking up junk and helping people move. No boss. No warehouse. Just open the app, accept jobs, and get paid weekly.
+            HaulKind drivers earn $25–$45/hr hauling items and helping people move. No boss. No warehouse. Just open the app, accept jobs, and get paid weekly.
           </p>
           <Link 
             href="/become-a-driver/apply"
@@ -50,7 +50,7 @@ export default function BecomeADriver() {
           <div className="max-w-3xl mx-auto mb-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Become a HaulKind Driver</h2>
             <p className="text-gray-600 text-lg">
-              Looking for independent driver opportunities in your area? HaulKind connects you with local hauling jobs, junk removal jobs, and moving jobs — all on your own schedule. As a HaulKind driver, you choose when to work and keep the majority of every job.
+              Looking for independent driver opportunities in your area? HaulKind connects you with local hauling jobs, pickup jobs, and moving jobs — all on your own schedule. As a HaulKind driver, you choose when to work and keep the majority of every job.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -108,9 +108,9 @@ export default function BecomeADriver() {
             <div className="flex items-start gap-4">
               <span className="text-3xl flex-shrink-0">💵</span>
               <div>
-                <h3 className="text-lg font-bold text-green-900 mb-2">Disposal fees go straight to you</h3>
+                <h3 className="text-lg font-bold text-green-900 mb-2">Handling fees go straight to you</h3>
                 <p className="text-sm text-green-800">
-                  Every job includes a fixed disposal fee ($10–$70 depending on load size). That fee is collected from the customer upfront and paid directly to you as part of your job payment — no waiting, no reimbursement process, no receipts to file. It&apos;s already in your earnings when the job closes.
+                  Every hauling job includes a fixed handling fee ($10–$70 depending on load size). That fee is collected from the customer upfront and paid directly to you as part of your job payment — no waiting, no reimbursement process, no receipts to file. It&apos;s already in your earnings when the job closes.
                 </p>
               </div>
             </div>
@@ -285,7 +285,7 @@ export default function BecomeADriver() {
           <div className="bg-white rounded-xl shadow-lg p-8">
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               <div>
-                <h3 className="text-xl font-bold mb-4 text-secondary-600">Junk Removal (Haul Away)</h3>
+                <h3 className="text-xl font-bold mb-4 text-secondary-600">Hauling (Haul Away)</h3>
                 <ul className="space-y-3 text-gray-700">
                   <li className="flex justify-between">
                     <span>1/8 Truck ($99)</span>
@@ -349,15 +349,15 @@ export default function BecomeADriver() {
             {[
               {
                 q: 'How do I become a HaulKind driver?',
-                a: 'To become a HaulKind driver, fill out the online application (takes about 2 minutes), upload your vehicle photos and insurance, and we review within 24 hours. Once approved, download the driver app and start accepting junk removal jobs and moving jobs right away.',
+                a: 'To become a HaulKind driver, fill out the online application (takes about 2 minutes), upload your vehicle photos and insurance, and we review within 24 hours. Once approved, download the driver app and start accepting hauling jobs and moving jobs right away.',
               },
               {
                 q: 'What types of driver jobs are available on HaulKind?',
-                a: 'HaulKind offers a variety of driver jobs including junk removal jobs, moving labor jobs, donation pickup, mattress swap, furniture assembly, and property cleanout jobs. You choose which local hauling jobs to accept.',
+                a: 'HaulKind offers a variety of driver jobs including hauling jobs, moving labor jobs, donation pickup, mattress swap, furniture assembly, and property clearing jobs. You choose which local hauling jobs to accept.',
               },
               {
                 q: 'How much can a HaulKind driver earn?',
-                a: 'HaulKind drivers earn $25-$45/hr on average. Junk removal jobs pay $59-$317 per haul plus disposal fees. Moving jobs pay $47-$77/hr. You keep the majority of every job and get paid weekly via direct deposit.',
+                a: 'HaulKind drivers earn $25-$45/hr on average. Hauling jobs pay $59-$317 per haul plus fees. Moving jobs pay $47-$77/hr. You keep the majority of every job and get paid weekly via direct deposit.',
               },
               {
                 q: 'Do I need commercial insurance for driver jobs?',
@@ -368,8 +368,8 @@ export default function BecomeADriver() {
                 a: 'You can rent a truck and still make good money with local hauling jobs. Many HaulKind drivers start by renting and buy their own truck later from their earnings.',
               },
               {
-                q: 'How do disposal fees work for junk removal jobs?',
-                a: 'Every junk removal job includes a fixed disposal fee ($10-$70 based on load size) that is collected from the customer upfront and paid directly to you as part of your job payment. No waiting, no reimbursement process, no receipts to file.',
+                q: 'How do handling fees work for hauling jobs?',
+                a: 'Every hauling job includes a fixed handling fee ($10-$70 based on load size) that is collected from the customer upfront and paid directly to you as part of your job payment. No waiting, no reimbursement process, no receipts to file.',
               },
               {
                 q: 'Can I work in multiple states as a HaulKind driver?',
@@ -394,12 +394,12 @@ export default function BecomeADriver() {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
-          { '@type': 'Question', name: 'How do I become a HaulKind driver?', acceptedAnswer: { '@type': 'Answer', text: 'To become a HaulKind driver, fill out the online application (takes about 2 minutes), upload your vehicle photos and insurance, and we review within 24 hours. Once approved, download the driver app and start accepting junk removal jobs and moving jobs right away.' } },
-          { '@type': 'Question', name: 'What types of driver jobs are available on HaulKind?', acceptedAnswer: { '@type': 'Answer', text: 'HaulKind offers a variety of driver jobs including junk removal jobs, moving labor jobs, donation pickup, mattress swap, furniture assembly, and property cleanout jobs. You choose which local hauling jobs to accept.' } },
-          { '@type': 'Question', name: 'How much can a HaulKind driver earn?', acceptedAnswer: { '@type': 'Answer', text: 'HaulKind drivers earn $25-$45/hr on average. Junk removal jobs pay $59-$317 per haul plus disposal fees. Moving jobs pay $47-$77/hr. You keep the majority of every job and get paid weekly via direct deposit.' } },
+          { '@type': 'Question', name: 'How do I become a HaulKind driver?', acceptedAnswer: { '@type': 'Answer', text: 'To become a HaulKind driver, fill out the online application (takes about 2 minutes), upload your vehicle photos and insurance, and we review within 24 hours. Once approved, download the driver app and start accepting hauling jobs and moving jobs right away.' } },
+          { '@type': 'Question', name: 'What types of driver jobs are available on HaulKind?', acceptedAnswer: { '@type': 'Answer', text: 'HaulKind offers a variety of driver jobs including hauling jobs, moving labor jobs, donation pickup, mattress swap, furniture assembly, and property clearing jobs. You choose which local hauling jobs to accept.' } },
+          { '@type': 'Question', name: 'How much can a HaulKind driver earn?', acceptedAnswer: { '@type': 'Answer', text: 'HaulKind drivers earn $25-$45/hr on average. Hauling jobs pay $59-$317 per haul plus fees. Moving jobs pay $47-$77/hr. You keep the majority of every job and get paid weekly via direct deposit.' } },
           { '@type': 'Question', name: 'Do I need commercial insurance for driver jobs?', acceptedAnswer: { '@type': 'Answer', text: 'You need auto insurance that covers business use. Many personal policies include this. Check with your insurance provider before applying for independent driver opportunities.' } },
           { '@type': 'Question', name: 'What if I don\'t have a truck?', acceptedAnswer: { '@type': 'Answer', text: 'You can rent a truck and still make good money with local hauling jobs. Many HaulKind drivers start by renting and buy their own truck later from their earnings.' } },
-          { '@type': 'Question', name: 'How do disposal fees work for junk removal jobs?', acceptedAnswer: { '@type': 'Answer', text: 'Every junk removal job includes a fixed disposal fee ($10-$70 based on load size) that is collected from the customer upfront and paid directly to you as part of your job payment. No waiting, no reimbursement process, no receipts to file.' } },
+          { '@type': 'Question', name: 'How do handling fees work for hauling jobs?', acceptedAnswer: { '@type': 'Answer', text: 'Every hauling job includes a fixed handling fee ($10-$70 based on load size) that is collected from the customer upfront and paid directly to you as part of your job payment. No waiting, no reimbursement process, no receipts to file.' } },
           { '@type': 'Question', name: 'Can I work in multiple states as a HaulKind driver?', acceptedAnswer: { '@type': 'Answer', text: 'Yes! If you have coverage in multiple service areas, you can accept driver jobs across state lines. We currently serve NYC, Long Island, Philadelphia, and NJ.' } },
           { '@type': 'Question', name: 'Is being a HaulKind driver a full-time or part-time job?', acceptedAnswer: { '@type': 'Answer', text: 'HaulKind offers independent driver opportunities with 100% flexibility. You can work full-time or part-time — go online when you want, no shifts, no minimums, no penalties for declining a job.' } },
         ],
@@ -414,8 +414,8 @@ export default function BecomeADriver() {
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
-              <h3 className="text-lg font-bold mb-2">Junk Removal Jobs</h3>
-              <p className="text-gray-600 text-sm">Pick up furniture, appliances, yard waste, and general junk from homes and businesses. These are the most common driver jobs on the platform.</p>
+              <h3 className="text-lg font-bold mb-2">Hauling Jobs</h3>
+              <p className="text-gray-600 text-sm">Pick up furniture, appliances, and other items from homes and businesses. These are the most common driver jobs on the platform.</p>
             </div>
             <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
               <h3 className="text-lg font-bold mb-2">Moving Labor Jobs</h3>
@@ -434,8 +434,8 @@ export default function BecomeADriver() {
               <p className="text-gray-600 text-sm">Assemble furniture for customers — IKEA, Wayfair, Amazon, and more. A great add-on for independent driver opportunities.</p>
             </div>
             <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
-              <h3 className="text-lg font-bold mb-2">Property Cleanout Jobs</h3>
-              <p className="text-gray-600 text-sm">Full property cleanouts for real estate agents, landlords, and homeowners. These are larger driver jobs that pay significantly more.</p>
+              <h3 className="text-lg font-bold mb-2">Property Clearing Jobs</h3>
+              <p className="text-gray-600 text-sm">Full property clearing for real estate agents, landlords, and homeowners. These are larger driver jobs that pay significantly more.</p>
             </div>
           </div>
         </div>
@@ -446,7 +446,7 @@ export default function BecomeADriver() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Become a HaulKind Driver?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Apply now and get approved in 24 hours. Start accepting junk removal jobs and moving jobs this week.
+            Apply now and get approved in 24 hours. Start accepting hauling jobs and moving jobs this week.
           </p>
           <Link 
             href="/become-a-driver/apply"

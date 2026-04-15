@@ -277,7 +277,7 @@ function formatOrderForDriver(order: any) {
   return {
     id: order.id,
     service_type: order.serviceType || 'HAUL_AWAY',
-    description: items.description || order.serviceType || 'Junk Removal',
+    description: items.description || order.serviceType || 'Hauling',
     pickup_address: fullAddress,
     pickup_lat: order.lat ? parseFloat(order.lat) : null,
     pickup_lng: order.lng ? parseFloat(order.lng) : null,

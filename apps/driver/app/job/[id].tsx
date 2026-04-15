@@ -98,7 +98,7 @@ export default function JobDetailScreen() {
       if (job?.serviceType === 'HAUL_AWAY' && !receiptPhoto) {
         Alert.alert(
           'Receipt Required',
-          'Please upload disposal receipt for haul away jobs',
+          'Please upload a receipt for haul away jobs',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Upload Receipt', onPress: () => pickReceiptPhoto() },
@@ -192,7 +192,7 @@ export default function JobDetailScreen() {
       {/* Job Info */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>
-          {job.serviceType === 'HAUL_AWAY' ? '🚚 Junk Removal' :
+          {job.serviceType === 'HAUL_AWAY' ? '🚚 Hauling' :
            job.serviceType === 'LABOR_ONLY' ? '💪 Moving Labor' :
            job.serviceType === 'MATTRESS_SWAP' ? '🛏️ Mattress Swap' :
            job.serviceType === 'FURNITURE_ASSEMBLY' ? '🔧 Furniture Assembly' :
@@ -321,7 +321,7 @@ export default function JobDetailScreen() {
 
         {job.serviceType === 'HAUL_AWAY' && job.status === 'STARTED' && (
           <View style={styles.photoSection}>
-            <Text style={styles.photoLabel}>Disposal Receipt {receiptPhoto && '✅'}</Text>
+            <Text style={styles.photoLabel}>Hauling Receipt {receiptPhoto && '✅'}</Text>
             <TouchableOpacity style={styles.photoButton} onPress={pickReceiptPhoto}>
               <Text style={styles.photoButtonText}>📷 Upload Receipt</Text>
             </TouchableOpacity>

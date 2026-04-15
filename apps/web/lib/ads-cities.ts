@@ -57,7 +57,7 @@ export const ADS_CITIES: AdsCityData[] = [
   // New Jersey — NJ compliance: No "Junk Removal" or "Solid Waste Disposal" (A-901 required)
   // NJ services: Furniture Donation Pickup, Moving Labor, Furniture Assembly
   {
-    slug: 'junk-removal-south-jersey',
+    slug: 'hauling-south-jersey',
     city: 'South Jersey',
     state: 'NJ',
     h1: 'Furniture Donation Pickup & Moving Help in South Jersey',
@@ -67,7 +67,7 @@ export const ADS_CITIES: AdsCityData[] = [
     neighborhoods: ['Camden', 'Cherry Hill', 'Voorhees', 'Marlton', 'Mount Laurel', 'Haddonfield', 'Collingswood', 'Moorestown', 'Medford', 'Turnersville'],
   },
   {
-    slug: 'junk-removal-trenton',
+    slug: 'hauling-trenton',
     city: 'Trenton',
     state: 'NJ',
     h1: 'Furniture Donation Pickup & Moving Help in Trenton',
@@ -77,7 +77,7 @@ export const ADS_CITIES: AdsCityData[] = [
     neighborhoods: ['Downtown Trenton', 'Chambersburg', 'Mill Hill', 'West Ward', 'North Trenton', 'Hamilton', 'Ewing', 'Lawrence', 'Princeton Junction'],
   },
   {
-    slug: 'junk-removal-princeton',
+    slug: 'hauling-princeton',
     city: 'Princeton',
     state: 'NJ',
     h1: 'Furniture Donation Pickup & Moving Help in Princeton',
@@ -159,7 +159,7 @@ export const ADS_CITIES: AdsCityData[] = [
     neighborhoods: ['White Plains', 'Yonkers', 'New Rochelle', 'Scarsdale', 'Mount Vernon', 'Tarrytown', 'Mamaroneck', 'Larchmont', 'Ossining', 'Peekskill'],
   },
   {
-    slug: 'junk-removal-jersey-city',
+    slug: 'hauling-jersey-city',
     city: 'Jersey City',
     state: 'NJ',
     h1: 'Furniture Donation Pickup & Moving Help in Jersey City',
@@ -169,7 +169,7 @@ export const ADS_CITIES: AdsCityData[] = [
     neighborhoods: ['Downtown', 'The Heights', 'Journal Square', 'Bergen-Lafayette', 'Greenville', 'West Side', 'McGinley Square', 'Liberty State Park area'],
   },
   {
-    slug: 'junk-removal-newark',
+    slug: 'hauling-newark',
     city: 'Newark',
     state: 'NJ',
     h1: 'Furniture Donation Pickup & Moving Help in Newark',
@@ -179,7 +179,7 @@ export const ADS_CITIES: AdsCityData[] = [
     neighborhoods: ['Ironbound', 'North Ward', 'South Ward', 'West Ward', 'Central Ward', 'Vailsburg', 'Forest Hill', 'Roseville', 'University Heights'],
   },
   {
-    slug: 'junk-removal-hoboken',
+    slug: 'hauling-hoboken',
     city: 'Hoboken',
     state: 'NJ',
     h1: 'Furniture Donation Pickup & Moving Help in Hoboken',

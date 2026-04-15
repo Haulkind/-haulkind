@@ -45,9 +45,9 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Services</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/services/furniture" className="hover:text-white transition">Furniture Removal</Link></li>
-              <li><Link href="/services/appliances" className="hover:text-white transition">Appliance Removal</Link></li>
-              <li><Link href="/services/cleanout" className="hover:text-white transition">Property Cleanouts</Link></li>
+              <li><Link href="/services/furniture" className="hover:text-white transition">Furniture Pickup</Link></li>
+              <li><Link href="/services/appliances" className="hover:text-white transition">Appliance Pickup</Link></li>
+              <li><Link href="/services/cleanout" className="hover:text-white transition">Property Clearing</Link></li>
               <li><Link href="/services/commercial" className="hover:text-white transition">Commercial</Link></li>
               <li><Link href="/donation-pickup" className="hover:text-white transition">Donation Pickup</Link></li>
               <li><Link href="/mattress-swap" className="hover:text-white transition">Mattress Swap</Link></li>
@@ -84,15 +84,15 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <h4 className="text-white font-semibold mb-3 text-sm">Popular Service Areas</h4>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <Link href="/junk-removal-philadelphia-pa" className="hover:text-white transition">Junk Removal Philadelphia</Link>
-            <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Removal Philadelphia</Link>
+            <Link href="/junk-removal-philadelphia-pa" className="hover:text-white transition">Hauling Philadelphia</Link>
+            <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Pickup Philadelphia</Link>
             <Link href="/donation-pickup-camden-nj" className="hover:text-white transition">Donation Delivery Camden</Link>
             <Link href="/mattress-removal-cherry-hill-nj" className="hover:text-white transition">Mattress Swap Cherry Hill</Link>
-            <Link href="/appliance-removal-trenton-nj" className="hover:text-white transition">Appliance Delivery Trenton</Link>
+            <Link href="/donation-pickup-trenton-nj" className="hover:text-white transition">Donation Pickup Trenton</Link>
             <Link href="/moving-help-princeton-nj" className="hover:text-white transition">Moving Help Princeton</Link>
-            <Link href="/garage-cleanout-mount-laurel-nj" className="hover:text-white transition">Moving Help Mount Laurel</Link>
-            <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Removal Philadelphia</Link>
-            <Link href="/basement-cleanout-camden-nj" className="hover:text-white transition">Furniture Assembly Camden</Link>
+            <Link href="/moving-help-mount-laurel-nj" className="hover:text-white transition">Moving Help Mount Laurel</Link>
+            <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Pickup Philadelphia</Link>
+            <Link href="/moving-help-camden-nj" className="hover:text-white transition">Moving Help Camden</Link>
             <Link href="/donation-pickup-cherry-hill-nj" className="hover:text-white transition">Donation Pickup Cherry Hill</Link>
             <Link href="/become-a-driver" className="text-primary-400 hover:text-white transition font-medium">HaulKind Driver Jobs</Link>
             <Link href="/service-areas" className="text-primary-400 hover:text-white transition font-medium">View All Service Areas &rarr;</Link>
@@ -102,7 +102,7 @@ export default function Footer() {
         {/* NJ Compliance Legal Disclaimer */}
         <div className="border-t border-gray-800 mt-6 pt-6">
           <p className="text-xs text-gray-500 leading-relaxed max-w-4xl mx-auto">
-            <strong className="text-gray-400">Legal Disclaimer:</strong> HaulKind&apos;s Junk Removal and Solid Waste Disposal services are exclusively available to residents within Pennsylvania. In New Jersey, we strictly operate as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs. We do not transport solid waste to NJ landfills.
+            <strong className="text-gray-400">Legal Disclaimer:</strong> In New Jersey, HaulKind strictly operates as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs only. We do not handle or transport solid waste in NJ.
           </p>
         </div>
 

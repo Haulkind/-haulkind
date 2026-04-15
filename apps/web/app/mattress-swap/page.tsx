@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: 'What do you do with the old mattress?',
-    a: 'We donate mattresses in good condition to local charities and provide a tax donation receipt. Damaged mattresses go to certified disposal facilities.',
+    a: 'We donate mattresses in good condition to local charities and provide a tax donation receipt. Damaged mattresses go to certified recycling facilities.',
   },
   {
     q: 'Can you also assemble my bed frame?',
@@ -155,7 +155,7 @@ export default function MattressSwapLandingPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-center text-sm text-gray-500">All prices include labor, removal, and responsible disposal. No hidden fees.</p>
+            <p className="text-center text-sm text-gray-500">All prices include labor, pickup, and responsible handling. No hidden fees.</p>
           </div>
         </section>
 
@@ -202,7 +202,7 @@ export default function MattressSwapLandingPage() {
             <h2 className="text-3xl font-bold text-center mb-6">What Happens to Your Old Mattress?</h2>
             <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
               <p className="text-gray-700 leading-relaxed">
-                At HaulKind, we don&apos;t just dump your old mattress. If it&apos;s in good condition, we donate it to local charities and provide you with a tax donation receipt. Damaged or heavily worn mattresses are taken to certified disposal facilities. We recycle materials whenever possible.
+                At HaulKind, we don&apos;t just dump your old mattress. If it&apos;s in good condition, we donate it to local charities and provide you with a tax donation receipt. Damaged or heavily worn mattresses are taken to certified recycling facilities. We recycle materials whenever possible.
               </p>
             </div>
           </div>

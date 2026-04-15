@@ -5,7 +5,7 @@ import { getStatesWithCounts } from '@/lib/seo-data-national'
 
 export const metadata: Metadata = {
   title: 'Service Areas - Nationwide Hauling & Moving Help | HaulKind',
-  description: 'HaulKind serves cities across all 50 states. Professional hauling, furniture removal, cleanouts, and moving help. Get a free quote.',
+  description: 'HaulKind serves cities across all 50 states. Professional hauling, furniture pickup, moving help, and more. Get a free quote.',
   alternates: { canonical: '/service-areas' },
   openGraph: {
     title: 'HaulKind Service Areas - Nationwide Coverage',
@@ -51,7 +51,7 @@ export default function ServiceAreas() {
               Hauling &amp; Moving Help Service Areas
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional hauling, furniture removal, cleanout services, and moving labor nationwide. Find your state and city below and book online in 60 seconds.
+              HaulKind provides professional hauling, furniture pickup, moving labor, and more nationwide. Find your state and city below and book online in 60 seconds.
             </p>
             <Link
               href="/quote"

@@ -246,7 +246,7 @@ app.get('/customer/auth/me', authenticateToken, async (req: AuthRequest, res: Re
 // END CUSTOMER AUTH ROUTES
 // =====================================================
 
-// POST /quotes - Calculate quote for junk removal
+// POST /quotes - Calculate quote for hauling service
 app.post('/quotes', async (req: Request, res: Response) => {
   try {
     const { serviceType, serviceAreaId, pickupLat, pickupLng, pickupAddress, scheduledFor, volumeTier, addons } = req.body;

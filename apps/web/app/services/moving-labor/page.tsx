@@ -215,7 +215,7 @@ export default function MovingLaborPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-2xl font-bold mb-6">Explore Our Other Services</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/services/cleanout" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Cleanouts</Link>
+            <Link href="/services/cleanout" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
             <Link href="/services/furniture" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
             <Link href="/services/appliances" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Removal</Link>
             <Link href="/services/commercial" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Commercial Services</Link>

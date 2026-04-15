@@ -6,7 +6,7 @@ const features = [
       </svg>
     ),
     title: 'No Surprise Fees — Ever',
-    description: "Other companies quote low, then add fees for stairs, distance, disposal, and weight. Our price is locked in before we start. Guaranteed.",
+    description: "Other companies quote low, then add fees for stairs, distance, handling, and weight. Our price is locked in before we start. Guaranteed.",
     gradient: 'from-green-500 to-green-600',
   },
   {
@@ -27,7 +27,7 @@ const features = [
       </svg>
     ),
     title: 'Same-Day Pickup Available',
-    description: "Book before noon and we can usually pick up today. Because when you want junk gone, you want it gone NOW.",
+    description: "Book before noon and we can usually pick up today. Because when you want stuff gone, you want it gone NOW.",
     gradient: 'from-orange-500 to-orange-600',
   },
   {

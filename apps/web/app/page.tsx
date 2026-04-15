@@ -29,7 +29,7 @@ export default function Home() {
       <div className="py-6 bg-primary-50 border-b border-primary-100">
         <div className="container mx-auto px-4 text-center">
           <p className="text-lg md:text-xl font-bold text-primary-800 mb-3">
-            Half a truck starting at $279 — disposal included, no hidden fees.
+            Half a truck starting at $279 — all-in pricing, no hidden fees.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8">
             <div className="flex items-center gap-2">

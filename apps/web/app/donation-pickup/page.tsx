@@ -24,7 +24,7 @@ const pricingTiers = [
   { name: 'Small Load', price: '$109', desc: '1-3 items (e.g., a chair + lamp)', size: '1/8 truck' },
   { name: 'Medium Load', price: '$169', desc: '4-6 items (e.g., sofa + table)', size: '1/4 truck' },
   { name: 'Large Load', price: '$279', desc: '7-12 items (e.g., bedroom set)', size: '1/2 truck' },
-  { name: 'Full Load', price: '$389', desc: 'Full room or garage cleanout', size: 'Full truck' },
+  { name: 'Full Load', price: '$389', desc: 'Full room or garage clearing', size: 'Full truck' },
 ]
 
 const faqs = [
@@ -140,7 +140,7 @@ export default function DonationPickupPage() {
               { title: 'Tax Receipt Included', desc: 'Get an official donation receipt for your tax deduction.', icon: '📋' },
               { title: 'We Do the Heavy Lifting', desc: 'Our crew loads everything. You do not lift a finger.', icon: '💪' },
               { title: 'Same-Day Available', desc: 'Book before noon for same-day donation pickup.', icon: '⚡' },
-              { title: 'Eco-Friendly', desc: 'Items go to charity, not the landfill. Feel good about decluttering.', icon: '🌱' },
+              { title: 'Eco-Friendly', desc: 'Items go to charity, not to waste. Feel good about decluttering.', icon: '🌱' },
             ].map((item) => (
               <div key={item.title} className="bg-gray-50 rounded-xl p-6 text-center">
                 <div className="text-3xl mb-3">{item.icon}</div>
@@ -195,7 +195,7 @@ export default function DonationPickupPage() {
         <div className="container mx-auto px-4">
           <h3 className="text-xl font-bold text-center text-gray-900 mb-6">Also Available</h3>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/quote?service=haul-away" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Junk Removal \u2192'}</Link>
+            <Link href="/quote?service=haul-away" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Hauling (Haul Away) \u2192'}</Link>
             <Link href="/assembly" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Furniture Assembly \u2192'}</Link>
             <Link href="/quote?service=labor-only" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Moving Labor \u2192'}</Link>
           </div>

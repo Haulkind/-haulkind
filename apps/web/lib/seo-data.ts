@@ -87,7 +87,7 @@ export const CITIES: CityData[] = [
     stateAbbr: 'NJ',
     slug: 'mount-laurel-nj',
     population: '43,000',
-    description: 'Mount Laurel is a thriving Burlington County township known for its mix of residential communities and commercial centers along Route 73. Families and businesses here rely on efficient furniture donation pickup, moving labor, and furniture assembly for everything from furniture removal to office moves.',
+    description: 'Mount Laurel is a thriving Burlington County township known for its mix of residential communities and commercial centers along Route 73. Families and businesses here rely on efficient furniture donation pickup, moving labor, and furniture assembly for everything from moving help to office relocations.',
     neighborhoods: ['Larchmont', 'Rancocas Woods', 'Hartford', 'Masonville', 'Fellowship', 'Elbo Lane', 'Ramblewood', 'Birchfield', 'Mount Laurel Center', 'Centerton'],
     zipCodes: ['08054'],
     nearbyAreas: ['Cherry Hill', 'Moorestown', 'Marlton', 'Maple Shade', 'Medford'],
@@ -245,15 +245,15 @@ export function generateFAQs(service: ServiceData, city: CityData): { question: 
     },
   ]
 
-  // Add service-specific FAQ
-  if (service.category === 'removal') {
+  // Add service-specific FAQ (only for non-NJ or non-waste services)
+  if (service.category === 'removal' && city.stateAbbr !== 'NJ') {
     faqs.push({
       question: `What happens to my items after ${service.shortName}?`,
-      answer: `After picking up your items in ${city.name}, our team sorts materials for recycling, donation, and proper disposal. We partner with local recycling facilities and donation centers in the ${city.name} area to minimize landfill waste. Usable items are donated whenever possible.`,
+      answer: `After picking up your items in ${city.name}, our team sorts materials for recycling, donation, and responsible handling. We partner with local recycling facilities and donation centers in the ${city.name} area. Usable items are donated whenever possible.`,
     })
   }
 
-  if (service.category === 'cleanout') {
+  if (service.category === 'cleanout' && city.stateAbbr !== 'NJ') {
     faqs.push({
       question: `How long does a ${service.shortName} take in ${city.name}?`,
       answer: `Most ${service.shortName} jobs in ${city.name} take between 1-4 hours depending on the amount of material. A standard single-car garage or small basement can usually be cleared in about 2 hours. Larger spaces or heavily packed areas may take longer.`,
@@ -281,11 +281,16 @@ export function generatePageContent(service: ServiceData, city: CityData) {
   return { slug, url, title, metaDescription, h1 }
 }
 
+// NJ compliance: these service categories must NOT generate pages for NJ cities
+const NJ_BLOCKED_CATEGORIES = new Set(['removal', 'cleanout'])
+
 // Get all valid slug combinations for static generation
 export function getAllSlugs(): string[] {
   const slugs: string[] = []
   for (const service of SERVICES) {
     for (const city of CITIES) {
+      // Skip waste-related services for NJ cities (NJDEP compliance)
+      if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) continue
       slugs.push(`${service.slug}-${city.slug}`)
     }
   }
@@ -297,6 +302,8 @@ export function parseSlug(slug: string): { service: ServiceData; city: CityData 
   for (const service of SERVICES) {
     for (const city of CITIES) {
       if (slug === `${service.slug}-${city.slug}`) {
+        // Block waste-related service pages for NJ cities (NJDEP compliance)
+        if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) return null
         return { service, city }
       }
     }

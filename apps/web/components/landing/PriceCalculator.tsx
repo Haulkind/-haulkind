@@ -12,7 +12,7 @@ function isNJZip(zip: string): boolean {
   return num >= 7001 && num <= 8999
 }
 
-// Pricing table for Junk Removal & Donation Pickup
+// Pricing table for Hauling (Haul Away) & Donation Pickup
 const PRICED_ITEMS = [
   { id: 'sofa', name: 'Sofa / Couch', icon: '🛋️', price: 89 },
   { id: 'sofa_set_2', name: 'Sofa Set (2-Piece)', icon: '🛋️', price: 170 },
@@ -26,9 +26,9 @@ const PRICED_ITEMS = [
   { id: 'stove', name: 'Stove / Oven', icon: '🍳', price: 89 },
   { id: 'tv', name: 'TV', icon: '📺', price: 45 },
   { id: 'computer', name: 'Computer / Monitor', icon: '🖥️', price: 35 },
-  { id: 'garage_small', name: 'Garage Cleanout (Small)', icon: '🏠', price: 399 },
-  { id: 'garage_medium', name: 'Garage Cleanout (Medium)', icon: '🏡', price: 499 },
-  { id: 'garage_large', name: 'Garage Cleanout (Large)', icon: '🏘️', price: 699 },
+  { id: 'garage_small', name: 'Garage Clearing (Small)', icon: '🏠', price: 399 },
+  { id: 'garage_medium', name: 'Garage Clearing (Medium)', icon: '🏡', price: 499 },
+  { id: 'garage_large', name: 'Garage Clearing (Large)', icon: '🏘️', price: 699 },
   { id: 'yard_partial', name: 'Yard Debris (Partial)', icon: '🌿', price: 299 },
   { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '🌳', price: 899 },
 ]
@@ -223,7 +223,7 @@ export default function PriceCalculator() {
             {junkRemovalBlocked && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ Junk Removal service is currently exclusive to Pennsylvania. Please select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.
+                  ⚠️ Hauling (Haul Away) service is currently exclusive to Pennsylvania. Please select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.
                 </p>
               </div>
             )}
@@ -247,8 +247,8 @@ export default function PriceCalculator() {
                 }`}
               >
                 <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
-                <div className="font-semibold text-gray-900">Junk Removal <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
-                <div className="text-sm text-gray-500">Remove old furniture, appliances, and unwanted items</div>
+                <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
+                <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
                 {junkRemovalBlocked && <div className="text-xs text-red-500 mt-1 font-medium">Not available for NJ addresses</div>}
               </button>
               <button
@@ -307,7 +307,7 @@ export default function PriceCalculator() {
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
               <span className="text-lg">🏷️</span>
               <p className="text-sm text-green-800 font-medium">
-                <strong>Multi-item discount:</strong> Save 5% for each additional item! The more you remove, the more you save.
+                <strong>Multi-item discount:</strong> Save 5% for each additional item! The more you haul, the more you save.
               </p>
             </div>
           )}
@@ -316,7 +316,7 @@ export default function PriceCalculator() {
           {isJunkOrDonation && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Items to Remove
+                Select Items
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {PRICED_ITEMS.map((item) => {
@@ -393,7 +393,7 @@ export default function PriceCalculator() {
                 </p>
               )}
               <p className="text-xs text-teal-600 mt-1">
-                {totalItemCount} item{totalItemCount !== 1 ? 's' : ''} selected — disposal included, no hidden fees
+                {totalItemCount} item{totalItemCount !== 1 ? 's' : ''} selected — all-in pricing, no hidden fees
                 {totalItemCount === 1 && ' · Add more items to save 5% each!'}
               </p>
             </div>

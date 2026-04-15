@@ -49,7 +49,7 @@ export default function InstallPage() {
       {/* Earnings banner */}
       <div className="mx-6 bg-white/10 rounded-2xl p-5 mb-8 text-center">
         <p className="text-amber-300 font-bold text-lg mb-1">Earn $25–$45/hr</p>
-        <p className="text-primary-200 text-sm">Accept haul-away and junk removal jobs in your area</p>
+        <p className="text-primary-200 text-sm">Accept hauling and moving jobs in your area</p>
       </div>
 
       {/* Install steps */}

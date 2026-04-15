@@ -43,7 +43,7 @@ export default function OfferCard({ offer, onAccept, onDecline }: OfferCardProps
       {/* Job Type */}
       <View style={styles.header}>
         <Text style={styles.jobType}>
-          {job.serviceType === 'HAUL_AWAY' ? '🚚 Junk Removal' : '💪 Labor Only'}
+          {job.serviceType === 'HAUL_AWAY' ? '🚚 Hauling' : '💪 Labor Only'}
         </Text>
         <Text style={styles.payout}>${job.payout.toFixed(2)}</Text>
       </View>

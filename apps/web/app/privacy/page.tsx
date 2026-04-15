@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'HaulKind privacy policy. Learn how we collect, use, and protect your personal information when using our junk removal and moving services.',
+  description: 'HaulKind privacy policy. Learn how we collect, use, and protect your personal information when using our hauling and moving services.',
   alternates: { canonical: '/privacy' },
   robots: { index: true, follow: true },
 }
@@ -40,7 +40,7 @@ export default function Privacy() {
               <li>Name, email address, and phone number</li>
               <li>Service address and location information</li>
               <li>Payment information (processed securely through our payment processor)</li>
-              <li>Photos of items for removal (if you choose to provide them)</li>
+              <li>Photos of items for pickup (if you choose to provide them)</li>
             </ul>
 
             <h3>Automatically Collected Information</h3>

@@ -33,7 +33,7 @@ export default function Terms() {
 
             <h2>Description of Services</h2>
             <p>
-              Haulkind is a platform that connects customers who need junk removal or moving assistance with independent drivers who provide these services. Haulkind acts as an intermediary and does not directly provide junk removal or moving services.
+              Haulkind is a platform that connects customers who need hauling or moving assistance with independent drivers who provide these services. Haulkind acts as an intermediary and does not directly provide hauling or moving services.
             </p>
 
             <h2>User Accounts</h2>
@@ -53,8 +53,8 @@ export default function Terms() {
               All prices are displayed upfront before booking. Prices include:
             </p>
             <ul>
-              <li>Service fee (based on volume for junk removal or hourly rate for labor)</li>
-              <li>Up to $50 in disposal fees (excess disposal fees are charged separately)</li>
+              <li>Service fee (based on volume for haul-away or hourly rate for labor)</li>
+              <li>Up to $50 in handling fees (excess handling fees are charged separately)</li>
               <li>Any selected add-ons</li>
             </ul>
 
@@ -101,8 +101,8 @@ export default function Terms() {
               <li>Maintain required licenses, insurance, and vehicle standards</li>
               <li>Arrive within the scheduled time window</li>
               <li>Handle customer property with care</li>
-              <li>Dispose of items properly and legally</li>
-              <li>Provide receipts for disposal fees exceeding $50</li>
+              <li>Handle items properly and legally</li>
+              <li>Provide receipts for handling fees exceeding $50</li>
             </ul>
 
             <h2>Prohibited Items</h2>
@@ -114,13 +114,13 @@ export default function Terms() {
               <li>Medical waste (needles, biohazards)</li>
               <li>Firearms, ammunition, explosives</li>
               <li>Illegal substances or stolen property</li>
-              <li>Items requiring special permits or disposal procedures</li>
+              <li>Items requiring special permits or handling procedures</li>
             </ul>
 
             <h2>Liability and Disclaimers</h2>
             <h3>Service Disclaimer</h3>
             <p>
-              Haulkind is a platform connecting customers and drivers. We do not employ drivers or directly provide junk removal services. Drivers are independent contractors responsible for their own actions.
+              Haulkind is a platform connecting customers and drivers. We do not employ drivers or directly provide hauling services. Drivers are independent contractors responsible for their own actions.
             </p>
 
             <h3>Limitation of Liability</h3>

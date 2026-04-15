@@ -150,7 +150,7 @@ export default function AssemblyConfirmationPage() {
         <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 text-center">
           <p className="text-teal-800 font-medium mb-2">Need your old furniture removed?</p>
           <Link href="/quote" className="inline-block px-6 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition">
-            Get Junk Removal Quote &rarr;
+            Get Hauling Quote &rarr;
           </Link>
         </div>
 
