@@ -33,8 +33,9 @@ const PRICED_ITEMS = [
   { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '🌳', price: 899 },
 ]
 
-// Items allowed for NJ ZIP codes (non-regulated services)
-const NJ_ALLOWED_ITEMS = new Set([
+// Items BLOCKED for NJ ZIP codes (solid waste / entulho — regulated by NJDEP)
+// Furniture, appliances, electronics are ALLOWED because they are donation-eligible
+const NJ_BLOCKED_ITEMS = new Set([
   'garage_small', 'garage_medium', 'garage_large',
   'yard_partial', 'yard_full',
 ])
@@ -226,7 +227,7 @@ export default function PriceCalculator() {
                   setItemQuantities(prev => {
                     const filtered: Record<string, number> = {}
                     for (const [id, qty] of Object.entries(prev)) {
-                      if (NJ_ALLOWED_ITEMS.has(id)) filtered[id] = qty
+                      if (!NJ_BLOCKED_ITEMS.has(id)) filtered[id] = qty
                     }
                     return filtered
                   })
@@ -238,7 +239,7 @@ export default function PriceCalculator() {
             {junkRemovalBlocked && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ We do not handle hauling or solid waste removal in New Jersey (NJDEP regulation). For NJ, only Yard Debris and Garage Clearing are available. For other services, choose Moving Labor or Furniture Assembly.
+                  ⚠️ Hauling and solid waste removal (Yard Debris, Garage Clearing) are not available in New Jersey (NJDEP regulation). Donation Pickup for furniture, appliances, and electronics is available. You can also choose Moving Labor or Furniture Assembly.
                 </p>
               </div>
             )}
@@ -337,7 +338,7 @@ export default function PriceCalculator() {
                 {PRICED_ITEMS.map((item) => {
                   const qty = itemQuantities[item.id] || 0
                   const isSelected = qty > 0
-                  const isBlockedForNJ = isNJ && !NJ_ALLOWED_ITEMS.has(item.id)
+                  const isBlockedForNJ = isNJ && NJ_BLOCKED_ITEMS.has(item.id)
                   return (
                     <div
                       key={item.id}
