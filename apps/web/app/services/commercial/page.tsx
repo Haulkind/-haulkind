@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Commercial Hauling & Office Cleanouts | HaulKind',
-  description: 'Commercial hauling for offices, warehouses, retail stores, and construction sites in PA & NY. Furniture donation pickup & moving labor in NJ. Fast, insured, affordable.',
+  title: 'Commercial Hauling & Office Clearing in PA | HaulKind',
+  description: 'Commercial hauling for offices, warehouses, retail stores, and construction sites in Pennsylvania. Fast, insured, affordable.',
   alternates: { canonical: '/services/commercial' },
   openGraph: {
-    title: 'Commercial Hauling & Office Cleanouts | HaulKind',
-    description: 'Office furniture, warehouse cleanouts, construction debris. Professional commercial services in PA, NY & NJ.',
+    title: 'Commercial Hauling & Office Clearing | HaulKind',
+    description: 'Office furniture, warehouse clearing, construction debris. Professional commercial services in PA.',
     url: 'https://haulkind.com/services/commercial',
   },
 }
@@ -16,8 +16,8 @@ export default function CommercialPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Commercial Hauling & Office Cleanouts',
-    description: 'Professional commercial hauling for offices, warehouses, retail stores, and construction sites.',
+    name: 'Commercial Hauling & Office Clearing',
+    description: 'Professional commercial hauling for offices, warehouses, retail stores, and construction sites in Pennsylvania.',
     provider: {
       '@type': 'LocalBusiness',
       name: 'HaulKind',
@@ -25,8 +25,6 @@ export default function CommercialPage() {
     },
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
-      { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: 'Commercial Hauling',
     url: 'https://haulkind.com/services/commercial',
@@ -40,10 +38,10 @@ export default function CommercialPage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Commercial Hauling & Office Clearing
+            Commercial Hauling & Office Clearing in PA
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            Clearing out an office, renovating a retail space, or cleaning up a job site? HaulKind handles commercial hauling quickly and professionally so your business stays on schedule.
+            Clearing out an office, renovating a retail space, or cleaning up a job site? HaulKind handles commercial hauling in Pennsylvania quickly and professionally so your business stays on schedule.
           </p>
           <Link
             href="/quote"
@@ -59,10 +57,10 @@ export default function CommercialPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Commercial Hauling That Works Around Your Schedule</h2>
           <p className="text-gray-700 text-lg mb-4">
-            Businesses generate a lot of waste that regular trash pickup can't handle. Old office furniture piling up after a renovation. Warehouse pallets and packaging taking up valuable floor space. Construction debris that needs to go before the next phase of the project can start. These are the kinds of jobs HaulKind was built for.
+            Businesses generate a lot of bulk items that regular pickup can't handle. Old office furniture piling up after a renovation. Warehouse pallets and packaging taking up valuable floor space. Construction debris that needs to go before the next phase of the project can start. These are the kinds of jobs HaulKind was built for.
           </p>
           <p className="text-gray-700 text-lg mb-4">
-            We work with property managers, office administrators, general contractors, retail store owners, and warehouse operators across Pennsylvania, New York, and New Jersey. Our team arrives when you need us — before business hours, after closing, or on weekends — so your operations aren't disrupted.
+            We work with property managers, office administrators, general contractors, retail store owners, and warehouse operators across Pennsylvania. Our team arrives when you need us — before business hours, after closing, or on weekends — so your operations aren't disrupted.
           </p>
           <p className="text-gray-700 text-lg">
             Every commercial job comes with the same transparent pricing you'd get for a residential pickup. No haggling with salespeople, no inflated corporate rates. You describe the job, we give you a price, and we show up ready to work. For recurring needs, we can set up weekly or monthly pickups to keep your space clean without you having to think about it.
@@ -78,7 +76,7 @@ export default function CommercialPage() {
             {[
               { step: '1', title: 'Describe the Job', desc: 'Tell us what needs to go and how much. Photos help. We give you a transparent quote instantly — no site visit required for most jobs.' },
               { step: '2', title: 'Schedule Around Your Business', desc: 'Pick a time that minimizes disruption. Early morning, late evening, weekends — we work around your hours.' },
-              { step: '3', title: 'We Clear It Out', desc: 'Our insured crew arrives on time, removes everything, and leaves the space clean. We handle disposal, recycling, and donation.' },
+              { step: '3', title: 'We Clear It Out', desc: 'Our insured crew arrives on time, removes everything, and leaves the space clean. We handle recycling and donation.' },
             ].map((item) => (
               <div key={item.step} className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <div className="w-14 h-14 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
@@ -186,28 +184,17 @@ export default function CommercialPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Commercial Service Areas</h2>
           <p className="text-gray-700 text-lg mb-6">
-            HaulKind serves businesses across the tri-state area. From Center City Philadelphia to Midtown Manhattan to the industrial corridors of New Jersey, we're nearby and ready.
+            HaulKind serves businesses across Pennsylvania. From Center City Philadelphia to Pittsburgh, we're nearby and ready.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-bold text-lg mb-3 text-primary-600">Pennsylvania</h3>
               <ul className="space-y-1 text-gray-700">
                 <li>Philadelphia</li><li>Pittsburgh</li><li>Allentown</li><li>Reading</li><li>Scranton</li><li>Harrisburg</li><li>Bethlehem</li><li>Lancaster</li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New York</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>New York City</li><li>Buffalo</li><li>Rochester</li><li>Syracuse</li><li>Albany</li><li>Yonkers</li><li>White Plains</li><li>Long Island</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New Jersey</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>Newark</li><li>Jersey City</li><li>Paterson</li><li>Elizabeth</li><li>Trenton</li><li>Edison</li><li>Woodbridge</li><li>Cherry Hill</li>
-              </ul>
-            </div>
           </div>
+          <p className="text-sm text-gray-500 mt-6">Commercial hauling services are currently available in Pennsylvania only. In New Jersey, HaulKind offers Furniture Assembly, Moving Labor, and Donation Pickup.</p>
         </div>
       </section>
 
@@ -216,9 +203,9 @@ export default function CommercialPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-2xl font-bold mb-6">Explore Our Other Services</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/services/cleanout" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Cleanouts</Link>
-            <Link href="/services/furniture" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
-            <Link href="/services/appliances" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Removal</Link>
+            <Link href="/services/cleanout" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
+            <Link href="/services/furniture" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Pickup</Link>
+            <Link href="/services/appliances" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Pickup</Link>
             <Link href="/services/moving-labor" className="bg-gray-50 rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Moving Labor</Link>
           </div>
         </div>
@@ -229,7 +216,7 @@ export default function CommercialPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Need Commercial Hauling?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Get a transparent quote for your business. Fast, insured, flexible scheduling. Serving PA, NY & NJ.
+            Get a transparent quote for your business. Fast, insured, flexible scheduling. Serving Pennsylvania.
           </p>
           <Link
             href="/quote"
@@ -237,6 +224,15 @@ export default function CommercialPage() {
           >
             Get a Fast Quote
           </Link>
+        </div>
+      </section>
+
+      {/* NJ Disclaimer */}
+      <section className="py-6 bg-gray-100">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            In New Jersey, HaulKind strictly operates as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs only. We do not handle or transport solid waste in NJ.
+          </p>
         </div>
       </section>
     </div>

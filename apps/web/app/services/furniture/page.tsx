@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Furniture Pickup & Hauling in PA, NY & NJ | HaulKind',
-  description: 'Fast furniture pickup in Pennsylvania, New York & New Jersey. Couches, mattresses, desks, tables, dressers. We haul it away. From $99. Same-day available.',
+  title: 'Furniture Pickup & Hauling in PA | HaulKind',
+  description: 'Fast furniture pickup in Pennsylvania. Couches, mattresses, desks, tables, dressers. We haul it away. From $99. Same-day available.',
   alternates: { canonical: '/services/furniture' },
   openGraph: {
     title: 'Furniture Pickup & Hauling | HaulKind',
-    description: 'Old couch, mattress, or desk? We pick up and haul away furniture fast. Affordable, insured. Serving PA, NY & NJ.',
+    description: 'Old couch, mattress, or desk? We pick up and haul away furniture fast. Affordable, insured. Serving PA.',
     url: 'https://haulkind.com/services/furniture',
   },
 }
@@ -25,8 +25,6 @@ export default function FurniturePage() {
     },
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
-      { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: 'Furniture Pickup',
     url: 'https://haulkind.com/services/furniture',
@@ -40,10 +38,10 @@ export default function FurniturePage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Furniture Pickup & Hauling in PA, NY & NJ
+            Furniture Pickup & Hauling in PA
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            That old couch isn't going to move itself. Whether you're replacing a mattress, clearing out a room, or downsizing your home, HaulKind picks up your unwanted furniture and hauls it away — the same day if you need it.
+            That old couch isn't going to move itself. Whether you're replacing a mattress, clearing out a room, or downsizing your home, HaulKind picks up your unwanted furniture and hauls it away — the same day if you need it. Furniture hauling is available in Pennsylvania.
           </p>
           <Link
             href="/quote"
@@ -65,7 +63,7 @@ export default function FurniturePage() {
             HaulKind eliminates all of that. You tell us what needs to go, we give you an instant price, and our insured team shows up to carry it out — no matter what floor it's on or how tight the hallway is. We handle the heavy lifting, the loading, and the transportation. You just point and we go.
           </p>
           <p className="text-gray-700 text-lg">
-            Our pricing starts at $99 for small loads like a single piece of furniture — all-in pricing. Need a full room cleared? We've got truck-load pricing for that too. Everything is transparent — you see the price before you book, and there are no surprise charges at the door. Homeowners, renters, landlords, and offices across Pennsylvania, New York, and New Jersey rely on HaulKind for fast, no-hassle furniture pickup.
+            Our pricing starts at $99 for small loads like a single piece of furniture — all-in pricing. Need a full room cleared? We've got truck-load pricing for that too. Everything is transparent — you see the price before you book, and there are no surprise charges at the door. Homeowners, renters, landlords, and offices across Pennsylvania rely on HaulKind for fast, no-hassle furniture pickup.
           </p>
         </div>
       </section>
@@ -154,7 +152,7 @@ export default function FurniturePage() {
               { title: 'We Carry It Out', desc: 'No need to drag anything to the curb. We come inside, carry it out, and load it onto our truck — stairs included.' },
               { title: 'Donate When Possible', desc: 'Furniture in good condition? We partner with local charities to donate usable items instead of letting them go to waste.' },
               { title: 'Instant Pricing', desc: 'Get your exact price before you book. Single item or full truckload — no hidden fees, no haggling.' },
-              { title: 'Same-Day Pickup', desc: 'Need that couch gone today? We offer same-day furniture pickup in most cities across PA, NY & NJ.' },
+              { title: 'Same-Day Pickup', desc: 'Need that couch gone today? We offer same-day furniture pickup in most cities across Pennsylvania.' },
               { title: 'Fully Insured', desc: 'Every job is covered by liability insurance. We protect your home, walls, and doorframes during removal.' },
               { title: 'Track Your Driver', desc: 'Watch your driver approach on a live map. No more wondering when they\'ll show up.' },
             ].map((item) => (
@@ -172,28 +170,17 @@ export default function FurniturePage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Furniture Pickup Service Areas</h2>
           <p className="text-gray-700 text-lg mb-6">
-            HaulKind picks up unwanted furniture across the tri-state area. From city apartments in Manhattan to suburban homes in Cherry Hill, our local drivers are nearby and ready.
+            HaulKind picks up unwanted furniture across Pennsylvania. Our local drivers are nearby and ready.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-bold text-lg mb-3 text-primary-600">Pennsylvania</h3>
               <ul className="space-y-1 text-gray-700">
                 <li>Philadelphia</li><li>Pittsburgh</li><li>Allentown</li><li>Reading</li><li>Scranton</li><li>Harrisburg</li><li>Bethlehem</li><li>Lancaster</li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New York</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>New York City</li><li>Buffalo</li><li>Rochester</li><li>Syracuse</li><li>Albany</li><li>Yonkers</li><li>White Plains</li><li>Long Island</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New Jersey</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>Newark</li><li>Jersey City</li><li>Paterson</li><li>Elizabeth</li><li>Trenton</li><li>Edison</li><li>Woodbridge</li><li>Cherry Hill</li>
-              </ul>
-            </div>
           </div>
+          <p className="text-sm text-gray-500 mt-6">Furniture hauling services are currently available in Pennsylvania only. In New Jersey, HaulKind offers Furniture Assembly, Moving Labor, and Donation Pickup.</p>
         </div>
       </section>
 
@@ -202,8 +189,8 @@ export default function FurniturePage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-2xl font-bold mb-6">Explore Our Other Services</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Cleanouts</Link>
-            <Link href="/services/appliances" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Removal</Link>
+            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
+            <Link href="/services/appliances" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Pickup</Link>
             <Link href="/services/moving-labor" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Moving Labor</Link>
             <Link href="/services/commercial" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Commercial Services</Link>
           </div>
@@ -215,7 +202,7 @@ export default function FurniturePage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Rid of Old Furniture?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Get your price in seconds. We pick up from any room, any floor. Fast, affordable furniture removal across PA, NY & NJ.
+            Get your price in seconds. We pick up from any room, any floor. Fast, affordable furniture pickup across Pennsylvania.
           </p>
           <Link
             href="/quote"
@@ -223,6 +210,15 @@ export default function FurniturePage() {
           >
             Get a Fast Quote
           </Link>
+        </div>
+      </section>
+
+      {/* NJ Disclaimer */}
+      <section className="py-6 bg-gray-100">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            In New Jersey, HaulKind strictly operates as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs only. We do not handle or transport solid waste in NJ.
+          </p>
         </div>
       </section>
     </div>

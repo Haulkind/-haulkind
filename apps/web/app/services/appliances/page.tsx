@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Appliance Pickup & Hauling in PA, NY & NJ | HaulKind',
-  description: 'Fast appliance pickup in Pennsylvania, New York & New Jersey. Fridges, washers, dryers, ovens, dishwashers. We haul away responsibly. From $99.',
+  title: 'Appliance Pickup & Recycling in PA | HaulKind',
+  description: 'Fast appliance pickup in Pennsylvania. Fridges, washers, dryers, ovens, dishwashers. We pick up and recycle responsibly. From $99.',
   alternates: { canonical: '/services/appliances' },
   openGraph: {
-    title: 'Appliance Pickup & Hauling | HaulKind',
-    description: 'Old fridge, washer, or dryer? We pick up and haul away appliances responsibly. Fast, affordable, insured. PA, NY & NJ.',
+    title: 'Appliance Pickup & Recycling | HaulKind',
+    description: 'Old fridge, washer, or dryer? We pick up and recycle appliances responsibly. Fast, affordable, insured. Serving PA.',
     url: 'https://haulkind.com/services/appliances',
   },
 }
@@ -16,7 +16,7 @@ export default function AppliancesPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Appliance Pickup & Hauling',
+    name: 'Appliance Pickup & Recycling',
     description: 'Professional appliance pickup and responsible recycling. Refrigerators, washers, dryers, ovens, and more.',
     provider: {
       '@type': 'LocalBusiness',
@@ -25,8 +25,6 @@ export default function AppliancesPage() {
     },
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
-      { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: 'Appliance Pickup',
     url: 'https://haulkind.com/services/appliances',
@@ -40,10 +38,10 @@ export default function AppliancesPage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Appliance Pickup & Hauling in PA, NY & NJ
+            Appliance Pickup & Recycling in PA
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            Old refrigerator taking up space? Broken washer sitting in the basement? HaulKind picks up and hauls away appliances the right way — fast, affordable, and hassle-free.
+            Old refrigerator taking up space? Broken washer sitting in the basement? HaulKind picks up and recycles appliances the right way — fast, affordable, and hassle-free.
           </p>
           <Link
             href="/quote"
@@ -65,7 +63,7 @@ export default function AppliancesPage() {
             HaulKind takes care of the entire process. We disconnect the appliance (if accessible), carry it out of your home regardless of where it's located — basement, second floor, tight hallway — load it onto our truck, and take it to the proper recycling facility. You don't lift a finger.
           </p>
           <p className="text-gray-700 text-lg">
-            Whether you're upgrading your kitchen, clearing out a rental property, or just finally getting rid of that old dryer in the garage, we make it simple. Homeowners, landlords, property managers, and businesses across Pennsylvania, New York, and New Jersey trust HaulKind to handle their appliance removal quickly and professionally.
+            Whether you're upgrading your kitchen, clearing out a rental property, or just finally getting rid of that old dryer in the garage, we make it simple. Homeowners, landlords, property managers, and businesses across Pennsylvania trust HaulKind to handle their appliance pickup quickly and professionally.
           </p>
         </div>
       </section>
@@ -77,7 +75,7 @@ export default function AppliancesPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: '1', title: 'Get Your Quote', desc: 'Tell us what appliances need to go. Upload a photo or describe the items. You get an instant, transparent price — no hidden fees.' },
-              { step: '2', title: 'Book Your Pickup', desc: 'Pick a date and time that works. Same-day appliance removal is available in most areas across PA, NY & NJ.' },
+              { step: '2', title: 'Book Your Pickup', desc: 'Pick a date and time that works. Same-day appliance pickup is available in most areas across Pennsylvania.' },
               { step: '3', title: 'We Pick Up & Recycle', desc: 'Our insured team arrives, carefully removes the appliance from wherever it sits, and takes it for proper recycling.' },
             ].map((item) => (
               <div key={item.step} className="bg-white rounded-xl shadow-lg p-8 text-center">
@@ -95,7 +93,7 @@ export default function AppliancesPage() {
       {/* What we remove */}
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8">Appliances We Remove</h2>
+          <h2 className="text-3xl font-bold mb-8">Appliances We Pick Up</h2>
           <div className="grid md:grid-cols-2 gap-6">
             <ul className="space-y-3 text-gray-700 text-lg">
               <li className="flex items-start gap-3">
@@ -148,7 +146,7 @@ export default function AppliancesPage() {
       {/* Why choose HaulKind */}
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="container mx-auto px-4 max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8">Why Choose HaulKind for Appliance Removal</h2>
+          <h2 className="text-3xl font-bold mb-8">Why Choose HaulKind for Appliance Pickup</h2>
           <div className="grid md:grid-cols-2 gap-6">
             {[
               { title: 'No Heavy Lifting for You', desc: 'Our team handles everything — even if the appliance is in a tight basement or up three flights of stairs.' },
@@ -170,30 +168,19 @@ export default function AppliancesPage() {
       {/* Service areas */}
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 max-w-4xl">
-          <h2 className="text-3xl font-bold mb-6">Appliance Removal Service Areas</h2>
+          <h2 className="text-3xl font-bold mb-6">Appliance Pickup Service Areas</h2>
           <p className="text-gray-700 text-lg mb-6">
-            HaulKind removes appliances across Pennsylvania, New York, and New Jersey. Our local drivers mean faster pickups and lower costs.
+            HaulKind picks up appliances across Pennsylvania. Our local drivers mean faster pickups and lower costs.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-bold text-lg mb-3 text-primary-600">Pennsylvania</h3>
               <ul className="space-y-1 text-gray-700">
                 <li>Philadelphia</li><li>Pittsburgh</li><li>Allentown</li><li>Reading</li><li>Scranton</li><li>Harrisburg</li><li>Bethlehem</li><li>Lancaster</li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New York</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>New York City</li><li>Buffalo</li><li>Rochester</li><li>Syracuse</li><li>Albany</li><li>Yonkers</li><li>White Plains</li><li>Long Island</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New Jersey</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>Newark</li><li>Jersey City</li><li>Paterson</li><li>Elizabeth</li><li>Trenton</li><li>Edison</li><li>Woodbridge</li><li>Cherry Hill</li>
-              </ul>
-            </div>
           </div>
+          <p className="text-sm text-gray-500 mt-6">Appliance pickup services are currently available in Pennsylvania only. In New Jersey, HaulKind offers Furniture Assembly, Moving Labor, and Donation Pickup.</p>
         </div>
       </section>
 
@@ -203,7 +190,7 @@ export default function AppliancesPage() {
           <h2 className="text-2xl font-bold mb-6">Explore Our Other Services</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
-            <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
+            <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Pickup</Link>
             <Link href="/services/moving-labor" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Moving Labor</Link>
             <Link href="/services/commercial" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Commercial Services</Link>
           </div>
@@ -215,7 +202,7 @@ export default function AppliancesPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Remove That Old Appliance?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Get your price in seconds. We handle the heavy lifting, disconnection, and recycling. Serving PA, NY & NJ.
+            Get your price in seconds. We handle the heavy lifting, disconnection, and recycling. Serving Pennsylvania.
           </p>
           <Link
             href="/quote"
@@ -223,6 +210,15 @@ export default function AppliancesPage() {
           >
             Get a Fast Quote
           </Link>
+        </div>
+      </section>
+
+      {/* NJ Disclaimer */}
+      <section className="py-6 bg-gray-100">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            In New Jersey, HaulKind strictly operates as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs only. We do not handle or transport solid waste in NJ.
+          </p>
         </div>
       </section>
     </div>
