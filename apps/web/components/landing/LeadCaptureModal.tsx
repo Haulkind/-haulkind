@@ -25,6 +25,20 @@ function unformatPhone(value: string): string {
   return value.replace(/\D/g, '')
 }
 
+// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
+function isNJZip(zip: string): boolean {
+  const z = zip.replace(/\D/g, '').slice(0, 5)
+  if (z.length !== 5) return false
+  const num = parseInt(z, 10)
+  return num >= 7001 && num <= 8999
+}
+
+// Items allowed for NJ ZIP codes (non-regulated services)
+const NJ_ALLOWED_ITEM_IDS = new Set([
+  'garage_small', 'garage_medium', 'garage_large',
+  'yard_partial', 'yard_full',
+])
+
 export default function LeadCaptureModal({
   selectedItems,
   estimatedPrice,
@@ -44,7 +58,10 @@ export default function LeadCaptureModal({
   const formRef = useRef<HTMLFormElement>(null)
 
   const phoneDigits = unformatPhone(phone)
-  const isValid = name.trim().length > 0 && phoneDigits.length === 10 && zip.length === 5 && tcpaConsent
+  const isNJ = isNJZip(zip)
+  // Check if any selected items are regulated (not allowed in NJ)
+  const hasRegulatedItems = isNJ && itemDetails.some(item => !NJ_ALLOWED_ITEM_IDS.has(item.id))
+  const isValid = name.trim().length > 0 && phoneDigits.length === 10 && zip.length === 5 && tcpaConsent && !hasRegulatedItems
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -170,8 +187,17 @@ export default function LeadCaptureModal({
               placeholder="Enter 5-digit ZIP"
               required
               maxLength={5}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                hasRegulatedItems ? 'border-red-400 bg-red-50' : 'border-gray-300'
+              }`}
             />
+            {hasRegulatedItems && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg">
+                <p className="text-sm text-red-700 font-medium">
+                  We do not handle hauling or solid waste removal in New Jersey. Your selected items include regulated services not available in NJ. Please go back and select only Yard Debris or Garage Clearing items.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* TCPA Consent */}
