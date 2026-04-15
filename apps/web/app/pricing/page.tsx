@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Junk Removal Pricing - All-In Rates from $99 | HaulKind',
-  description: 'See exact junk removal and moving labor prices. Haul Away from $99 (1/8 truck) to $529 (full truck). Disposal included. Labor help from $79/hr. No hidden fees.',
+  title: 'Hauling & Moving Pricing - All-In Rates from $99 | HaulKind',
+  description: 'See exact hauling and moving labor prices. Haul Away from $99 (1/8 truck) to $529 (full truck). All-in pricing. Labor help from $79/hr. No hidden fees.',
   alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'Junk Removal Pricing - All-In Rates from $99 | HaulKind',
-    description: 'Junk removal from $99, disposal included. Moving labor from $79/hr. No hidden fees. See all prices upfront before you book.',
+    title: 'Hauling & Moving Pricing - All-In Rates from $99 | HaulKind',
+    description: 'Hauling from $99, all-in pricing. Moving labor from $79/hr. No hidden fees. See all prices upfront before you book.',
     url: 'https://haulkind.com/pricing',
   },
 }
@@ -27,14 +27,14 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Junk Removal Pricing */}
+      {/* Hauling Pricing */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 max-w-6xl">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            Junk Removal (Haul Away)
+            Hauling (Haul Away)
           </h2>
           <p className="text-center text-gray-600 mb-12 text-lg">
-            All-in pricing based on volume. Disposal included in every price.
+            All-in pricing based on volume. Everything included in every price.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
@@ -114,9 +114,9 @@ export default function Pricing() {
             <div className="flex items-start gap-3">
               <span className="text-2xl">♻️</span>
               <div>
-                <h3 className="font-bold text-gray-900 mb-2">What happens to your junk?</h3>
+                <h3 className="font-bold text-gray-900 mb-2">What happens to your items?</h3>
                 <p className="text-[13px] text-gray-600">
-                  Your disposal fee goes directly to your driver to cover certified disposal at an approved facility. Items that can be donated or recycled are — keeping your neighborhood clean and out of landfills. No hidden landfill upsells. No surprise charges when the truck arrives.
+                  Your handling fee goes directly to your driver. Items that can be donated or recycled are — keeping your neighborhood clean. No hidden upsells. No surprise charges when the truck arrives.
                 </p>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function Pricing() {
                   <tr className="border-b-2 border-gray-200">
                     <th className="text-left py-3 px-3 text-gray-600 font-medium"></th>
                     <th className="py-3 px-3 text-center bg-primary-50 text-primary-700 font-bold rounded-t-lg">HaulKind</th>
-                    <th className="py-3 px-3 text-center text-gray-600 font-medium">Traditional Junk Companies</th>
+                    <th className="py-3 px-3 text-center text-gray-600 font-medium">Traditional Hauling Companies</th>
                     <th className="py-3 px-3 text-center text-gray-600 font-medium">Online-Only Platforms</th>
                   </tr>
                 </thead>
@@ -177,7 +177,7 @@ export default function Pricing() {
               </table>
             </div>
             <p className="text-[13px] text-gray-400 italic text-center mt-4">
-              Some junk removal companies won&apos;t show you a price until their truck is in your driveway. HaulKind shows it before you even finish your morning coffee.
+              Some hauling companies won&apos;t show you a price until their truck is in your driveway. HaulKind shows it before you even finish your morning coffee.
             </p>
           </div>
         </div>
@@ -190,7 +190,7 @@ export default function Pricing() {
             Labor Only (Help Moving)
           </h2>
           <p className="text-center text-gray-600 mb-12 text-lg">
-            Need muscle, not removal? Hire hourly help to move items.
+            Need muscle, not hauling? Hire hourly help to move items.
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">

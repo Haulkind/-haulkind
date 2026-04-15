@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'How It Works - Book Junk Removal in 3 Easy Steps',
-  description: 'Get a quote, book online, and track your driver in real time. Simple, transparent junk removal and moving help in PA, NY & NJ. No hidden fees.',
+  title: 'How It Works - Book Hauling & Moving Help in 3 Easy Steps',
+  description: 'Get a quote, book online, and track your driver in real time. Simple, transparent hauling and moving help in PA, NY & NJ. No hidden fees.',
   alternates: { canonical: '/how-it-works' },
   openGraph: {
-    title: 'How HaulKind Works - 3 Easy Steps to Junk-Free',
-    description: 'Get a quote in seconds, book & pay online, track your driver live. Junk removal made simple.',
+    title: 'How HaulKind Works - 3 Easy Steps',
+    description: 'Get a quote in seconds, book & pay online, track your driver live. Hauling & moving help made simple.',
     url: 'https://haulkind.com/how-it-works',
   },
 }
@@ -22,7 +22,7 @@ export default function HowItWorks() {
             How It Works
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-            Simple, transparent, and fast. Get junk removed or hire help in three easy steps.
+            Simple, transparent, and fast. Get items hauled or hire moving help in three easy steps.
           </p>
         </div>
       </section>
@@ -41,10 +41,10 @@ export default function HowItWorks() {
               <div className="flex-1">
                 <h3 className="text-2xl font-bold mb-4">Get a Quote</h3>
                 <p className="text-gray-600 text-lg mb-4">
-                  Enter your address and we'll check if we serve your area. Select your service type: Junk Removal (Haul Away) or Labor Only (Help Moving).
+                  Enter your address and we'll check if we serve your area. Select your service type: Hauling (Haul Away) or Labor Only (Help Moving).
                 </p>
                 <p className="text-gray-600 text-lg mb-4">
-                  For Junk Removal, choose your volume (1/8 truck to full truck) and add any extras like heavy items or stairs. For Labor Only, select how many helpers you need and for how long.
+                  For Hauling, choose your items and quantities. For Labor Only, select how many helpers you need and for how long.
                 </p>
                 <p className="text-gray-600 text-lg">
                   You'll see your total price instantly—no hidden fees, no surprises.
@@ -144,7 +144,7 @@ export default function HowItWorks() {
                   Navigate to the customer's location. Complete the job professionally. Mark it complete in the app.
                 </p>
                 <p className="text-gray-600 text-lg mb-4">
-                  You keep 60% of the service price. Every job includes a fixed disposal fee ($10-$70) that goes directly to you as part of your earnings.
+                  You keep 60% of the service price. Every job includes a fixed handling fee ($10-$70) that goes directly to you as part of your earnings.
                 </p>
                 <p className="text-gray-600 text-lg">
                   Get paid weekly via direct deposit. Track your earnings in real-time in the driver app.

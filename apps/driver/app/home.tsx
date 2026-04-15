@@ -33,7 +33,7 @@ function formatPayout(order: Job): string {
 
 function formatServiceType(type: string): string {
   const labels: Record<string, string> = {
-    'HAUL_AWAY': '🚚 Junk Removal',
+    'HAUL_AWAY': '🚚 Hauling',
     'LABOR_ONLY': '💪 Moving Labor',
     'MATTRESS_SWAP': '🛏️ Mattress Swap',
     'FURNITURE_ASSEMBLY': '🔧 Assembly',

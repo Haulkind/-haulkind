@@ -203,7 +203,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
               <div>
                 <h3 className="font-bold text-gray-900">{post.author}</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Fast, fair junk removal in PA, NJ &amp; NY. Licensed &amp; insured, real-time GPS tracking, same-day service available.
+                  Fast, fair hauling & moving help in PA, NJ &amp; NY. Licensed &amp; insured, real-time GPS tracking, same-day service available.
                 </p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                   Call (609) 456-8188
                 </a>
               </div>
-              <p className="text-xs text-teal-200 mt-3">Half a truck starting at $279 — disposal included. Same-day pickup available.</p>
+              <p className="text-xs text-teal-200 mt-3">Half a truck starting at $279 — all-in pricing. Same-day pickup available.</p>
             </div>
           </div>
         </div>

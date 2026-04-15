@@ -25,7 +25,7 @@ export function generateCityDescription(city: GeoCity): string {
 
   const templates = [
     `With a population of ${pop}, ${city.name} is a vibrant community in ${city.county}, ${city.state}. From ${neighborhoodList} and beyond, residents and businesses need reliable ${serviceLabel} they can trust. HaulKind provides fast, affordable pickup and moving help throughout ${city.name} and surrounding ${city.stateAbbr} areas.`,
-    `${city.name}, ${city.stateAbbr} is home to ${pop} residents across diverse neighborhoods including ${neighborhoodList}. Whether you are moving, decluttering, or renovating, HaulKind delivers professional hauling, cleanout, and moving labor services with transparent pricing and live GPS tracking.`,
+    `${city.name}, ${city.stateAbbr} is home to ${pop} residents across diverse neighborhoods including ${neighborhoodList}. Whether you are moving, decluttering, or renovating, HaulKind delivers professional ${isNJ ? 'moving labor, furniture assembly, and donation pickup' : 'hauling, cleanout, and moving labor'} services with transparent pricing and live GPS tracking.`,
     `Located in ${city.county}, ${city.name} is one of ${city.state}'s thriving communities with ${pop} residents. From ${city.neighborhoods[0]} to ${city.neighborhoods[Math.min(city.neighborhoods.length - 1, 5)]}, HaulKind provides ${serviceLabel2} across the entire ${city.name} area.`,
   ]
 
@@ -36,12 +36,17 @@ export function generateCityDescription(city: GeoCity): string {
 
 // ----- Slug utilities for nationwide scale -----
 
+// NJ compliance: these service categories must NOT generate pages for NJ cities
+const NJ_BLOCKED_CATEGORIES = new Set(['removal', 'cleanout'])
+
 /** Get all valid service+city slug combinations */
 export function getAllSlugsNational(): string[] {
   const cities = getAllCities()
   const slugs: string[] = []
   for (const service of SERVICES) {
     for (const city of cities) {
+      // Skip waste-related services for NJ cities (NJDEP compliance)
+      if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) continue
       slugs.push(`${service.slug}-${city.slug}`)
     }
   }
@@ -54,7 +59,10 @@ export function parseSlugNational(slug: string): { service: ServiceData; city: G
     if (slug.startsWith(service.slug + '-')) {
       const citySlug = slug.slice(service.slug.length + 1)
       const city = getCityBySlug(citySlug)
-      if (city) return { service, city }
+      if (!city) continue
+      // Block waste-related service pages for NJ cities (NJDEP compliance)
+      if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) return null
+      return { service, city }
     }
   }
   return null
@@ -105,15 +113,15 @@ export function generateFAQsNational(service: ServiceData, city: GeoCity): { que
     answer: `Yes! HaulKind serves all of ${city.name}'s ${pop} residents. We cover every neighborhood from ${city.neighborhoods[0]} to ${city.neighborhoods[city.neighborhoods.length - 1]}, plus nearby communities like ${city.nearbyAreas.join(', ')}. Enter your ZIP code (${city.zipCodes[0]} and more) in our quote tool to confirm.`,
   })
 
-  // Add service-specific FAQ
-  if (service.category === 'removal') {
+  // Add service-specific FAQ (only for non-NJ or non-waste services)
+  if (service.category === 'removal' && city.stateAbbr !== 'NJ') {
     faqs.push({
       question: `What happens to my items after ${service.shortName} in ${city.name}?`,
-      answer: `After picking up your items in ${city.name}, our team sorts materials for recycling, donation, and proper disposal. We partner with local recycling facilities and donation centers in ${city.county} to minimize landfill waste. Usable items are donated whenever possible.`,
+      answer: `After picking up your items in ${city.name}, our team sorts materials for recycling, donation, and responsible handling. We partner with local recycling facilities and donation centers in ${city.county}. Usable items are donated whenever possible.`,
     })
   }
 
-  if (service.category === 'cleanout') {
+  if (service.category === 'cleanout' && city.stateAbbr !== 'NJ') {
     faqs.push({
       question: `How long does a ${service.shortName} take in ${city.name}?`,
       answer: `Most ${service.shortName} jobs in ${city.name} take between 1-4 hours depending on the amount of material. A standard single-car garage or small basement can usually be cleared in about 2 hours. Larger spaces or heavily packed areas may take longer.`,

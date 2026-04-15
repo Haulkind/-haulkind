@@ -159,7 +159,7 @@ export default function DriverDashboardPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {job.service_type === 'HAUL_AWAY' ? 'Junk Removal' : 'Labor Only'}
+                    {job.service_type === 'HAUL_AWAY' ? 'Hauling' : 'Labor Only'}
                   </h3>
                   <p className="text-sm text-gray-600">{job.customer_name}</p>
                 </div>
@@ -209,7 +209,7 @@ export default function DriverDashboardPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {job.service_type === 'HAUL_AWAY' ? 'Junk Removal' : 'Labor Only'}
+                    {job.service_type === 'HAUL_AWAY' ? 'Hauling' : 'Labor Only'}
                   </h3>
                   <p className="text-sm text-gray-600">{job.customer_name}</p>
                 </div>

@@ -208,7 +208,7 @@ export default function AssemblyPage() {
         <div className="container mx-auto px-4">
           <h3 className="text-xl font-bold text-center text-gray-900 mb-6">Also Available</h3>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/quote?service=haul-away" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Junk Removal \u2192'}</Link>
+            <Link href="/quote?service=haul-away" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Hauling \u2192'}</Link>
             <Link href="/donation-pickup" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Donation Pickup \u2192'}</Link>
             <Link href="/quote?service=labor-only" className="bg-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition text-sm font-medium text-gray-700 hover:text-teal-600">{'Moving Labor \u2192'}</Link>
           </div>

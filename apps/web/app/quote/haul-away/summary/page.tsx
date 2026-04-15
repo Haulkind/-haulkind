@@ -371,7 +371,7 @@ export default function HaulAwaySummaryPage() {
           {/* All-in notice */}
           <div className="mb-4 p-4 bg-green-50 rounded-lg">
             <p className="text-sm text-green-900">
-              <strong>All-in price.</strong> Disposal fee is already included. No per-mile charges. No receipts. No surprise fees when the driver arrives.
+              <strong>All-in price.</strong> Everything is already included. No per-mile charges. No receipts. No surprise fees when the driver arrives.
             </p>
           </div>
 

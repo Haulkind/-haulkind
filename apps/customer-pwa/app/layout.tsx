@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'HaulKind - Track Your Order',
-  description: 'Track your junk removal order in real time, manage bookings, and get notifications.',
+  description: 'Track your order in real time, manage bookings, and get notifications.',
   manifest: '/manifest.json',
   robots: {
     index: false,

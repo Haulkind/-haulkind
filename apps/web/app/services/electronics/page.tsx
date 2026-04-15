@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Electronics Disposal & E-Waste Recycling in PA, NJ & NY | HaulKind',
-  description: 'Safe electronics disposal and e-waste recycling in Pennsylvania, New Jersey & New York. TVs, computers, monitors, printers removed responsibly. From $89.',
+  title: 'Electronics Pickup & E-Waste Recycling in PA, NJ & NY | HaulKind',
+  description: 'Safe electronics pickup and e-waste recycling in Pennsylvania, New Jersey & New York. TVs, computers, monitors, printers removed responsibly. From $89.',
   alternates: { canonical: 'https://haulkind.com/services/electronics' },
   openGraph: {
-    title: 'Electronics Disposal & E-Waste Recycling | HaulKind',
+    title: 'Electronics Pickup & E-Waste Recycling | HaulKind',
     description: 'Old TV, computer, or printer? We remove and recycle electronics responsibly. Fast, affordable, insured. PA, NJ & NY.',
     url: 'https://haulkind.com/services/electronics',
     siteName: 'HaulKind',
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Electronics Disposal & E-Waste Recycling | HaulKind',
+    title: 'Electronics Pickup & E-Waste Recycling | HaulKind',
     description: 'Old TV, computer, or printer? We remove and recycle electronics responsibly. Fast, affordable, insured.',
   },
 }
@@ -23,8 +23,8 @@ export default function ElectronicsPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Electronics Disposal & E-Waste Recycling',
-    description: 'Professional electronics disposal and e-waste recycling. TVs, computers, monitors, printers, and more. Responsible recycling guaranteed.',
+    name: 'Electronics Pickup & E-Waste Recycling',
+    description: 'Professional electronics pickup and e-waste recycling. TVs, computers, monitors, printers, and more. Responsible recycling guaranteed.',
     provider: {
       '@type': 'LocalBusiness',
       name: 'HaulKind',
@@ -36,7 +36,7 @@ export default function ElectronicsPage() {
       { '@type': 'State', name: 'New Jersey' },
       { '@type': 'State', name: 'New York' },
     ],
-    serviceType: 'Electronics Disposal',
+    serviceType: 'Electronics Recycling',
     url: 'https://haulkind.com/services/electronics',
   }
 
@@ -54,10 +54,10 @@ export default function ElectronicsPage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Electronics Disposal &amp; E-Waste Recycling in PA, NJ &amp; NY
+            Electronics Pickup &amp; E-Waste Recycling in PA, NJ &amp; NY
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            Old TVs, broken computers, outdated monitors — electronics pile up fast. HaulKind picks up your e-waste and ensures it is recycled responsibly, not dumped in a landfill.
+            Old TVs, broken computers, outdated monitors — electronics pile up fast. HaulKind picks up your e-waste and ensures it is recycled responsibly.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -82,13 +82,13 @@ export default function ElectronicsPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Why Proper Electronics Disposal Matters</h2>
           <p className="text-gray-700 text-lg mb-4">
-            Electronics contain hazardous materials like lead, mercury, and cadmium that can contaminate soil and groundwater when sent to landfills. Many states — including Pennsylvania, New Jersey, and New York — have regulations requiring responsible e-waste disposal.
+            Electronics contain hazardous materials like lead, mercury, and cadmium that can contaminate soil and groundwater if not handled properly. Many states — including Pennsylvania, New Jersey, and New York — have regulations requiring responsible e-waste recycling.
           </p>
           <p className="text-gray-700 text-lg mb-4">
-            HaulKind takes the hassle out of electronics disposal. We pick up your old TVs, computers, monitors, printers, and other e-waste from wherever they sit in your home or office. Every item we collect is taken to a certified recycling facility where components are separated and processed responsibly.
+            HaulKind takes the hassle out of electronics recycling. We pick up your old TVs, computers, monitors, printers, and other e-waste from wherever they sit in your home or office. Every item we collect is taken to a certified recycling facility where components are separated and processed responsibly.
           </p>
           <p className="text-gray-700 text-lg">
-            Whether you are upgrading your home office, clearing out a storage room, or handling a business technology refresh, HaulKind makes electronics disposal simple, fast, and affordable.
+            Whether you are upgrading your home office, clearing out a storage room, or handling a business technology refresh, HaulKind makes electronics recycling simple, fast, and affordable.
           </p>
         </div>
       </section>
@@ -96,7 +96,7 @@ export default function ElectronicsPage() {
       {/* How it works */}
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="container mx-auto px-4 max-w-5xl">
-          <h2 className="text-3xl font-bold text-center mb-12">How Electronics Disposal Works</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">How Electronics Recycling Works</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: '1', title: 'Get Your Quote', desc: 'Tell us what electronics you need removed. Upload a photo or describe the items. You get an instant, transparent price — no hidden fees.' },
@@ -146,13 +146,13 @@ export default function ElectronicsPage() {
       {/* Why choose HaulKind */}
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="container mx-auto px-4 max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8">Why Choose HaulKind for Electronics Disposal</h2>
+          <h2 className="text-3xl font-bold mb-8">Why Choose HaulKind for Electronics Recycling</h2>
           <div className="grid md:grid-cols-2 gap-6">
             {[
               { title: 'Certified E-Waste Recycling', desc: 'Every item we collect goes to a certified recycling facility. Metals, plastics, and components are separated and processed properly.' },
               { title: 'Data Security', desc: 'Worried about personal data? We recommend wiping drives before pickup. For business clients, we can coordinate with certified data destruction partners.' },
               { title: 'No Minimum Quantity', desc: 'Whether it is a single old monitor or an entire office full of outdated equipment, we handle jobs of every size.' },
-              { title: 'Transparent, All-In Pricing', desc: 'See your exact price before booking. No surprise fees. Disposal and recycling are included in the quote.' },
+              { title: 'Transparent, All-In Pricing', desc: 'See your exact price before booking. No surprise fees. Recycling is included in the quote.' },
               { title: 'Same-Day Pickup Available', desc: 'Need electronics gone today? We offer same-day service in most areas across PA, NJ & NY.' },
               { title: 'Insured & Professional', desc: 'Our drivers are background-checked and fully insured. Your home or office is protected during removal.' },
             ].map((item) => (
@@ -168,7 +168,7 @@ export default function ElectronicsPage() {
       {/* Service areas */}
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 max-w-4xl">
-          <h2 className="text-3xl font-bold mb-6">Electronics Disposal Service Areas</h2>
+          <h2 className="text-3xl font-bold mb-6">Electronics Recycling Service Areas</h2>
           <p className="text-gray-700 text-lg mb-6">
             HaulKind picks up and recycles electronics across Pennsylvania, New Jersey, and New York. Local drivers mean faster pickups and lower costs.
           </p>
@@ -201,10 +201,10 @@ export default function ElectronicsPage() {
           <h2 className="text-3xl font-bold mb-8">Frequently Asked Questions</h2>
           <div className="space-y-6">
             {[
-              { q: 'How much does electronics disposal cost?', a: 'Electronics disposal with HaulKind starts at $89 for a few items. Larger pickups (full office cleanouts, multiple TVs) are priced by volume. Get your exact price instantly with our online quote tool.' },
+              { q: 'How much does electronics recycling cost?', a: 'Electronics recycling with HaulKind starts at $89 for a few items. Larger pickups (full office clearing, multiple TVs) are priced by volume. Get your exact price instantly with our online quote tool.' },
               { q: 'Do you recycle all electronics?', a: 'Yes. Every item we collect goes to a certified e-waste recycling facility. We do not send electronics to landfills. Components like metals, plastics, and glass are separated and processed responsibly.' },
-              { q: 'Can you pick up a single TV or monitor?', a: 'Absolutely. No job is too small. We handle single-item pickups as well as full office cleanouts.' },
-              { q: 'What about data on old computers and hard drives?', a: 'We recommend wiping or removing hard drives before pickup. For business clients, we can coordinate with certified data destruction partners for secure disposal.' },
+              { q: 'Can you pick up a single TV or monitor?', a: 'Absolutely. No job is too small. We handle single-item pickups as well as full office clearing.' },
+              { q: 'What about data on old computers and hard drives?', a: 'We recommend wiping or removing hard drives before pickup. For business clients, we can coordinate with certified data destruction partners for secure handling.' },
               { q: 'Do you offer same-day electronics pickup?', a: 'Yes, same-day service is available in most areas across PA, NJ & NY, subject to availability. Book online or call (609) 456-8188.' },
             ].map((faq) => (
               <div key={faq.q} className="bg-white rounded-xl shadow p-6">
@@ -223,7 +223,7 @@ export default function ElectronicsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/services/appliances" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Removal</Link>
             <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
-            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Cleanouts</Link>
+            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
             <Link href="/services/what-we-take" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">What We Take</Link>
           </div>
         </div>

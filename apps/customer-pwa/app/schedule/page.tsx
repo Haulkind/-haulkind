@@ -18,7 +18,7 @@ function isNJZip(zip: string): boolean {
 }
 
 const SERVICE_OPTIONS = [
-  { id: 'HAUL_AWAY' as ServiceType, label: 'Junk Removal (PA Only)', emoji: '🚛', desc: 'We haul away your unwanted items', price: 'Starting at $99' },
+  { id: 'HAUL_AWAY' as ServiceType, label: 'Hauling (PA Only)', emoji: '🚛', desc: 'We haul away your stuff', price: 'Starting at $99' },
   { id: 'LABOR_ONLY' as ServiceType, label: 'Moving Labor', emoji: '💪', desc: 'Helpers for moving, loading, or cleanup', price: 'Starting at $79/hr' },
   { id: 'DONATION_PICKUP' as ServiceType, label: 'Donation Pickup', emoji: '❤️', desc: 'We pick up and deliver to a local charity', price: 'Starting at $109' },
   { id: 'MATTRESS_SWAP' as ServiceType, label: 'Mattress Swap', emoji: '🛏️', desc: 'Remove your old mattress & set up the new one', price: 'Starting at $99' },
@@ -33,7 +33,7 @@ const VOLUME_TIERS = [
   { id: 'FULL', label: 'Full Truck', desc: 'Maximum capacity (16+ items)', price: 599 },
 ]
 
-// Junk Removal / Donation Pickup item-based calculator (matches website exactly)
+// Hauling / Donation Pickup item-based calculator (matches website exactly)
 const JUNK_PRICED_ITEMS = [
   { id: 'sofa', name: 'Sofa / Couch', icon: '\ud83d\udecb\ufe0f', price: 89 },
   { id: 'sofa_set_2', name: 'Sofa Set (2-Piece)', icon: '\ud83d\udecb\ufe0f', price: 170 },
@@ -47,9 +47,9 @@ const JUNK_PRICED_ITEMS = [
   { id: 'stove', name: 'Stove / Oven', icon: '\ud83c\udf73', price: 89 },
   { id: 'tv', name: 'TV', icon: '\ud83d\udcfa', price: 45 },
   { id: 'computer', name: 'Computer / Monitor', icon: '\ud83d\udda5\ufe0f', price: 35 },
-  { id: 'garage_small', name: 'Garage Cleanout (Small)', icon: '\ud83c\udfe0', price: 399 },
-  { id: 'garage_medium', name: 'Garage Cleanout (Medium)', icon: '\ud83c\udfe1', price: 499 },
-  { id: 'garage_large', name: 'Garage Cleanout (Large)', icon: '\ud83c\udfd8\ufe0f', price: 699 },
+  { id: 'garage_small', name: 'Garage Clearing (Small)', icon: '\ud83c\udfe0', price: 399 },
+  { id: 'garage_medium', name: 'Garage Clearing (Medium)', icon: '\ud83c\udfe1', price: 499 },
+  { id: 'garage_large', name: 'Garage Clearing (Large)', icon: '\ud83c\udfd8\ufe0f', price: 699 },
   { id: 'yard_partial', name: 'Yard Debris (Partial)', icon: '\ud83c\udf3f', price: 299 },
   { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '\ud83c\udf33', price: 899 },
 ]
@@ -169,7 +169,7 @@ function SchedulePageInner() {
   const [mattressQty, setMattressQty] = useState(1)
   const [assemblyItems, setAssemblyItems] = useState(1)
   const [pickupType, setPickupType] = useState<'IN_HOME' | 'CURBSIDE'>('IN_HOME')
-  // Junk Removal / Donation Pickup item calculator state
+  // Hauling / Donation Pickup item calculator state
   const [junkItemQuantities, setJunkItemQuantities] = useState<Record<string, number>>({})
   const setJunkQty = (itemId: string, qty: number) => {
     setJunkItemQuantities(prev => {
@@ -310,7 +310,7 @@ function SchedulePageInner() {
     if (!zipCode.trim()) { setError('Please enter a zip code'); return }
     // NJ compliance: block HAUL_AWAY for NJ ZIP codes
     if (serviceType === 'HAUL_AWAY' && isNJZip(zipCode)) {
-      setError('Junk Removal service is currently exclusive to Pennsylvania. Please go back and select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.')
+      setError('Hauling service is currently exclusive to Pennsylvania. Please go back and select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.')
       return
     }
     setLoading(true)
@@ -366,7 +366,7 @@ function SchedulePageInner() {
     setLoading(true)
     setError('')
     try {
-      // Calculate local totals for junk removal / donation pickup
+      // Calculate local totals for hauling / donation pickup
       if (serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') {
         setQuoteTotal(junkDisplayPrice)
         setStep('summary')
@@ -578,7 +578,7 @@ function SchedulePageInner() {
             {serviceType === 'HAUL_AWAY' && zipCode.length === 5 && isNJZip(zipCode) && (
               <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ Junk Removal service is currently exclusive to Pennsylvania. Please go back and select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.
+                  ⚠️ Hauling service is currently exclusive to Pennsylvania. Please go back and select Donation Pickup, Moving Labor, or Furniture Assembly for New Jersey addresses.
                 </p>
               </div>
             )}
@@ -647,11 +647,11 @@ function SchedulePageInner() {
         {/* Step: Details */}
         {step === 'details' && (
           <div className="space-y-4">
-            {/* ─── JUNK REMOVAL / DONATION PICKUP — Item Calculator ─── */}
+            {/* ─── HAULING / DONATION PICKUP — Item Calculator ─── */}
             {(serviceType === 'HAUL_AWAY' || serviceType === 'DONATION_PICKUP') && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-gray-900">Select Your Items</h2>
-                <p className="text-sm text-gray-500">Choose items and quantities below. Prices include disposal.</p>
+                <p className="text-sm text-gray-500">Choose items and quantities below. All-in pricing.</p>
 
                 {/* Multi-item discount banner */}
                 {junkTotalItemCount === 1 && (
@@ -766,7 +766,7 @@ function SchedulePageInner() {
 
                 <div className="p-3 bg-green-50 rounded-lg">
                   <p className="text-xs text-green-900">
-                    <strong>All-in pricing.</strong> Disposal fee included in every price above. No per-mile charges. No surprises.
+                    <strong>All-in pricing.</strong> Everything is included in every price above. No per-mile charges. No surprises.
                   </p>
                 </div>
               </div>

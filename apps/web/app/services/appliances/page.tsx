@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Appliance Removal & Disposal in PA, NY & NJ | HaulKind',
-  description: 'Fast appliance removal in Pennsylvania, New York & New Jersey. Fridges, washers, dryers, ovens, dishwashers. We haul and dispose responsibly. From $99. Disposal included.',
+  title: 'Appliance Pickup & Hauling in PA, NY & NJ | HaulKind',
+  description: 'Fast appliance pickup in Pennsylvania, New York & New Jersey. Fridges, washers, dryers, ovens, dishwashers. We haul away responsibly. From $99.',
   alternates: { canonical: '/services/appliances' },
   openGraph: {
-    title: 'Appliance Removal & Disposal | HaulKind',
-    description: 'Old fridge, washer, or dryer? We remove and dispose of appliances responsibly. Fast, affordable, insured. PA, NY & NJ.',
+    title: 'Appliance Pickup & Hauling | HaulKind',
+    description: 'Old fridge, washer, or dryer? We pick up and haul away appliances responsibly. Fast, affordable, insured. PA, NY & NJ.',
     url: 'https://haulkind.com/services/appliances',
   },
 }
@@ -16,8 +16,8 @@ export default function AppliancesPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Appliance Removal & Disposal',
-    description: 'Professional appliance removal and responsible disposal. Refrigerators, washers, dryers, ovens, and more.',
+    name: 'Appliance Pickup & Hauling',
+    description: 'Professional appliance pickup and responsible recycling. Refrigerators, washers, dryers, ovens, and more.',
     provider: {
       '@type': 'LocalBusiness',
       name: 'HaulKind',
@@ -28,7 +28,7 @@ export default function AppliancesPage() {
       { '@type': 'State', name: 'New York' },
       { '@type': 'State', name: 'New Jersey' },
     ],
-    serviceType: 'Appliance Removal',
+    serviceType: 'Appliance Pickup',
     url: 'https://haulkind.com/services/appliances',
   }
 
@@ -40,10 +40,10 @@ export default function AppliancesPage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Appliance Removal & Disposal in PA, NY & NJ
+            Appliance Pickup & Hauling in PA, NY & NJ
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            Old refrigerator taking up space? Broken washer sitting in the basement? HaulKind removes and disposes of appliances the right way — fast, affordable, and hassle-free.
+            Old refrigerator taking up space? Broken washer sitting in the basement? HaulKind picks up and hauls away appliances the right way — fast, affordable, and hassle-free.
           </p>
           <Link
             href="/quote"
@@ -62,7 +62,7 @@ export default function AppliancesPage() {
             Appliances are some of the hardest items to get rid of on your own. They're heavy, bulky, and most curbside trash services won't take them. Refrigerators and air conditioners contain refrigerants that require proper handling. Washers and dryers are too heavy for one person to move safely.
           </p>
           <p className="text-gray-700 text-lg mb-4">
-            HaulKind takes care of the entire process. We disconnect the appliance (if accessible), carry it out of your home regardless of where it's located — basement, second floor, tight hallway — load it onto our truck, and take it to the proper recycling or disposal facility. You don't lift a finger.
+            HaulKind takes care of the entire process. We disconnect the appliance (if accessible), carry it out of your home regardless of where it's located — basement, second floor, tight hallway — load it onto our truck, and take it to the proper recycling facility. You don't lift a finger.
           </p>
           <p className="text-gray-700 text-lg">
             Whether you're upgrading your kitchen, clearing out a rental property, or just finally getting rid of that old dryer in the garage, we make it simple. Homeowners, landlords, property managers, and businesses across Pennsylvania, New York, and New Jersey trust HaulKind to handle their appliance removal quickly and professionally.
@@ -78,7 +78,7 @@ export default function AppliancesPage() {
             {[
               { step: '1', title: 'Get Your Quote', desc: 'Tell us what appliances need to go. Upload a photo or describe the items. You get an instant, transparent price — no hidden fees.' },
               { step: '2', title: 'Book Your Pickup', desc: 'Pick a date and time that works. Same-day appliance removal is available in most areas across PA, NY & NJ.' },
-              { step: '3', title: 'We Remove & Dispose', desc: 'Our insured team arrives, carefully removes the appliance from wherever it sits, and takes it for proper recycling or disposal.' },
+              { step: '3', title: 'We Pick Up & Recycle', desc: 'Our insured team arrives, carefully removes the appliance from wherever it sits, and takes it for proper recycling.' },
             ].map((item) => (
               <div key={item.step} className="bg-white rounded-xl shadow-lg p-8 text-center">
                 <div className="w-14 h-14 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
@@ -152,7 +152,7 @@ export default function AppliancesPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {[
               { title: 'No Heavy Lifting for You', desc: 'Our team handles everything — even if the appliance is in a tight basement or up three flights of stairs.' },
-              { title: 'Responsible Disposal', desc: 'We recycle metals and components whenever possible. Refrigerants are handled according to EPA regulations.' },
+              { title: 'Responsible Recycling', desc: 'We recycle metals and components whenever possible. Refrigerants are handled according to EPA regulations.' },
               { title: 'Transparent Pricing', desc: 'See your exact price before booking. No surprise fees at the door. What you see is what you pay.' },
               { title: 'Same-Day Pickup', desc: 'New appliance arriving today? We can often remove the old one the same day you book.' },
               { title: 'Insured & Professional', desc: 'Our drivers are background-checked and insured. Your home is protected during the removal.' },
@@ -202,7 +202,7 @@ export default function AppliancesPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-2xl font-bold mb-6">Explore Our Other Services</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Cleanouts</Link>
+            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
             <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
             <Link href="/services/moving-labor" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Moving Labor</Link>
             <Link href="/services/commercial" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Commercial Services</Link>
@@ -215,7 +215,7 @@ export default function AppliancesPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Remove That Old Appliance?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Get your price in seconds. We handle the heavy lifting, disconnection, and disposal. Serving PA, NY & NJ.
+            Get your price in seconds. We handle the heavy lifting, disconnection, and recycling. Serving PA, NY & NJ.
           </p>
           <Link
             href="/quote"

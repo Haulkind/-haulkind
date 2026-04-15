@@ -40,10 +40,10 @@ export default function CommercialPage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Commercial Junk Removal & Office Cleanouts
+            Commercial Hauling & Office Clearing
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            Clearing out an office, renovating a retail space, or cleaning up a job site? HaulKind handles commercial junk removal quickly and professionally so your business stays on schedule.
+            Clearing out an office, renovating a retail space, or cleaning up a job site? HaulKind handles commercial hauling quickly and professionally so your business stays on schedule.
           </p>
           <Link
             href="/quote"
@@ -57,7 +57,7 @@ export default function CommercialPage() {
       {/* About the service */}
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 max-w-4xl">
-          <h2 className="text-3xl font-bold mb-6">Commercial Removal That Works Around Your Schedule</h2>
+          <h2 className="text-3xl font-bold mb-6">Commercial Hauling That Works Around Your Schedule</h2>
           <p className="text-gray-700 text-lg mb-4">
             Businesses generate a lot of waste that regular trash pickup can't handle. Old office furniture piling up after a renovation. Warehouse pallets and packaging taking up valuable floor space. Construction debris that needs to go before the next phase of the project can start. These are the kinds of jobs HaulKind was built for.
           </p>
@@ -143,12 +143,12 @@ export default function CommercialPage() {
           <h2 className="text-3xl font-bold mb-8">Industries We Serve</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { title: 'Property Management', desc: 'Tenant turnovers, eviction cleanouts, and building maintenance across your portfolio.' },
+              { title: 'Property Management', desc: 'Tenant turnovers, move-out clearing, and building maintenance across your portfolio.' },
               { title: 'Construction & Renovation', desc: 'Debris removal between project phases. We keep your job site clean and OSHA-compliant.' },
-              { title: 'Offices & Coworking', desc: 'Furniture recycling after downsizing, equipment disposal, and full office cleanouts.' },
-              { title: 'Retail & Restaurants', desc: 'Store fixture removal, old equipment disposal, and seasonal inventory cleanups.' },
-              { title: 'Warehouses & Storage', desc: 'Pallet disposal, bulk packaging removal, and storage unit cleanouts.' },
-              { title: 'Real Estate', desc: 'Pre-listing cleanouts to make properties show-ready. Fast turnaround for closings.' },
+              { title: 'Offices & Coworking', desc: 'Furniture recycling after downsizing, equipment handling, and full office clearing.' },
+              { title: 'Retail & Restaurants', desc: 'Store fixture pickup, old equipment handling, and seasonal inventory cleanups.' },
+              { title: 'Warehouses & Storage', desc: 'Pallet handling, bulk packaging pickup, and storage unit clearing.' },
+              { title: 'Real Estate', desc: 'Pre-listing clearing to make properties show-ready. Fast turnaround for closings.' },
             ].map((item) => (
               <div key={item.title} className="bg-white rounded-xl shadow p-6">
                 <h3 className="text-lg font-bold mb-2 text-primary-700">{item.title}</h3>
@@ -169,7 +169,7 @@ export default function CommercialPage() {
               { title: 'Volume Discounts', desc: 'Large or recurring jobs get better rates. The more you need removed, the more you save per load.' },
               { title: 'Fully Insured', desc: 'Commercial liability coverage on every job. Your property and our team are both protected.' },
               { title: 'Fast Turnaround', desc: 'Most commercial jobs are completed within 24-48 hours of booking. Same-day available for urgent needs.' },
-              { title: 'Responsible Disposal', desc: 'We recycle, donate, and dispose responsibly. Get documentation for your records if needed.' },
+              { title: 'Responsible Handling', desc: 'We recycle, donate, and handle items responsibly. Get documentation for your records if needed.' },
               { title: 'No Contracts Required', desc: 'Use us once or set up a recurring schedule. No long-term commitment, no cancellation fees.' },
             ].map((item) => (
               <div key={item.title} className="bg-gray-50 rounded-xl p-6">
@@ -227,7 +227,7 @@ export default function CommercialPage() {
       {/* CTA */}
       <section className="py-16 md:py-24 bg-primary-600 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Need Commercial Junk Removal?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Need Commercial Hauling?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             Get a transparent quote for your business. Fast, insured, flexible scheduling. Serving PA, NY & NJ.
           </p>

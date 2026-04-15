@@ -36,7 +36,7 @@ export default function HaulAwayVolumePage() {
       <div className="container mx-auto px-4 max-w-3xl">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-3xl font-bold mb-2">Select Volume</h1>
-          <p className="text-gray-600 mb-8">How much junk do you need removed?</p>
+          <p className="text-gray-600 mb-8">How much stuff do you need hauled away?</p>
 
           <div className="space-y-4">
             {VOLUME_TIERS.map((tier) => (
@@ -56,7 +56,7 @@ export default function HaulAwayVolumePage() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary-600">${tier.price}</div>
-                    <div className="text-sm text-green-600 font-medium">Disposal included</div>
+                    <div className="text-sm text-green-600 font-medium">All-in pricing</div>
                   </div>
                 </div>
               </button>
@@ -94,13 +94,13 @@ export default function HaulAwayVolumePage() {
 
           <div className="mt-6 p-4 bg-green-50 rounded-lg">
             <p className="text-sm text-green-900">
-              <strong>All-in pricing.</strong> Disposal fee already included in every price above — paid directly to your driver. No per-mile charges. No surprises.
+              <strong>All-in pricing.</strong> Everything is included in every price above — paid directly to your driver. No per-mile charges. No surprises.
             </p>
           </div>
 
           {/* Inline comparison */}
           <p className="mt-3 text-[11px] text-gray-400 italic text-center">
-            Traditional junk companies charge $400-600 for a half truck — and don&apos;t show you the price until they arrive.
+            Traditional hauling companies charge $400-600 for a half truck — and don&apos;t show you the price until they arrive.
           </p>
 
           <div className="flex gap-4 mt-8">

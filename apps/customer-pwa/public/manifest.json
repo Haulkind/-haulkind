@@ -1,7 +1,7 @@
 {
   "name": "HaulKind",
   "short_name": "HaulKind",
-  "description": "Track your junk removal orders in real time. Login, view orders, and get notifications.",
+  "description": "Track your orders in real time. Login, view orders, and get notifications.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

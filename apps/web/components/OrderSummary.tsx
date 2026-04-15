@@ -260,7 +260,7 @@ export default function OrderSummary({
           </svg>
           <div>
             <p className="text-xs font-medium text-green-800">
-              Eco-Friendly Disposal
+              Eco-Friendly Recycling
             </p>
             <p className="text-xs text-green-700 mt-1">
               We donate and recycle whenever possible

@@ -27,11 +27,11 @@ export default function ComparisonTable() {
                 { feature: 'Upfront Pricing', haulkind: true, chain: false, note: 'vs "we\'ll quote on-site"' },
                 { feature: 'Real-Time GPS Tracking', haulkind: true, chain: false, note: '' },
                 { feature: 'Same-Day Service', haulkind: true, chain: false, note: 'book before noon' },
-                { feature: 'No Hidden Fees', haulkind: true, chain: false, note: 'disposal, stairs, distance included' },
+                { feature: 'No Hidden Fees', haulkind: true, chain: false, note: 'all-in pricing, stairs, distance included' },
                 { feature: 'Online Booking', haulkind: true, chain: true, note: '' },
                 { feature: 'Licensed & Insured', haulkind: true, chain: true, note: '' },
                 { feature: 'Donation Drop-Off', haulkind: true, chain: false, note: 'we donate usable items' },
-                { feature: 'Furniture Assembly', haulkind: true, chain: false, note: 'assembly + removal combo' },
+                { feature: 'Furniture Assembly', haulkind: true, chain: false, note: 'assembly + haul-away combo' },
               ].map((row, i) => (
                 <tr key={i} className="hover:bg-gray-50">
                   <td className="py-3 px-6 text-gray-800 font-medium text-sm">

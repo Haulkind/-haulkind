@@ -147,7 +147,7 @@ export default function HaulAwayLocationPage() {
     const cleaned = value.replace(/\D/g, '').slice(0, 5)
     setZip(cleaned)
     setError('')
-    // NJ compliance: only block if this is Junk Removal (HAUL_AWAY), not Donation Pickup
+    // NJ compliance: only block if this is Hauling (HAUL_AWAY), not Donation Pickup
     if (isJunkRemovalFlow && cleaned.length === 5 && isNJZip(cleaned)) {
       setNjBlocked(true)
     } else {
@@ -217,9 +217,9 @@ export default function HaulAwayLocationPage() {
       return
     }
 
-    // NJ compliance: block Junk Removal (HAUL_AWAY) for NJ ZIP codes — Donation Pickup is allowed
+    // NJ compliance: block Hauling (HAUL_AWAY) for NJ ZIP codes — Donation Pickup is allowed
     if (isJunkRemovalFlow && isNJZip(zip)) {
-      setError('Junk Removal service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.')
+      setError('Hauling service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.')
       return
     }
     
@@ -473,7 +473,7 @@ export default function HaulAwayLocationPage() {
                 {njBlocked && (
                   <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                     <p className="text-sm text-amber-800 font-medium">
-                      ⚠️ Junk Removal service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.
+                      ⚠️ Hauling service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.
                     </p>
                   </div>
                 )}

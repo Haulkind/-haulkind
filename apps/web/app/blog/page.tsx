@@ -5,11 +5,11 @@ import BlogCard from './components/BlogCard'
 
 export const metadata: Metadata = {
   title: 'Blog — Tips, Guides & Local Resources | HaulKind',
-  description: 'Junk removal tips, pricing guides, and local resources for PA, NJ & NY. Learn how to save on hauling, donate items, and declutter your home.',
+  description: 'Hauling tips, pricing guides, and local resources for PA, NJ & NY. Learn how to save on hauling, donate items, and declutter your home.',
   alternates: { canonical: 'https://haulkind.com/blog' },
   openGraph: {
     title: 'HaulKind Blog — Tips, Guides & Local Resources',
-    description: 'Junk removal tips, pricing guides, and local resources for PA, NJ & NY.',
+    description: 'Hauling tips, pricing guides, and local resources for PA, NJ & NY.',
     url: 'https://haulkind.com/blog',
     siteName: 'HaulKind',
     type: 'website',
@@ -42,7 +42,7 @@ export default function BlogIndexPage({
         <div className="container mx-auto px-4 text-center max-w-3xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">HaulKind Blog</h1>
           <p className="text-lg text-gray-300">
-            Tips, Guides &amp; Local Resources for Junk Removal, Moving &amp; More
+            Tips, Guides &amp; Local Resources for Hauling, Moving &amp; More
           </p>
         </div>
       </section>
@@ -103,7 +103,7 @@ export default function BlogIndexPage({
 
         {/* CTA */}
         <div className="mt-16 bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl p-8 md:p-12 text-white text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Need junk removed?</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">Need items hauled?</h2>
           <p className="text-teal-100 mb-6 max-w-xl mx-auto">
             Get a guaranteed price in 30 seconds. No hidden fees, no obligation. Same-day pickup available.
           </p>

@@ -23,7 +23,7 @@ export default function WhatWeTakePage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Junk Removal — What We Take',
+    name: 'Hauling — What We Take',
     description: 'HaulKind removes furniture, appliances, electronics, yard waste, construction debris, and more from homes and businesses across PA, NJ & NY.',
     provider: {
       '@type': 'LocalBusiness',
@@ -36,7 +36,7 @@ export default function WhatWeTakePage() {
       { '@type': 'State', name: 'New Jersey' },
       { '@type': 'State', name: 'New York' },
     ],
-    serviceType: 'Junk Removal',
+    serviceType: 'Hauling',
     url: 'https://haulkind.com/services/what-we-take',
   }
 
@@ -95,7 +95,7 @@ export default function WhatWeTakePage() {
     {
       title: 'Specialty Items',
       icon: '🎯',
-      items: ['Pianos & organs', 'Pool tables', 'Gun safes & heavy safes', 'Aquariums & fish tanks', 'Workshop equipment', 'Craft supplies & materials', 'Collections & hoarding cleanup', 'Estate cleanout items', 'Foreclosure cleanout items', 'Rental property cleanout'],
+      items: ['Pianos & organs', 'Pool tables', 'Gun safes & heavy safes', 'Aquariums & fish tanks', 'Workshop equipment', 'Craft supplies & materials', 'Collections & hoarding cleanup', 'Estate clearing items', 'Foreclosure clearing items', 'Rental property clearing'],
       link: '/services/cleanout',
     },
   ]
@@ -122,7 +122,7 @@ export default function WhatWeTakePage() {
             What We Take — Items We Remove &amp; Haul Away
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            From a single mattress to a full estate cleanout, HaulKind removes almost anything. Here is a complete list of what we take — and the few things we cannot.
+            From a single mattress to a full estate clearing, HaulKind hauls away almost anything. Here is a complete list of what we take — and the few things we cannot.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -146,7 +146,7 @@ export default function WhatWeTakePage() {
       <section className="py-8 bg-white border-b">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <p className="text-lg text-gray-700">
-            <strong>Short answer:</strong> If it fits in our truck and it is not hazardous, we take it. Furniture, appliances, electronics, yard waste, construction debris, office equipment — we handle it all. <strong>All prices include labor, loading, hauling, and disposal.</strong>
+            <strong>Short answer:</strong> If it fits in our truck and it is not hazardous, we take it. Furniture, appliances, electronics, yard waste, construction debris, office equipment — we handle it all. <strong>All prices include labor, loading, and hauling.</strong>
           </p>
         </div>
       </section>
@@ -209,7 +209,7 @@ export default function WhatWeTakePage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Items in Good Condition? We Donate Them</h2>
           <p className="text-gray-700 text-lg mb-4">
-            If your items are still in usable condition — furniture, clothing, electronics, household goods — HaulKind will donate them to local charities instead of sending them to a landfill. You may even qualify for a tax deduction.
+            If your items are still in usable condition — furniture, clothing, electronics, household goods — HaulKind will donate them to local charities instead of letting them go to waste. You may even qualify for a tax deduction.
           </p>
           <p className="text-gray-700 text-lg mb-6">
             Our <Link href="/donation-pickup" className="text-primary-600 hover:underline font-semibold">Donation Pickup service</Link> makes it easy to give back while clearing out your space.
@@ -222,7 +222,7 @@ export default function WhatWeTakePage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">How Pricing Works</h2>
           <p className="text-gray-700 text-lg mb-4">
-            HaulKind prices by truck volume — how much space your items take up. A few small items cost less than a full truck load. Every quote includes labor, loading, hauling, and disposal. No hidden fees.
+            HaulKind prices by truck volume — how much space your items take up. A few small items cost less than a full truck load. Every quote includes labor, loading, and hauling. No hidden fees.
           </p>
           <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
             <div className="grid md:grid-cols-2 gap-4">
@@ -254,8 +254,8 @@ export default function WhatWeTakePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
             <Link href="/services/appliances" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Removal</Link>
-            <Link href="/services/electronics" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Electronics Disposal</Link>
-            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Cleanouts</Link>
+            <Link href="/services/electronics" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Electronics Recycling</Link>
+            <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
           </div>
         </div>
       </section>
