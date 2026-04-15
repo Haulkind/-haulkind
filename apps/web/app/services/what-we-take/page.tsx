@@ -2,20 +2,20 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'What We Take — Items We Remove & Haul Away | HaulKind',
-  description: 'Full list of items HaulKind removes: furniture, appliances, electronics, yard waste, construction debris, and more. See what we take and what we cannot accept.',
+  title: 'What We Take — Items We Pick Up | HaulKind',
+  description: 'Full list of items HaulKind picks up: furniture, appliances, electronics, yard waste, construction debris, and more. See what we take and what we cannot accept.',
   alternates: { canonical: 'https://haulkind.com/services/what-we-take' },
   openGraph: {
-    title: 'What We Take — Items We Remove & Haul Away | HaulKind',
-    description: 'Full list of items HaulKind removes. Furniture, appliances, electronics, yard waste, construction debris, and more.',
+    title: 'What We Take — Items We Pick Up | HaulKind',
+    description: 'Full list of items HaulKind picks up. Furniture, appliances, electronics, yard waste, construction debris, and more.',
     url: 'https://haulkind.com/services/what-we-take',
     siteName: 'HaulKind',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'What We Take — Items We Remove | HaulKind',
-    description: 'Full list of items HaulKind removes. Furniture, appliances, electronics, yard waste, construction debris, and more.',
+    title: 'What We Take — Items We Pick Up | HaulKind',
+    description: 'Full list of items HaulKind picks up. Furniture, appliances, electronics, yard waste, construction debris, and more.',
   },
 }
 
@@ -24,7 +24,7 @@ export default function WhatWeTakePage() {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Hauling — What We Take',
-    description: 'HaulKind removes furniture, appliances, electronics, yard waste, construction debris, and more from homes and businesses across PA, NJ & NY.',
+    description: 'HaulKind picks up furniture, appliances, electronics, yard waste, construction debris, and more from homes and businesses in Pennsylvania.',
     provider: {
       '@type': 'LocalBusiness',
       name: 'HaulKind',
@@ -119,10 +119,10 @@ export default function WhatWeTakePage() {
       <section className="bg-primary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            What We Take — Items We Remove &amp; Haul Away
+            What We Take — Items We Pick Up
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            From a single mattress to a full estate clearing, HaulKind hauls away almost anything. Here is a complete list of what we take — and the few things we cannot.
+            From a single mattress to a full estate clearing, HaulKind picks up almost anything. Here is a complete list of what we take — and the few things we cannot. Item pickup and hauling services are available in Pennsylvania only. In NJ, we offer Furniture Assembly, Moving Labor, and Donation Pickup.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -154,7 +154,7 @@ export default function WhatWeTakePage() {
       {/* Item categories */}
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 max-w-6xl">
-          <h2 className="text-3xl font-bold text-center mb-12">Items We Remove</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Items We Pick Up</h2>
           <div className="grid md:grid-cols-2 gap-8">
             {categories.map((cat) => (
               <div key={cat.title} className="bg-white rounded-xl shadow-lg border p-6">
@@ -172,7 +172,7 @@ export default function WhatWeTakePage() {
                 </ul>
                 {cat.link && (
                   <Link href={cat.link} className="text-primary-600 hover:text-primary-800 text-sm font-semibold transition">
-                    Learn more about {cat.title.toLowerCase()} removal &rarr;
+                    Learn more about {cat.title.toLowerCase()} pickup &rarr;
                   </Link>
                 )}
               </div>
@@ -252,8 +252,8 @@ export default function WhatWeTakePage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-2xl font-bold mb-6">Explore Our Services</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Removal</Link>
-            <Link href="/services/appliances" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Removal</Link>
+            <Link href="/services/furniture" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Furniture Pickup</Link>
+            <Link href="/services/appliances" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Appliance Pickup</Link>
             <Link href="/services/electronics" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Electronics Recycling</Link>
             <Link href="/services/cleanout" className="bg-white rounded-lg shadow p-4 hover:shadow-md transition text-center font-medium text-primary-600">Property Clearing</Link>
           </div>
@@ -265,7 +265,7 @@ export default function WhatWeTakePage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Clear the Clutter?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Get your price in seconds. We remove almost anything — furniture, appliances, electronics, yard waste, construction debris, and more.
+            We pick up almost anything — furniture, appliances, electronics, yard waste, construction debris, and more. Hauling available in PA.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -278,6 +278,15 @@ export default function WhatWeTakePage() {
               Or Call (609) 456-8188
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* NJ Disclaimer */}
+      <section className="py-6 bg-gray-100">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            In New Jersey, HaulKind strictly operates as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs only. We do not handle or transport solid waste in NJ.
+          </p>
         </div>
       </section>
     </div>
