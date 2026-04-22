@@ -258,7 +258,13 @@ class ApiClient {
     });
   }
 
-  async getOrderMedia(id: string): Promise<{ completion_photos: string | null; signature_data: string | null; photo_urls: string | null }> {
+  async getOrderMedia(id: string): Promise<{
+    completion_photos: string | null;
+    before_photos: string | null;
+    after_photos: string | null;
+    signature_data: string | null;
+    photo_urls: string | null;
+  }> {
     return this.request(`/admin/orders/${id}/media`);
   }
 

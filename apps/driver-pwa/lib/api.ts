@@ -276,10 +276,12 @@ export interface Order {
   customer_notes?: string
   customer_name?: string
   customer_phone?: string
-  photo_urls?: string[]
-  photos?: string[]
-  before_photos?: string[]
-  after_photos?: string[]
+  photo_urls?: string[] | string
+  photos?: string[] | string
+  before_photos?: string[] | string
+  after_photos?: string[] | string
+  completion_photos?: string[] | string
+  signature_data?: string
   created_at?: string
   updated_at?: string
   time_window?: string

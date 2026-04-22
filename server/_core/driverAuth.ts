@@ -249,6 +249,8 @@ export function registerDriverAuthRoutes(app: Express) {
             ALTER TABLE jobs
             ADD COLUMN IF NOT EXISTS pickup_time_window TEXT,
             ADD COLUMN IF NOT EXISTS completion_photos TEXT,
+            ADD COLUMN IF NOT EXISTS before_photos TEXT,
+            ADD COLUMN IF NOT EXISTS after_photos TEXT,
             ADD COLUMN IF NOT EXISTS signature_data TEXT,
             ADD COLUMN IF NOT EXISTS photo_urls TEXT,
             ADD COLUMN IF NOT EXISTS price_total_cents INTEGER,
@@ -1587,28 +1589,73 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
-  // POST /driver/orders/:id/upload-photo - Upload completion photo
+  // POST /driver/orders/:id/upload-photo - Upload before/after/completion photo
   app.post('/driver/orders/:id/upload-photo', async (req, res) => {
     try {
       const decoded = verifyToken(req);
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      const { photo_base64 } = req.body;
-      // Store completion photo in DB and update status
-      // Append to existing photos (JSON array of base64 strings)
-      await pool.query(
-        `UPDATE jobs SET 
-          status = 'photo_taken', 
-          completion_photos = CASE 
-            WHEN completion_photos IS NULL OR completion_photos = '' THEN $3
-            ELSE completion_photos || '|||' || $3
-          END,
-          updated_at = NOW() 
-        WHERE id = $1 AND assigned_driver_id = $2`,
-        [req.params.id, decoded.driverId, photo_base64 || '']
-      );
-      res.json({ success: true, message: 'Photo uploaded' });
+      const body = req.body || {};
+      // Accept multiple field names for backward compatibility
+      const photoData: string = body.photo_data || body.photo_base64 || '';
+      const rawType: string = String(body.type || 'completion').toLowerCase();
+      if (!photoData) return res.status(400).json({ error: 'photo_data required' });
+
+      // Ensure columns exist (idempotent safety for older DB snapshots)
+      try {
+        await pool.query(`
+          ALTER TABLE jobs
+          ADD COLUMN IF NOT EXISTS before_photos TEXT,
+          ADD COLUMN IF NOT EXISTS after_photos TEXT,
+          ADD COLUMN IF NOT EXISTS completion_photos TEXT
+        `);
+      } catch {}
+
+      // Route photo to the correct column based on type.
+      // "after" photos are also mirrored into completion_photos so the existing
+      // admin media viewer keeps working without changes.
+      if (rawType === 'before') {
+        await pool.query(
+          `UPDATE jobs SET
+            before_photos = CASE
+              WHEN before_photos IS NULL OR before_photos = '' THEN $3
+              ELSE before_photos || '|||' || $3
+            END,
+            updated_at = NOW()
+          WHERE id = $1 AND assigned_driver_id = $2`,
+          [req.params.id, decoded.driverId, photoData]
+        );
+      } else if (rawType === 'after') {
+        await pool.query(
+          `UPDATE jobs SET
+            status = 'photo_taken',
+            after_photos = CASE
+              WHEN after_photos IS NULL OR after_photos = '' THEN $3
+              ELSE after_photos || '|||' || $3
+            END,
+            completion_photos = CASE
+              WHEN completion_photos IS NULL OR completion_photos = '' THEN $3
+              ELSE completion_photos || '|||' || $3
+            END,
+            updated_at = NOW()
+          WHERE id = $1 AND assigned_driver_id = $2`,
+          [req.params.id, decoded.driverId, photoData]
+        );
+      } else {
+        await pool.query(
+          `UPDATE jobs SET
+            status = 'photo_taken',
+            completion_photos = CASE
+              WHEN completion_photos IS NULL OR completion_photos = '' THEN $3
+              ELSE completion_photos || '|||' || $3
+            END,
+            updated_at = NOW()
+          WHERE id = $1 AND assigned_driver_id = $2`,
+          [req.params.id, decoded.driverId, photoData]
+        );
+      }
+      res.json({ success: true, message: 'Photo uploaded', type: rawType });
     } catch (err: any) {
       console.error('Upload photo error:', err);
       res.status(500).json({ error: 'Failed to upload photo' });
@@ -1622,11 +1669,13 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      const { signature_base64 } = req.body;
-      // Store signature data in DB and update status
+      const body = req.body || {};
+      // Accept multiple field names for backward compatibility
+      const signature: string = body.signature_data || body.signature_base64 || '';
+      if (!signature) return res.status(400).json({ error: 'signature_data required' });
       await pool.query(
         "UPDATE jobs SET status = 'signed', signature_data = $3, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId, signature_base64 || '']
+        [req.params.id, decoded.driverId, signature]
       );
       res.json({ success: true, message: 'Signature captured' });
     } catch (err: any) {

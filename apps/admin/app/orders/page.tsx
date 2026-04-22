@@ -28,8 +28,8 @@ export default function OrdersPage() {
   const [actionSuccess, setActionSuccess] = useState('');
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
   const [mediaModalOrder, setMediaModalOrder] = useState<Order | null>(null);
-  const [mediaTab, setMediaTab] = useState<'photos' | 'completion' | 'signature'>('photos');
-  const [mediaData, setMediaData] = useState<{ completion_photos: string | null; signature_data: string | null; photo_urls: string | null } | null>(null);
+  const [mediaTab, setMediaTab] = useState<'photos' | 'before' | 'after' | 'completion' | 'signature'>('photos');
+  const [mediaData, setMediaData] = useState<{ completion_photos: string | null; before_photos: string | null; after_photos: string | null; signature_data: string | null; photo_urls: string | null } | null>(null);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
 
@@ -877,6 +877,26 @@ export default function OrdersPage() {
                 Customer Photos
               </button>
               <button
+                onClick={() => setMediaTab('before')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  mediaTab === 'before'
+                    ? 'border-amber-500 text-amber-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Before Photos
+              </button>
+              <button
+                onClick={() => setMediaTab('after')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  mediaTab === 'after'
+                    ? 'border-emerald-500 text-emerald-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                After Photos
+              </button>
+              <button
                 onClick={() => setMediaTab('completion')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 ${
                   mediaTab === 'completion'
@@ -884,7 +904,7 @@ export default function OrdersPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Completion Photos
+                Completion (legacy)
               </button>
               <button
                 onClick={() => setMediaTab('signature')}
@@ -932,6 +952,78 @@ export default function OrdersPage() {
                           <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
                             <span>Photo {idx + 1} of {photos.length}</span>
                             <span className="text-sky-600">Click to enlarge</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Before Photos Tab */}
+            {mediaTab === 'before' && (
+              <div>
+                {mediaLoading ? (
+                  <p className="text-gray-500 text-sm">Loading photos...</p>
+                ) : (() => {
+                  const photos: string[] = [];
+                  if (mediaData?.before_photos) {
+                    mediaData.before_photos.split('|||').forEach((p: string) => {
+                      if (p.trim()) photos.push(p.trim());
+                    });
+                  }
+                  if (photos.length === 0) {
+                    return <p className="text-gray-500 text-sm">No before photos available for this order.</p>;
+                  }
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {photos.map((photo, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => window.open(photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`), '_blank')}>
+                          <img
+                            src={photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`)}
+                            alt={`Before photo ${idx + 1}`}
+                            className="w-full h-auto object-contain max-h-80"
+                          />
+                          <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
+                            <span>Before {idx + 1} of {photos.length}</span>
+                            <span className="text-amber-600">Click to enlarge</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* After Photos Tab */}
+            {mediaTab === 'after' && (
+              <div>
+                {mediaLoading ? (
+                  <p className="text-gray-500 text-sm">Loading photos...</p>
+                ) : (() => {
+                  const photos: string[] = [];
+                  if (mediaData?.after_photos) {
+                    mediaData.after_photos.split('|||').forEach((p: string) => {
+                      if (p.trim()) photos.push(p.trim());
+                    });
+                  }
+                  if (photos.length === 0) {
+                    return <p className="text-gray-500 text-sm">No after photos available for this order.</p>;
+                  }
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {photos.map((photo, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => window.open(photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`), '_blank')}>
+                          <img
+                            src={photo.startsWith('data:') ? photo : (photo.startsWith('http') ? photo : `data:image/jpeg;base64,${photo}`)}
+                            alt={`After photo ${idx + 1}`}
+                            className="w-full h-auto object-contain max-h-80"
+                          />
+                          <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500 flex justify-between items-center">
+                            <span>After {idx + 1} of {photos.length}</span>
+                            <span className="text-emerald-600">Click to enlarge</span>
                           </div>
                         </div>
                       ))}

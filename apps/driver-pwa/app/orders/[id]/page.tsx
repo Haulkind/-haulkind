@@ -5,8 +5,24 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import {
   getOrderDetail, startTrip, markArrived, startWork, completeOrder,
-  cancelOrder, acceptOrder, rejectOrder, uploadOrderPhoto, streamLocation, type Order,
+  cancelOrder, acceptOrder, rejectOrder, uploadOrderPhoto, submitSignature,
+  streamLocation, type Order,
 } from '@/lib/api'
+import SignaturePad from '@/components/SignaturePad'
+
+// Parse a photo field that may come back as string[] (JSON), |||-separated string, or array
+function parsePhotoField(field: unknown): string[] {
+  if (!field) return []
+  if (Array.isArray(field)) return field.filter(Boolean)
+  if (typeof field !== 'string') return []
+  const trimmed = field.trim()
+  if (!trimmed) return []
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (Array.isArray(parsed)) return parsed.filter(Boolean)
+  } catch {}
+  return trimmed.split('|||').map(s => s.trim()).filter(Boolean)
+}
 
 // Haversine distance in miles
 function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -30,10 +46,13 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
-  const [beforeCount, setBeforeCount] = useState(0)
-  const [afterCount, setAfterCount] = useState(0)
+  const [beforePhotos, setBeforePhotos] = useState<string[]>([])
+  const [afterPhotos, setAfterPhotos] = useState<string[]>([])
+  const [signatureData, setSignatureData] = useState<string | null>(null)
+  const [showSignaturePad, setShowSignaturePad] = useState(false)
   const locationRef = useRef<number | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const [photoType, setPhotoType] = useState<'before' | 'after'>('before')
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
   const [driverLat, setDriverLat] = useState<number | null>(null)
@@ -134,9 +153,9 @@ export default function OrderDetailPage() {
     try {
       const data = await getOrderDetail(token, id)
       setOrder(data.order)
-      // Count existing photos
-      if (data.order.before_photos) setBeforeCount(data.order.before_photos.length)
-      if (data.order.after_photos) setAfterCount(data.order.after_photos.length)
+      setBeforePhotos(parsePhotoField(data.order.before_photos))
+      setAfterPhotos(parsePhotoField(data.order.after_photos))
+      if (data.order.signature_data) setSignatureData(data.order.signature_data)
     } catch (err) {
       console.error('Failed to load order:', err)
     } finally {
@@ -185,20 +204,25 @@ export default function OrderDetailPage() {
           await markArrived(token, String(order.id))
           break
         case 'start-work':
-          if (beforeCount === 0) {
-            alert('Please take at least one before photo first')
+          if (beforePhotos.length === 0) {
+            alert('Please take at least one BEFORE photo first')
             setActing(false)
             return
           }
           await startWork(token, String(order.id))
           break
         case 'complete':
-          if (afterCount === 0) {
-            alert('Please take at least one after photo first')
+          if (afterPhotos.length === 0) {
+            alert('Please take at least one AFTER photo first')
             setActing(false)
             return
           }
-          await completeOrder(token, String(order.id))
+          if (!signatureData) {
+            setActing(false)
+            setShowSignaturePad(true)
+            return
+          }
+          await completeOrder(token, String(order.id), signatureData)
           break
         case 'cancel':
           if (confirm('Are you sure you want to cancel this order?')) {
@@ -232,29 +256,51 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handlePhotoCapture = (type: 'before' | 'after') => {
+  const handlePhotoCapture = (type: 'before' | 'after', source: 'camera' | 'gallery') => {
     setPhotoType(type)
-    fileInputRef.current?.click()
+    const input = source === 'camera' ? cameraInputRef.current : galleryInputRef.current
+    input?.click()
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !token || !order) return
-
     try {
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const base64 = reader.result as string
-        await uploadOrderPhoto(token, String(order.id), photoType, base64)
-        if (photoType === 'before') setBeforeCount(prev => prev + 1)
-        else setAfterCount(prev => prev + 1)
-      }
-      reader.readAsDataURL(file)
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      await uploadOrderPhoto(token, String(order.id), photoType, base64)
+      if (photoType === 'before') setBeforePhotos(prev => [...prev, base64])
+      else setAfterPhotos(prev => [...prev, base64])
     } catch (err) {
       alert('Failed to upload photo')
     }
     // Reset input
     e.target.value = ''
+  }
+
+  const handleSignatureSave = async (dataUrl: string) => {
+    if (!token || !order) return
+    try {
+      await submitSignature(token, String(order.id), dataUrl)
+      setSignatureData(dataUrl)
+      setShowSignaturePad(false)
+      // Now complete the order automatically
+      setActing(true)
+      try {
+        await completeOrder(token, String(order.id), dataUrl)
+        await fetchOrder()
+      } catch (err: any) {
+        alert(err.message || 'Failed to complete order')
+      } finally {
+        setActing(false)
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to save signature')
+    }
   }
 
   const openNavigation = () => {
@@ -299,12 +345,19 @@ export default function OrderDetailPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Hidden file input for photo capture */}
+      {/* Hidden file inputs for photo capture — camera vs gallery */}
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -481,32 +534,132 @@ export default function OrderDetailPage() {
 
         {/* Photos Section */}
         {!isFinished && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Photos</h3>
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-5">
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Job Photos</h3>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Before Photos ({beforeCount})</span>
+            {/* BEFORE photos — required to start work */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-gray-800">
+                  Before Photos <span className="text-gray-500">({beforePhotos.length})</span>
+                </span>
+                {beforePhotos.length === 0 && (
+                  <span className="text-xs font-semibold text-red-600">Required</span>
+                )}
+              </div>
+              {beforePhotos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {beforePhotos.map((url, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setLightboxPhoto(url)}
+                      className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square bg-gray-50 active:opacity-80"
+                    >
+                      <img
+                        src={url.startsWith('data:') || url.startsWith('http') ? url : `data:image/jpeg;base64,${url}`}
+                        alt={`Before photo ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
                 <button
-                  onClick={() => handlePhotoCapture('before')}
-                  className="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 active:bg-gray-200"
+                  onClick={() => handlePhotoCapture('before', 'camera')}
+                  className="flex-1 px-3 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-semibold active:bg-primary-700"
                 >
                   📷 Take Photo
                 </button>
+                <button
+                  onClick={() => handlePhotoCapture('before', 'gallery')}
+                  className="flex-1 px-3 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold active:bg-gray-200"
+                >
+                  🖼️ From Gallery
+                </button>
               </div>
+            </div>
 
-              {['started'].includes(status) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">After Photos ({afterCount})</span>
+            {/* AFTER photos — required to complete (shown once work has started) */}
+            {['started', 'photo_taken', 'signed'].includes(status) && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-800">
+                    After Photos <span className="text-gray-500">({afterPhotos.length})</span>
+                  </span>
+                  {afterPhotos.length === 0 && (
+                    <span className="text-xs font-semibold text-red-600">Required</span>
+                  )}
+                </div>
+                {afterPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {afterPhotos.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setLightboxPhoto(url)}
+                        className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square bg-gray-50 active:opacity-80"
+                      >
+                        <img
+                          src={url.startsWith('data:') || url.startsWith('http') ? url : `data:image/jpeg;base64,${url}`}
+                          alt={`After photo ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
                   <button
-                    onClick={() => handlePhotoCapture('after')}
-                    className="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 active:bg-gray-200"
+                    onClick={() => handlePhotoCapture('after', 'camera')}
+                    className="flex-1 px-3 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-semibold active:bg-primary-700"
                   >
                     📷 Take Photo
                   </button>
+                  <button
+                    onClick={() => handlePhotoCapture('after', 'gallery')}
+                    className="flex-1 px-3 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold active:bg-gray-200"
+                  >
+                    🖼️ From Gallery
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Signature — required to complete once after photo is taken */}
+            {['started', 'photo_taken', 'signed'].includes(status) && afterPhotos.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-800">Customer Signature</span>
+                  {!signatureData && (
+                    <span className="text-xs font-semibold text-red-600">Required</span>
+                  )}
+                </div>
+                {signatureData ? (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={signatureData}
+                      alt="Customer signature"
+                      className="h-20 bg-white border border-gray-200 rounded-lg p-1 flex-1 object-contain"
+                    />
+                    <button
+                      onClick={() => setShowSignaturePad(true)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 active:bg-gray-100"
+                    >
+                      Redo
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowSignaturePad(true)}
+                    className="w-full px-3 py-3 border-2 border-dashed border-primary-400 text-primary-700 rounded-lg text-sm font-semibold bg-primary-50 active:bg-primary-100"
+                  >
+                    ✍️ Capture Customer Signature
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -603,6 +756,14 @@ export default function OrderDetailPage() {
         .order-detail-pin { background: none !important; border: none !important; }
         .driver-marker { background: none !important; border: none !important; }
       `}</style>
+
+      {/* Signature Pad Modal */}
+      {showSignaturePad && (
+        <SignaturePad
+          onSave={handleSignatureSave}
+          onCancel={() => setShowSignaturePad(false)}
+        />
+      )}
 
       {/* Lightbox Photo Viewer */}
       {lightboxPhoto && (
