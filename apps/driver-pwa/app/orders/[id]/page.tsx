@@ -172,7 +172,7 @@ export default function OrderDetailPage() {
   // GPS location streaming when en_route/arrived/started
   useEffect(() => {
     const status = order?.status?.toLowerCase()
-    if (token && order && ['en_route', 'arrived', 'started', 'in_progress'].includes(status || '')) {
+    if (token && order && ['en_route', 'arrived', ...IN_PROGRESS_STATUSES].includes(status || '')) {
       // Stream location every 30 seconds
       const stream = () => {
         navigator.geolocation.getCurrentPosition(
