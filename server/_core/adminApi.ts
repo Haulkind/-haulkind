@@ -685,6 +685,8 @@ export function registerAdminApiRoutes(app: Express) {
                COALESCE(items_json::text, '[]') as items_json, json_build_object('total', COALESCE(estimated_price, '0'))::text as pricing_json,
                status, assigned_driver_id::text, created_at, updated_at,
                (completion_photos IS NOT NULL AND completion_photos != '') as has_completion_photos,
+               (before_photos IS NOT NULL AND before_photos != '') as has_before_photos,
+               (after_photos IS NOT NULL AND after_photos != '') as has_after_photos,
                (signature_data IS NOT NULL AND signature_data != '') as has_signature,
                (photo_urls IS NOT NULL AND photo_urls != '') as has_photo_urls,
                paid_at::text, stripe_payment_intent_id::text,
@@ -862,20 +864,38 @@ export function registerAdminApiRoutes(app: Express) {
     }
   });
 
-  // GET /admin/orders/:id/media - Fetch completion photos and signature on-demand
+  // GET /admin/orders/:id/media - Fetch before/after/completion photos + signature on-demand
   app.get('/admin/orders/:id/media', requireAdmin, async (req, res) => {
     try {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
-      // Only jobs table has media columns
+      // Make sure the columns exist even on older DB snapshots
+      try {
+        await pool.query(`
+          ALTER TABLE jobs
+          ADD COLUMN IF NOT EXISTS before_photos TEXT,
+          ADD COLUMN IF NOT EXISTS after_photos TEXT,
+          ADD COLUMN IF NOT EXISTS completion_photos TEXT,
+          ADD COLUMN IF NOT EXISTS signature_data TEXT,
+          ADD COLUMN IF NOT EXISTS photo_urls TEXT
+        `);
+      } catch {}
+
       const result = await pool.query(
-        'SELECT completion_photos, signature_data, photo_urls FROM jobs WHERE id = $1',
+        `SELECT before_photos, after_photos, completion_photos, signature_data, photo_urls
+         FROM jobs WHERE id = $1`,
         [req.params.id]
       );
 
       if (result.rows.length === 0) {
-        return res.json({ completion_photos: null, signature_data: null, photo_urls: null });
+        return res.json({
+          before_photos: null,
+          after_photos: null,
+          completion_photos: null,
+          signature_data: null,
+          photo_urls: null,
+        });
       }
 
       res.json(result.rows[0]);
