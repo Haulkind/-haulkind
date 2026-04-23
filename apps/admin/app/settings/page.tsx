@@ -8,6 +8,7 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordTotpCode, setPasswordTotpCode] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -52,13 +53,23 @@ export default function SettingsPage() {
       return;
     }
 
+    if (totpEnabled && passwordTotpCode.trim().length !== 6) {
+      setPasswordError('Enter the 6-digit code from your authenticator app');
+      return;
+    }
+
     setPasswordLoading(true);
     try {
-      await api.changePassword(currentPassword, newPassword);
+      await api.changePassword(
+        currentPassword,
+        newPassword,
+        totpEnabled ? passwordTotpCode.trim() : undefined,
+      );
       setPasswordSuccess('Password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setPasswordTotpCode('');
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password');
     } finally {
@@ -167,6 +178,29 @@ export default function SettingsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
+
+          {totpEnabled && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Authenticator Code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={passwordTotpCode}
+                onChange={(e) => setPasswordTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+                placeholder="6-digit code"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 tracking-widest font-mono"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Two-factor authentication is enabled — enter the current 6-digit code from your authenticator app to change your password.
+              </p>
+            </div>
+          )}
 
           {passwordError && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
