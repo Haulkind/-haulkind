@@ -162,10 +162,10 @@ export function registerAdminAuthRoutes(app: Express) {
     }
   });
 
-  // POST /admin/auth/change-password - Change admin password
+  // POST /admin/auth/change-password - Change admin password (requires TOTP when 2FA is on)
   app.post('/admin/auth/change-password', requireAdmin, async (req: any, res) => {
     try {
-      const { current_password, new_password } = req.body;
+      const { current_password, new_password, totp_code } = req.body;
       if (!current_password || !new_password) {
         return res.status(400).json({ error: 'Current password and new password are required' });
       }
@@ -179,9 +179,9 @@ export function registerAdminAuthRoutes(app: Express) {
         return res.status(500).json({ error: 'Database not available' });
       }
 
-      // Verify current password
+      // Verify current password + load 2FA state
       const userResult = await pool.query(
-        'SELECT id, password_hash FROM users WHERE id = $1 LIMIT 1',
+        'SELECT id, password_hash, totp_enabled, totp_secret FROM users WHERE id = $1 LIMIT 1',
         [req.user.userId]
       );
       const user = userResult.rows[0];
@@ -192,6 +192,32 @@ export function registerAdminAuthRoutes(app: Express) {
       const isValid = await bcrypt.compare(current_password, user.password_hash);
       if (!isValid) {
         return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      // If 2FA is enabled on this account, require a valid TOTP code as well
+      if (user.totp_enabled && user.totp_secret) {
+        const code = typeof totp_code === 'string' ? totp_code.trim() : '';
+        if (!code) {
+          return res.status(400).json({
+            error: 'Two-factor authentication code is required',
+            code: 'TOTP_REQUIRED',
+          });
+        }
+        const totp = new OTPAuth.TOTP({
+          issuer: 'Haulkind',
+          label: 'admin',
+          algorithm: 'SHA1',
+          digits: 6,
+          period: 30,
+          secret: OTPAuth.Secret.fromBase32(user.totp_secret),
+        });
+        const delta = totp.validate({ token: code, window: 1 });
+        if (delta === null) {
+          return res.status(401).json({
+            error: 'Invalid two-factor authentication code',
+            code: 'TOTP_INVALID',
+          });
+        }
       }
 
       // Hash and save new password

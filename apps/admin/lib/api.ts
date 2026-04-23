@@ -381,10 +381,14 @@ class ApiClient {
   }
 
   // Security
-  async changePassword(current_password: string, new_password: string): Promise<{ success: boolean; message: string }> {
+  async changePassword(
+    current_password: string,
+    new_password: string,
+    totp_code?: string,
+  ): Promise<{ success: boolean; message: string }> {
     return this.request('/admin/auth/change-password', {
       method: 'POST',
-      body: JSON.stringify({ current_password, new_password }),
+      body: JSON.stringify({ current_password, new_password, totp_code }),
     });
   }
 
