@@ -181,7 +181,7 @@ export function registerAdminAuthRoutes(app: Express) {
 
       // Verify current password + load 2FA state
       const userResult = await pool.query(
-        'SELECT id, password_hash, totp_enabled, totp_secret FROM users WHERE id = $1 LIMIT 1',
+        'SELECT id, email, password_hash, totp_enabled, totp_secret FROM users WHERE id = $1 LIMIT 1',
         [req.user.userId]
       );
       const user = userResult.rows[0];
@@ -204,8 +204,8 @@ export function registerAdminAuthRoutes(app: Express) {
           });
         }
         const totp = new OTPAuth.TOTP({
-          issuer: 'Haulkind',
-          label: 'admin',
+          issuer: 'HaulKind Admin',
+          label: user.email || 'admin',
           algorithm: 'SHA1',
           digits: 6,
           period: 30,
