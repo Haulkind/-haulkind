@@ -30,13 +30,48 @@ async function getPgPool() {
   }
 }
 
-// Middleware to verify admin JWT token
+// Roles that may access the admin dashboard / API.
+// - 'admin': full read/write access
+// - 'guest': read-only access (GET/HEAD/OPTIONS). Used for due-diligence auditors.
+const ADMIN_DASHBOARD_ROLES = new Set(['admin', 'guest']);
+const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+// Middleware to verify admin-dashboard JWT token.
+// Accepts both 'admin' and 'guest' roles; 'guest' is hard-capped to read-only
+// HTTP methods so they cannot modify, create, or delete any data — the backend
+// is the real enforcement boundary even if a UI control slips through.
 export function requireAdmin(req: any, res: any, next: any) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
+  const token = authHeader.substring(7);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    if (!ADMIN_DASHBOARD_ROLES.has(decoded.role)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    if (decoded.role === 'guest' && !READ_ONLY_METHODS.has(req.method)) {
+      return res.status(403).json({
+        error: 'Read-only access: guest accounts cannot modify data',
+        code: 'READ_ONLY_ROLE',
+      });
+    }
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// Stricter variant for endpoints that are admin-only even for reads
+// (e.g. user-management endpoints that list/create guest accounts).
+export function requireAdminOnly(req: any, res: any, next: any) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
   const token = authHeader.substring(7);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
@@ -75,8 +110,9 @@ export function registerAdminAuthRoutes(app: Express) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // Check if user has admin role
-      if (user.role !== 'admin') {
+      // Allow both full admins and read-only guest auditors to log in.
+      // The 'guest' role is hard-capped to GET-only requests by requireAdmin.
+      if (!ADMIN_DASHBOARD_ROLES.has(user.role)) {
         return res.status(403).json({ error: 'Admin access required' });
       }
 
@@ -111,18 +147,19 @@ export function registerAdminAuthRoutes(app: Express) {
       }
 
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: 'admin' },
+        { userId: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '24h' }
       );
-      
-      res.json({ 
-        token, 
-        admin: { 
-          id: user.id, 
-          email: user.email, 
-          name: user.name 
-        } 
+
+      res.json({
+        token,
+        admin: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
       });
     } catch (err: any) {
       console.error('Admin login error:', err);
@@ -139,7 +176,7 @@ export function registerAdminAuthRoutes(app: Express) {
       }
 
       const result = await pool.query(
-        'SELECT id, email, name, totp_enabled FROM users WHERE id = $1 LIMIT 1',
+        'SELECT id, email, name, role, totp_enabled FROM users WHERE id = $1 LIMIT 1',
         [req.user.userId]
       );
       const user = result.rows[0];
@@ -148,13 +185,14 @@ export function registerAdminAuthRoutes(app: Express) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      res.json({ 
-        admin: { 
-          id: user.id, 
-          email: user.email, 
+      res.json({
+        admin: {
+          id: user.id,
+          email: user.email,
           name: user.name,
-          totp_enabled: !!user.totp_enabled
-        } 
+          role: user.role,
+          totp_enabled: !!user.totp_enabled,
+        },
       });
     } catch (err: any) {
       console.error('Get admin user error:', err);
@@ -382,6 +420,127 @@ export function registerAdminAuthRoutes(app: Express) {
       res.json({ success: true, message: 'Two-factor authentication disabled' });
     } catch (err: any) {
       console.error('2FA disable error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // --- Guest (read-only auditor) account management -------------------------
+  // Admin-only: list guest users so the admin can see who currently has
+  // read-only access to the dashboard.
+  app.get('/admin/users/guests', requireAdminOnly, async (_req: any, res) => {
+    try {
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      const result = await pool.query(
+        "SELECT id, email, name, created_at FROM users WHERE role = 'guest' ORDER BY created_at DESC"
+      );
+      res.json({ guests: result.rows });
+    } catch (err: any) {
+      console.error('List guests error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Admin-only: create a new guest account OR reset the password of an
+  // existing guest with the same email. Returns the one-time temporary
+  // password so the admin can share it with the auditor out-of-band.
+  app.post('/admin/users/guest', requireAdminOnly, async (req: any, res) => {
+    try {
+      const { email, name } = req.body || {};
+      if (typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        return res.status(400).json({ error: 'Invalid email address' });
+      }
+
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+
+      // Generate a temporary password: 16 URL-safe chars.
+      const { randomBytes } = await import('crypto');
+      const tempPassword = randomBytes(12).toString('base64url');
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
+      const displayName = (typeof name === 'string' && name.trim()) || 'Guest Auditor';
+
+      // Look up existing user.
+      const existing = await pool.query(
+        'SELECT id, role FROM users WHERE email = $1 LIMIT 1',
+        [normalizedEmail]
+      );
+
+      let action: 'created' | 'reset';
+      let userId: number;
+
+      if (existing.rows.length > 0) {
+        const existingUser = existing.rows[0];
+        if (existingUser.role === 'admin') {
+          return res.status(409).json({
+            error: 'A full admin account already exists with this email. Refusing to downgrade to guest.',
+          });
+        }
+        // Reset password + ensure role is 'guest' and 2FA is off.
+        await pool.query(
+          "UPDATE users SET password_hash = $1, role = 'guest', name = COALESCE(name, $2), totp_enabled = false, totp_secret = NULL WHERE id = $3",
+          [passwordHash, displayName, existingUser.id]
+        );
+        userId = existingUser.id;
+        action = 'reset';
+      } else {
+        const inserted = await pool.query(
+          "INSERT INTO users (email, name, password_hash, role, totp_enabled) VALUES ($1, $2, $3, 'guest', false) RETURNING id",
+          [normalizedEmail, displayName, passwordHash]
+        );
+        userId = inserted.rows[0].id;
+        action = 'created';
+      }
+
+      console.log(`[AdminAuth] Guest account ${action} for ${normalizedEmail} (id=${userId}) by admin ${req.user.userId}`);
+      res.json({
+        success: true,
+        action,
+        guest: {
+          id: userId,
+          email: normalizedEmail,
+          name: displayName,
+          role: 'guest',
+        },
+        // Returned exactly once — admin must copy it now to share with the auditor.
+        temporary_password: tempPassword,
+      });
+    } catch (err: any) {
+      console.error('Create guest error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Admin-only: delete a guest account.
+  app.delete('/admin/users/guest/:id', requireAdminOnly, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: 'Invalid user id' });
+      }
+      const pool = await getPgPool();
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      const result = await pool.query(
+        "DELETE FROM users WHERE id = $1 AND role = 'guest' RETURNING id, email",
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Guest user not found' });
+      }
+      console.log(`[AdminAuth] Guest account deleted: ${result.rows[0].email} (id=${id}) by admin ${req.user.userId}`);
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('Delete guest error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
