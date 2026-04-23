@@ -1,7 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../lib/api';
+
+interface Guest {
+  id: number;
+  email: string;
+  name: string | null;
+  created_at: string;
+}
 
 export default function SettingsPage() {
   // Change password state
@@ -11,6 +18,16 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Guest users state (admin-only section)
+  const [role, setRole] = useState<'admin' | 'guest' | null>(null);
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestName, setGuestName] = useState('');
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState('');
+  const [guestTempPassword, setGuestTempPassword] = useState('');
+  const [guestJustAction, setGuestJustAction] = useState<'created' | 'reset' | null>(null);
 
   // 2FA state
   const [totpEnabled, setTotpEnabled] = useState(false);
@@ -30,12 +47,61 @@ export default function SettingsPage() {
       try {
         const data = await api.getMe();
         setTotpEnabled(!!data.admin.totp_enabled);
+        const r = data?.admin?.role;
+        if (r === 'admin' || r === 'guest') setRole(r);
       } catch (e) {
         // ignore
       }
     };
     loadUser();
   }, []);
+
+  const loadGuests = useCallback(async () => {
+    try {
+      const data = await api.listGuests();
+      setGuests(data.guests);
+    } catch (e) {
+      // Ignore — only admins can list; guests won't reach this page anyway.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (role === 'admin') loadGuests();
+  }, [role, loadGuests]);
+
+  const handleCreateGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGuestError('');
+    setGuestTempPassword('');
+    setGuestJustAction(null);
+    if (!guestEmail.trim()) {
+      setGuestError('Email is required');
+      return;
+    }
+    setGuestLoading(true);
+    try {
+      const data = await api.createOrResetGuest(guestEmail.trim(), guestName.trim() || undefined);
+      setGuestTempPassword(data.temporary_password);
+      setGuestJustAction(data.action);
+      setGuestEmail('');
+      setGuestName('');
+      await loadGuests();
+    } catch (err: any) {
+      setGuestError(err?.message || 'Failed to create guest account');
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
+  const handleDeleteGuest = async (id: number, email: string) => {
+    if (!confirm(`Delete guest account for ${email}? They will no longer be able to log in.`)) return;
+    try {
+      await api.deleteGuest(id);
+      await loadGuests();
+    } catch (err: any) {
+      setGuestError(err?.message || 'Failed to delete guest');
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,6 +403,89 @@ export default function SettingsPage() {
           </form>
         )}
       </div>
+
+      {/* Guest (Read-Only Auditor) Accounts — admin only */}
+      {role === 'admin' && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mt-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-1">Guest (Read-Only) Accounts</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Grant temporary, read-only dashboard access for due diligence or audits. Guests can view data but
+            cannot create, edit, or delete anything. They also cannot see or change account settings.
+          </p>
+
+          <form onSubmit={handleCreateGuest} className="space-y-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  required
+                  placeholder="arham@2point.ventures"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Guest Auditor"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+            {guestError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded text-sm">{guestError}</div>
+            )}
+            {guestTempPassword && (
+              <div className="bg-green-50 border border-green-200 text-green-900 px-4 py-3 rounded text-sm">
+                <div className="font-semibold mb-1">
+                  Guest account {guestJustAction === 'reset' ? 'password reset' : 'created'}.
+                </div>
+                <div>Temporary password (copy now — it won't be shown again):</div>
+                <code className="block mt-1 bg-white border border-green-300 rounded px-2 py-1 break-all font-mono text-sm">
+                  {guestTempPassword}
+                </code>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={guestLoading}
+              className="bg-green-600 text-white px-5 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {guestLoading ? 'Working…' : 'Create / Reset Guest'}
+            </button>
+          </form>
+
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Existing guests</h3>
+            {guests.length === 0 ? (
+              <p className="text-sm text-gray-500">No guest accounts yet.</p>
+            ) : (
+              <ul className="divide-y border border-gray-200 rounded-md">
+                {guests.map((g) => (
+                  <li key={g.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <div>
+                      <div className="font-medium text-gray-900">{g.email}</div>
+                      <div className="text-gray-500">{g.name || 'Guest Auditor'}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteGuest(g.id, g.email)}
+                      className="text-red-600 hover:text-red-700 text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

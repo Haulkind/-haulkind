@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
 import { useState, useEffect } from 'react';
+import { api, type AdminRole } from '../lib/api';
 
 export default function RootLayout({
   children,
@@ -14,6 +15,31 @@ export default function RootLayout({
   const router = useRouter();
   const isLoginPage = pathname === '/login';
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [role, setRole] = useState<AdminRole | null>(null);
+
+  // Fetch the current user's role once per mount so we can adapt the UI for
+  // read-only guest auditors (hide Settings, show banner, gate writes).
+  useEffect(() => {
+    if (isLoginPage) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.getMe();
+        if (!cancelled) {
+          const r = data?.admin?.role;
+          setRole(r === 'admin' || r === 'guest' ? r : null);
+        }
+      } catch {
+        // If /me fails (e.g. token expired) the individual pages will redirect
+        // to /login; no need to double-handle here.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoginPage]);
+
+  const isGuest = role === 'guest';
 
   // Close sidebar on route change
   useEffect(() => {
@@ -31,21 +57,22 @@ export default function RootLayout({
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin_token');
+      api.clearToken();
       router.push('/login');
     }
   };
 
-  const navItems = [
-    { href: '/', label: 'Dashboard', icon: '📊' },
-    { href: '/drivers', label: 'Drivers', icon: '🚗' },
-    { href: '/customers', label: 'Customers', icon: '👥' },
-    { href: '/orders', label: 'Orders', icon: '📦' },
-    { href: '/leads', label: 'Leads', icon: '📋' },
-    { href: '/payouts', label: 'Payouts', icon: '💰' },
-    { href: '/map', label: 'Driver Map', icon: '📍' },
-    { href: '/settings', label: 'Settings', icon: '🔒' },
+  const allNavItems = [
+    { href: '/', label: 'Dashboard', icon: '📊', adminOnly: false },
+    { href: '/drivers', label: 'Drivers', icon: '🚗', adminOnly: false },
+    { href: '/customers', label: 'Customers', icon: '👥', adminOnly: false },
+    { href: '/orders', label: 'Orders', icon: '📦', adminOnly: false },
+    { href: '/leads', label: 'Leads', icon: '📋', adminOnly: false },
+    { href: '/payouts', label: 'Payouts', icon: '💰', adminOnly: false },
+    { href: '/map', label: 'Driver Map', icon: '📍', adminOnly: false },
+    { href: '/settings', label: 'Settings', icon: '🔒', adminOnly: true },
   ];
+  const navItems = allNavItems.filter((item) => !item.adminOnly || !isGuest);
 
   if (isLoginPage) {
     return (
@@ -199,6 +226,12 @@ export default function RootLayout({
 
           {/* Main Content */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {isGuest && (
+              <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-sm text-center flex-shrink-0">
+                <span className="font-semibold">Read-only guest mode.</span>{' '}
+                You can view data but not create, edit, or delete anything.
+              </div>
+            )}
             {/* Mobile top bar */}
             <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
               <button

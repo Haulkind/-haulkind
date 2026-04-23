@@ -106,12 +106,24 @@ export interface Stats {
   };
 }
 
+export type AdminRole = 'admin' | 'guest';
+
+// HTTP methods that do not mutate server state. Anything else is blocked on
+// the client when the current user has role === 'guest' (and will also be
+// rejected by the backend — client-side blocking is just a UX nicety).
+const READ_ONLY_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 class ApiClient {
   private token: string | null = null;
+  private role: AdminRole | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('admin_token');
+      const cachedRole = localStorage.getItem('admin_role');
+      if (cachedRole === 'admin' || cachedRole === 'guest') {
+        this.role = cachedRole;
+      }
     }
   }
 
@@ -124,12 +136,39 @@ class ApiClient {
 
   clearToken() {
     this.token = null;
+    this.role = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_role');
     }
   }
 
+  setRole(role: AdminRole | null) {
+    this.role = role;
+    if (typeof window !== 'undefined') {
+      if (role) localStorage.setItem('admin_role', role);
+      else localStorage.removeItem('admin_role');
+    }
+  }
+
+  getRole(): AdminRole | null {
+    return this.role;
+  }
+
+  isGuest(): boolean {
+    return this.role === 'guest';
+  }
+
   private async request(endpoint: string, options: RequestInit = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+
+    // Client-side guard: refuse write calls if we already know this user is a
+    // read-only guest. This gives an instant, friendly error instead of a
+    // round-trip to the server (which would also reject with 403).
+    if (this.role === 'guest' && !READ_ONLY_METHODS.has(method)) {
+      throw new Error('Read-only access: your account cannot modify data');
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -163,11 +202,39 @@ class ApiClient {
     if (data.token) {
       this.setToken(data.token);
     }
+    if (data?.admin?.role === 'admin' || data?.admin?.role === 'guest') {
+      this.setRole(data.admin.role);
+    }
     return data;
   }
 
   async getMe() {
-    return this.request('/admin/auth/me');
+    const data = await this.request('/admin/auth/me');
+    if (data?.admin?.role === 'admin' || data?.admin?.role === 'guest') {
+      this.setRole(data.admin.role);
+    }
+    return data;
+  }
+
+  // Guest (read-only auditor) account management — admin-only on the backend.
+  async listGuests(): Promise<{ guests: Array<{ id: number; email: string; name: string | null; created_at: string }> }> {
+    return this.request('/admin/users/guests');
+  }
+
+  async createOrResetGuest(email: string, name?: string): Promise<{
+    success: boolean;
+    action: 'created' | 'reset';
+    guest: { id: number; email: string; name: string; role: 'guest' };
+    temporary_password: string;
+  }> {
+    return this.request('/admin/users/guest', {
+      method: 'POST',
+      body: JSON.stringify({ email, name }),
+    });
+  }
+
+  async deleteGuest(id: number): Promise<{ success: boolean }> {
+    return this.request(`/admin/users/guest/${id}`, { method: 'DELETE' });
   }
 
   // Stats
