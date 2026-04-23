@@ -37,6 +37,8 @@ function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number
 }
 
 const STATUS_FLOW = ['accepted', 'assigned', 'en_route', 'arrived', 'started', 'completed']
+// Statuses that mean "driver is actively doing the work" (server uses 'in_progress', some flows use 'started')
+const IN_PROGRESS_STATUSES = ['started', 'in_progress', 'photo_taken', 'signed']
 
 export default function OrderDetailPage() {
   const router = useRouter()
@@ -170,7 +172,7 @@ export default function OrderDetailPage() {
   // GPS location streaming when en_route/arrived/started
   useEffect(() => {
     const status = order?.status?.toLowerCase()
-    if (token && order && ['en_route', 'arrived', 'started'].includes(status || '')) {
+    if (token && order && ['en_route', 'arrived', ...IN_PROGRESS_STATUSES].includes(status || '')) {
       // Stream location every 30 seconds
       const stream = () => {
         navigator.geolocation.getCurrentPosition(
@@ -582,7 +584,7 @@ export default function OrderDetailPage() {
             </div>
 
             {/* AFTER photos — required to complete (shown once work has started) */}
-            {['started', 'photo_taken', 'signed'].includes(status) && (
+            {IN_PROGRESS_STATUSES.includes(status) && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-gray-800">
@@ -628,7 +630,7 @@ export default function OrderDetailPage() {
             )}
 
             {/* Signature — required to complete once after photo is taken */}
-            {['started', 'photo_taken', 'signed'].includes(status) && afterPhotos.length > 0 && (
+            {IN_PROGRESS_STATUSES.includes(status) && afterPhotos.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-gray-800">Customer Signature</span>
@@ -668,9 +670,11 @@ export default function OrderDetailPage() {
           <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Progress</h3>
           <div className="space-y-2">
             {STATUS_FLOW.map((s, i) => {
-              const currentIdx = STATUS_FLOW.indexOf(status)
+              // Normalize in-progress aliases to 'started' for the progress indicator
+              const normalizedStatus = IN_PROGRESS_STATUSES.includes(status) ? 'started' : status
+              const currentIdx = STATUS_FLOW.indexOf(normalizedStatus)
               const isDone = i <= currentIdx
-              const isCurrent = s === status
+              const isCurrent = s === normalizedStatus
               return (
                 <div key={s} className="flex items-center gap-3">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -804,7 +808,10 @@ function getNextAction(status: string): string | null {
     case 'assigned': return 'start-trip'
     case 'en_route': return 'arrived'
     case 'arrived': return 'start-work'
-    case 'started': return 'complete'
+    case 'started':
+    case 'in_progress':
+    case 'photo_taken':
+    case 'signed': return 'complete'
     default: return null
   }
 }
@@ -815,7 +822,10 @@ function getActionLabel(status: string): string {
     case 'assigned': return '🚗 Start Trip'
     case 'en_route': return '📍 I\'ve Arrived'
     case 'arrived': return '🔨 Start Work'
-    case 'started': return '✅ Complete Order'
+    case 'started':
+    case 'in_progress':
+    case 'photo_taken':
+    case 'signed': return '✅ Complete Order'
     default: return 'Next Step'
   }
 }
@@ -826,7 +836,10 @@ function statusBadge(status: string): string {
     case 'cancelled': return 'bg-red-800 text-red-100'
     case 'en_route':
     case 'arrived':
-    case 'started': return 'bg-blue-800 text-blue-100'
+    case 'started':
+    case 'in_progress':
+    case 'photo_taken':
+    case 'signed': return 'bg-blue-800 text-blue-100'
     default: return 'bg-primary-800 text-primary-100'
   }
 }
