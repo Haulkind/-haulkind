@@ -13,12 +13,14 @@ import type { NextRequest } from 'next/server'
 //   /ads/<anything>-nj
 //   /ads/<anything>-jersey         (south-jersey, north-jersey, central-jersey)
 //   /ads/hauling-trenton, /ads/hauling-princeton (legacy NJ ads)
+//   /ads/hauling-jersey-city, /ads/hauling-newark, /ads/hauling-hoboken
+//     (legacy NJ ads whose slugs do NOT end in -nj or -jersey)
 const NJ_PATH_PATTERNS: RegExp[] = [
   /^\/service-areas\/new-jersey(\/.*)?$/i,
   /^\/[a-z0-9-]+-nj\/?$/i,
   /^\/ads\/[a-z0-9-]+-nj\/?$/i,
   /^\/ads\/[a-z0-9-]*-jersey\/?$/i,
-  /^\/ads\/hauling-(south-jersey|trenton|princeton)\/?$/i,
+  /^\/ads\/hauling-(south-jersey|trenton|princeton|jersey-city|newark|hoboken)\/?$/i,
 ]
 
 function gone(): NextResponse {
