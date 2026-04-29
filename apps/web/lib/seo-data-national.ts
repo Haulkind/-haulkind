@@ -147,13 +147,19 @@ export function generateFAQsNational(service: ServiceData, city: GeoCity): { que
 
 /** Get all states with city counts for the service areas page */
 export function getStatesWithCounts(): { name: string; abbr: string; slug: string; cityCount: number; cities: GeoCity[] }[] {
-  return STATES.map(state => ({
-    name: state.name,
-    abbr: state.abbr,
-    slug: state.slug,
-    cityCount: state.cities.length,
-    cities: state.cities,
-  })).sort((a, b) => a.name.localeCompare(b.name))
+  // NJDEP compliance: New Jersey is excluded from the public service-areas
+  // index — /service-areas/new-jersey returns HTTP 410 Gone via middleware,
+  // so a clickable "New Jersey" tile here would be a broken link.
+  return STATES
+    .filter(state => state.slug !== 'new-jersey')
+    .map(state => ({
+      name: state.name,
+      abbr: state.abbr,
+      slug: state.slug,
+      cityCount: state.cities.length,
+      cities: state.cities,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /** Get nearby cities for cross-linking (same state, different city) */
