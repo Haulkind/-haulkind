@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Moving Labor & Loading Help in PA, NY & NJ | HaulKind',
-  description: 'Affordable moving labor in Pennsylvania, New York & New Jersey. Experienced helpers to load, unload, and move heavy items. From $79/hr. Same-day available.',
+  title: 'Moving Labor & Loading Help in PA & NY | HaulKind',
+  description: 'Affordable moving labor in Pennsylvania and New York. Experienced helpers to load, unload, and move heavy items. From $79/hr. Same-day available.',
   alternates: { canonical: '/services/moving-labor' },
   openGraph: {
     title: 'Moving Labor & Loading Help | HaulKind',
-    description: 'Hourly moving help from $79/hr. Load, unload, rearrange furniture. Insured helpers in PA, NY & NJ.',
+    description: 'Hourly moving help from $79/hr. Load, unload, rearrange furniture. Insured helpers in PA & NY.',
     url: 'https://haulkind.com/services/moving-labor',
   },
 }
@@ -26,7 +26,6 @@ export default function MovingLaborPage() {
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: 'Moving Labor',
     url: 'https://haulkind.com/services/moving-labor',
@@ -40,7 +39,7 @@ export default function MovingLaborPage() {
       <section className="bg-secondary-50 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Moving Labor & Loading Help in PA, NY & NJ
+            Moving Labor & Loading Help in PA & NY
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
             Need strong hands to load a truck, move furniture between rooms, or unload a storage unit? HaulKind sends experienced helpers to your door — no truck needed, just muscle.
@@ -98,7 +97,7 @@ export default function MovingLaborPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: '1', title: 'Tell Us What You Need', desc: 'Describe the job — loading a truck, moving furniture, unloading a pod. Get your price instantly with no obligation.' },
-              { step: '2', title: 'Pick Your Time', desc: 'Choose a date and time slot. Need help today? Same-day labor is available in most service areas across PA, NY & NJ.' },
+              { step: '2', title: 'Pick Your Time', desc: 'Choose a date and time slot. Need help today? Same-day labor is available in most service areas across PA & NY.' },
               { step: '3', title: 'We Show Up Ready', desc: 'Our helpers arrive with dollies, straps, and blankets. You direct the work. Pay only for the hours used.' },
             ].map((item) => (
               <div key={item.step} className="bg-gray-50 rounded-xl p-8 text-center">
@@ -185,9 +184,9 @@ export default function MovingLaborPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Moving Labor Service Areas</h2>
           <p className="text-gray-700 text-lg mb-6">
-            HaulKind moving helpers are available across the tri-state area. Whether you're in downtown Philadelphia, a Brooklyn walk-up, or a suburban home in New Jersey, we've got you covered.
+            HaulKind moving helpers are available across Pennsylvania and New York. Whether you're in downtown Philadelphia, a Brooklyn walk-up, or a suburban home outside Pittsburgh, we've got you covered.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-bold text-lg mb-3 text-primary-600">Pennsylvania</h3>
               <ul className="space-y-1 text-gray-700">
@@ -200,12 +199,7 @@ export default function MovingLaborPage() {
                 <li>New York City</li><li>Buffalo</li><li>Rochester</li><li>Syracuse</li><li>Albany</li><li>Yonkers</li><li>White Plains</li><li>Long Island</li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New Jersey</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>Newark</li><li>Jersey City</li><li>Paterson</li><li>Elizabeth</li><li>Trenton</li><li>Edison</li><li>Woodbridge</li><li>Cherry Hill</li>
-              </ul>
-            </div>
+
           </div>
         </div>
       </section>
@@ -228,7 +222,7 @@ export default function MovingLaborPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Need Moving Help Today?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Get your price in seconds. Experienced, insured helpers ready when you are. Serving PA, NY & NJ.
+            Get your price in seconds. Experienced, insured helpers ready when you are. Serving PA & NY.
           </p>
           <Link
             href="/quote"

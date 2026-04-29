@@ -18,10 +18,10 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'HaulKind - Fast Local Hauling & Moving Help | PA, NY, NJ',
+    default: 'HaulKind - Fast Local Hauling & Moving Help | PA, NY',
     template: '%s | HaulKind',
   },
-  description: 'Affordable hauling, moving labor & furniture donation pickup in PA, NY & NJ. All-in pricing from $99. Same-day service. Get a free quote now!',
+  description: 'Affordable hauling, moving labor & furniture donation pickup in PA & NY. All-in pricing from $99. Same-day service. Get a free quote now!',
   keywords: [
     'hauling service', 'moving help', 'labor only moving',
     'furniture pickup', 'mattress swap',
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     url: 'https://haulkind.com',
     siteName: 'HaulKind',
     title: 'HaulKind — Fast, Fair Hauling & Moving Help',
-    description: 'Same-day hauling, donation pickup & furniture assembly in PA, NJ & NY. Upfront pricing, GPS tracking, licensed & insured. Call (609) 456-8188',
+    description: 'Same-day hauling, donation pickup & furniture assembly in PA & NY. Upfront pricing, GPS tracking, licensed & insured. Call (609) 456-8188',
     images: [
       {
         url: '/og-image.png',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'HaulKind — Fast, Fair Hauling & Moving Help',
-    description: 'Same-day hauling & moving help in PA, NJ & NY. Upfront pricing, GPS tracking.',
+    description: 'Same-day hauling & moving help in PA & NY. Upfront pricing, GPS tracking.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -84,7 +84,7 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'HaulKind',
-    description: 'Fast local hauling, moving labor, and furniture donation pickup with transparent pricing. Serving Pennsylvania, New York, and New Jersey.',
+    description: 'Fast local hauling, moving labor, and furniture donation pickup with transparent pricing. Serving Pennsylvania and New York.',
     url: 'https://haulkind.com',
     logo: 'https://haulkind.com/logo-full.svg',
     image: 'https://haulkind.com/og-image.png',
@@ -104,7 +104,6 @@ export default function RootLayout({
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: ['Hauling', 'Moving Labor', 'Donation Pickup', 'Furniture Assembly', 'Mattress Swap', 'Loading & Unloading'],
     priceRange: '$79 - $529',

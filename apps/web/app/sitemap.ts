@@ -47,9 +47,11 @@ export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
     ]
 
     // Hierarchical service-areas pages: /service-areas/[state] and /service-areas/[state]/[city]
+    // NJDEP compliance: New Jersey state + cities are excluded entirely.
     const statesWithCounts = getStatesWithCounts()
     const serviceAreaPages: MetadataRoute.Sitemap = []
     for (const state of statesWithCounts) {
+      if (state.slug === 'new-jersey') continue
       serviceAreaPages.push({
         url: `${baseUrl}/service-areas/${state.slug}`,
         lastModified: now,
@@ -57,6 +59,7 @@ export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
         priority: 0.8,
       })
       for (const city of state.cities) {
+        if (city.stateAbbr === 'NJ') continue
         serviceAreaPages.push({
           url: `${baseUrl}/service-areas/${state.slug}/${city.slug}`,
           lastModified: now,
@@ -87,10 +90,13 @@ export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
   if (!service) return []
 
   const cities = getAllCities()
-  return cities.map(city => ({
-    url: `${baseUrl}/${service.slug}-${city.slug}`,
-    lastModified: now,
-    changeFrequency: 'monthly' as const,
-    priority: 0.8,
-  }))
+  // NJDEP compliance: exclude all New Jersey service+city slugs from the sitemap.
+  return cities
+    .filter(city => city.stateAbbr !== 'NJ')
+    .map(city => ({
+      url: `${baseUrl}/${service.slug}-${city.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    }))
 }

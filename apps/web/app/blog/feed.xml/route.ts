@@ -24,7 +24,7 @@ export async function GET() {
   <channel>
     <title>HaulKind Blog</title>
     <link>${siteUrl}/blog</link>
-    <description>Junk removal tips, pricing guides, and local resources for PA, NJ &amp; NY.</description>
+    <description>Hauling tips, pricing guides, and local resources for PA &amp; NY.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${siteUrl}/blog/feed.xml" rel="self" type="application/rss+xml"/>

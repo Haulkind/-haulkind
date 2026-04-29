@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Contact HaulKind - Get in Touch | PA, NY & NJ',
-  description: 'Contact HaulKind for hauling and moving help in Pennsylvania, New York & New Jersey. Email, phone, or get a free quote online. We respond fast.',
+  title: 'Contact HaulKind - Get in Touch | PA & NY',
+  description: 'Contact HaulKind for hauling and moving help in Pennsylvania and New York. Email, phone, or get a free quote online. We respond fast.',
   alternates: { canonical: '/contact' },
   openGraph: {
-    title: 'Contact HaulKind | PA, NY & NJ',
-    description: 'Questions about hauling or moving help? Contact HaulKind. Fast response, transparent pricing. Serving PA, NY & NJ.',
+    title: 'Contact HaulKind | PA & NY',
+    description: 'Questions about hauling or moving help? Contact HaulKind. Fast response, transparent pricing. Serving PA & NY.',
     url: 'https://haulkind.com/contact',
   },
 }
@@ -29,7 +29,6 @@ export default function ContactPage() {
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     openingHours: 'Mo-Su 07:00-19:00',
   }
@@ -126,7 +125,7 @@ export default function ContactPage() {
               <div className="bg-gray-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-2">What areas do you serve?</h3>
                 <p className="text-gray-700">
-                  HaulKind serves Pennsylvania, New York, and New Jersey. Major cities include Philadelphia, New York City, Newark, Jersey City, Pittsburgh, Allentown, and more. <Link href="/service-areas" className="text-primary-600 font-semibold hover:underline">See all service areas</Link>.
+                  HaulKind serves Pennsylvania and New York. Major cities include Philadelphia, Pittsburgh, Allentown, New York City, Buffalo, Rochester, and more. <Link href="/service-areas" className="text-primary-600 font-semibold hover:underline">See all service areas</Link>.
                 </p>
               </div>
 
@@ -152,7 +151,7 @@ export default function ContactPage() {
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Where We Operate</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-bold text-lg mb-3 text-primary-600">Pennsylvania</h3>
               <ul className="space-y-1 text-gray-700">
@@ -163,12 +162,6 @@ export default function ContactPage() {
               <h3 className="font-bold text-lg mb-3 text-primary-600">New York</h3>
               <ul className="space-y-1 text-gray-700">
                 <li>New York City</li><li>Buffalo</li><li>Rochester</li><li>Syracuse</li><li>Albany</li><li>Yonkers</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New Jersey</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>Newark</li><li>Jersey City</li><li>Paterson</li><li>Elizabeth</li><li>Trenton</li><li>Edison</li>
               </ul>
             </div>
           </div>

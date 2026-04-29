@@ -33,8 +33,10 @@ const PRICED_ITEMS = [
   { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '🌳', price: 899 },
 ]
 
-// Items BLOCKED for NJ ZIP codes (solid waste / entulho — regulated by NJDEP)
-// Furniture, appliances, electronics are ALLOWED because they are donation-eligible
+// NJDEP compliance: items that may NOT be offered to a New Jersey ZIP at all.
+// These are hard-removed from the rendered DOM (not hidden via CSS) when the
+// user types an NJ ZIP. Furniture/appliances/electronics are still offered
+// only via Donation Pickup, never via Hauling/Junk Removal.
 const NJ_BLOCKED_ITEMS = new Set([
   'garage_small', 'garage_medium', 'garage_large',
   'yard_partial', 'yard_full',
@@ -49,10 +51,10 @@ export default function PriceCalculator() {
   // Quantity map: itemId -> quantity (0 means not selected)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [showModal, setShowModal] = useState(false)
-  // NJ ZIP code compliance check
+  // NJDEP compliance: NJ ZIP detection drives hard DOM removal of any service
+  // option tied to "junk", "hauling", "removal", or "cleanout".
   const [userZip, setUserZip] = useState('')
   const isNJ = isNJZip(userZip)
-  const junkRemovalBlocked = isNJ
 
   const setQuantity = useCallback((itemId: string, qty: number) => {
     setItemQuantities(prev => {
@@ -218,10 +220,11 @@ export default function PriceCalculator() {
               onChange={(e) => {
                 const val = e.target.value.replace(/\D/g, '').slice(0, 5)
                 setUserZip(val)
-                // Auto-switch away from junk-removal if NJ ZIP detected
+                // NJDEP compliance: as soon as an NJ ZIP is typed, force the
+                // service away from anything resembling junk/hauling/removal.
                 if (isNJZip(val)) {
                   if (serviceType === 'junk-removal') {
-                    setServiceType('donation')
+                    setServiceType('labor')
                   }
                   // Clear any regulated (non-allowed) items for NJ
                   setItemQuantities(prev => {
@@ -236,10 +239,10 @@ export default function PriceCalculator() {
               placeholder="Enter your ZIP code"
               className="w-full sm:w-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
             />
-            {junkRemovalBlocked && (
+            {isNJ && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ Hauling and solid waste removal (Yard Debris, Garage Clearing) are not available in New Jersey (NJDEP regulation). Donation Pickup for furniture, appliances, and electronics is available. You can also choose Moving Labor or Furniture Assembly.
+                  In New Jersey, HaulKind offers Moving Labor, Furniture Assembly, Mattress Swap, and Donation Pickup. Other services are not available at this address.
                 </p>
               </div>
             )}
@@ -251,22 +254,23 @@ export default function PriceCalculator() {
               Service Type
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <button
-                onClick={() => { if (!junkRemovalBlocked) setServiceType('junk-removal') }}
-                disabled={junkRemovalBlocked}
-                className={`relative p-4 rounded-lg border-2 text-left transition ${
-                  junkRemovalBlocked
-                    ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
-                    : serviceType === 'junk-removal'
+              {/* NJDEP compliance: Hauling / Junk Removal option is hard-removed
+                  from the rendered DOM whenever the user's ZIP is in NJ.
+                  Inspector requirement: must NOT be present in inspect-element. */}
+              {!isNJ && (
+                <button
+                  onClick={() => setServiceType('junk-removal')}
+                  className={`relative p-4 rounded-lg border-2 text-left transition ${
+                    serviceType === 'junk-removal'
                       ? 'border-teal-500 bg-teal-50'
                       : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
-                <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
-                <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
-                {junkRemovalBlocked && <div className="text-xs text-red-500 mt-1 font-medium">Not available for NJ addresses</div>}
-              </button>
+                  }`}
+                >
+                  <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
+                  <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
+                  <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
+                </button>
+              )}
               <button
                 onClick={() => setServiceType('donation')}
                 className={`relative p-4 rounded-lg border-2 text-left transition ${
@@ -335,24 +339,18 @@ export default function PriceCalculator() {
                 Select Items
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {PRICED_ITEMS.map((item) => {
+                {PRICED_ITEMS.filter(item => !(isNJ && NJ_BLOCKED_ITEMS.has(item.id))).map((item) => {
                   const qty = itemQuantities[item.id] || 0
                   const isSelected = qty > 0
-                  const isBlockedForNJ = isNJ && NJ_BLOCKED_ITEMS.has(item.id)
                   return (
                     <div
                       key={item.id}
                       className={`p-3 rounded-lg border-2 text-center transition relative ${
-                        isBlockedForNJ
-                          ? 'border-gray-200 bg-gray-100 opacity-40 cursor-not-allowed'
-                          : isSelected
-                            ? 'border-teal-500 bg-teal-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                        isSelected
+                          ? 'border-teal-500 bg-teal-50'
+                          : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      {isBlockedForNJ && (
-                        <span className="absolute top-1 left-1 text-[9px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-full z-10">NJ blocked</span>
-                      )}
                       {isSelected && (
                         <span className="absolute top-1 right-1 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
                           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -368,10 +366,10 @@ export default function PriceCalculator() {
                       <div className="flex items-center justify-center gap-2 mt-2">
                         <button
                           type="button"
-                          onClick={() => { if (!isBlockedForNJ) setQuantity(item.id, qty - 1) }}
-                          disabled={qty === 0 || isBlockedForNJ}
+                          onClick={() => setQuantity(item.id, qty - 1)}
+                          disabled={qty === 0}
                           className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition ${
-                            qty === 0 || isBlockedForNJ
+                            qty === 0
                               ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                               : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
                           }`}
@@ -381,13 +379,8 @@ export default function PriceCalculator() {
                         <span className="w-6 text-center text-sm font-bold text-gray-800">{qty}</span>
                         <button
                           type="button"
-                          onClick={() => { if (!isBlockedForNJ) setQuantity(item.id, qty + 1) }}
-                          disabled={isBlockedForNJ}
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition ${
-                            isBlockedForNJ
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-teal-500 text-white hover:bg-teal-600'
-                          }`}
+                          onClick={() => setQuantity(item.id, qty + 1)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition bg-teal-500 text-white hover:bg-teal-600"
                         >
                           +
                         </button>

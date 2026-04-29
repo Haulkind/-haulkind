@@ -22,7 +22,7 @@ export default function FAQ() {
         },
         {
           q: 'What areas do you serve?',
-          a: 'We serve Pennsylvania, New York, and New Jersey. Check our service areas page for specific cities and coverage. Enter your address in the quote tool to verify coverage.',
+          a: 'We serve Pennsylvania and New York. Check our service areas page for specific cities and coverage. Enter your address in the quote tool to verify coverage.',
         },
         {
           q: 'Do I need to create an account?',

@@ -5,11 +5,11 @@ import BlogCard from './components/BlogCard'
 
 export const metadata: Metadata = {
   title: 'Blog — Tips, Guides & Local Resources | HaulKind',
-  description: 'Hauling tips, pricing guides, and local resources for PA, NJ & NY. Learn how to save on hauling, donate items, and declutter your home.',
+  description: 'Hauling tips, pricing guides, and local resources for PA & NY. Learn how to save on hauling, donate items, and declutter your home.',
   alternates: { canonical: 'https://haulkind.com/blog' },
   openGraph: {
     title: 'HaulKind Blog — Tips, Guides & Local Resources',
-    description: 'Hauling tips, pricing guides, and local resources for PA, NJ & NY.',
+    description: 'Hauling tips, pricing guides, and local resources for PA & NY.',
     url: 'https://haulkind.com/blog',
     siteName: 'HaulKind',
     type: 'website',

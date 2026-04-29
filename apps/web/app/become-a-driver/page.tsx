@@ -39,7 +39,7 @@ export default function BecomeADriver() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
           </Link>
           <p className="mt-4 text-sm text-secondary-200">
-            Actively onboarding drivers in NYC, Long Island, Philadelphia &amp; NJ — limited spots per area
+            Actively onboarding drivers in NYC, Long Island &amp; Philadelphia — limited spots per area
           </p>
         </div>
       </section>
@@ -130,12 +130,10 @@ export default function BecomeADriver() {
               { area: 'New York City (All 5 Boroughs)', badge: 'urgent' as const },
               { area: 'Long Island (Nassau & Suffolk)', badge: 'urgent' as const },
               { area: 'Philadelphia, PA', badge: 'urgent' as const },
-              { area: 'South Jersey (Camden, Cherry Hill, Voorhees)', badge: 'urgent' as const },
-              { area: 'Central NJ (Trenton, Princeton)', badge: 'growing' as const },
-              { area: 'Jersey City / Hoboken / Newark', badge: 'growing' as const },
               { area: 'Westchester County, NY', badge: 'growing' as const },
               { area: 'Bucks County, PA', badge: 'growing' as const },
               { area: 'Delaware County, PA', badge: 'growing' as const },
+              { area: 'Montgomery County, PA', badge: 'growing' as const },
             ].map((item, idx) => (
               <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                 <span className={`flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full ${
@@ -174,7 +172,7 @@ export default function BecomeADriver() {
                 </svg>
                 <div>
                   <h3 className="font-bold text-lg mb-2">Driver's License</h3>
-                  <p className="text-gray-600">Valid driver's license in PA, NY, or NJ.</p>
+                  <p className="text-gray-600">Valid driver's license in PA or NY.</p>
                 </div>
               </div>
 
@@ -373,7 +371,7 @@ export default function BecomeADriver() {
               },
               {
                 q: 'Can I work in multiple states as a HaulKind driver?',
-                a: 'Yes! If you have coverage in multiple service areas, you can accept driver jobs across state lines. We currently serve NYC, Long Island, Philadelphia, and NJ.',
+                a: 'Yes! If you have coverage in multiple service areas, you can accept driver jobs across state lines. We currently serve NYC, Long Island, and Philadelphia.',
               },
               {
                 q: 'Is being a HaulKind driver a full-time or part-time job?',
@@ -400,7 +398,7 @@ export default function BecomeADriver() {
           { '@type': 'Question', name: 'Do I need commercial insurance for driver jobs?', acceptedAnswer: { '@type': 'Answer', text: 'You need auto insurance that covers business use. Many personal policies include this. Check with your insurance provider before applying for independent driver opportunities.' } },
           { '@type': 'Question', name: 'What if I don\'t have a truck?', acceptedAnswer: { '@type': 'Answer', text: 'You can rent a truck and still make good money with local hauling jobs. Many HaulKind drivers start by renting and buy their own truck later from their earnings.' } },
           { '@type': 'Question', name: 'How do handling fees work for hauling jobs?', acceptedAnswer: { '@type': 'Answer', text: 'Every hauling job includes a fixed handling fee ($10-$70 based on load size) that is collected from the customer upfront and paid directly to you as part of your job payment. No waiting, no reimbursement process, no receipts to file.' } },
-          { '@type': 'Question', name: 'Can I work in multiple states as a HaulKind driver?', acceptedAnswer: { '@type': 'Answer', text: 'Yes! If you have coverage in multiple service areas, you can accept driver jobs across state lines. We currently serve NYC, Long Island, Philadelphia, and NJ.' } },
+          { '@type': 'Question', name: 'Can I work in multiple states as a HaulKind driver?', acceptedAnswer: { '@type': 'Answer', text: 'Yes! If you have coverage in multiple service areas, you can accept driver jobs across state lines. We currently serve NYC, Long Island, and Philadelphia.' } },
           { '@type': 'Question', name: 'Is being a HaulKind driver a full-time or part-time job?', acceptedAnswer: { '@type': 'Answer', text: 'HaulKind offers independent driver opportunities with 100% flexibility. You can work full-time or part-time — go online when you want, no shifts, no minimums, no penalties for declining a job.' } },
         ],
       }) }} />

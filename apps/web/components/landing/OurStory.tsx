@@ -23,7 +23,7 @@ export default function OurStory() {
                 {"He knew there was a better way. So he built HaulKind — a local service that treats customers AND crews right. Fair, upfront pricing. Real-time GPS tracking so you're never left waiting. And drivers who earn what they deserve."}
               </p>
               <p className="text-lg leading-relaxed mb-6">
-                {"Today, HaulKind serves the greater Philadelphia area, New Jersey, and New York with the same values Daniel started with: show up on time, charge a fair price, and treat every home like your own."}
+                {"Today, HaulKind serves the greater Philadelphia area and New York with the same values Daniel started with: show up on time, charge a fair price, and treat every home like your own."}
               </p>
             </div>
 

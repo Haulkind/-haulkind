@@ -14,25 +14,28 @@ export const revalidate = 86400
 export const dynamicParams = true
 
 function findCity(stateSlug: string, citySlug: string): { state: ReturnType<typeof getStateBySlug>; city: GeoCity } | null {
+  // NJDEP compliance: NJ city hubs are permanently gone (middleware returns 410).
+  if (stateSlug === 'new-jersey') return null
   const state = getStateBySlug(stateSlug)
   if (!state) return null
   const city = state.cities.find(c => c.slug === citySlug)
   if (!city) return null
+  if (city.stateAbbr === 'NJ') return null
   return { state, city }
 }
 
 export function generateMetadata({ params }: PageProps): Metadata {
   const result = findCity(params.state, params.city)
-  if (!result) return {}
+  if (!result) return { robots: { index: false, follow: false } }
   const { city } = result
 
   return {
-    title: `${city.stateAbbr === 'NJ' ? 'Furniture Donation Pickup & Moving Help' : 'Hauling & Moving Help'} in ${city.name}, ${city.stateAbbr} | HaulKind`,
-    description: `Professional ${city.stateAbbr === 'NJ' ? 'furniture donation pickup, moving labor, furniture assembly' : 'hauling, furniture pickup, moving help'}, and more in ${city.name}, ${city.stateAbbr}. Serving ${city.neighborhoods.length}+ neighborhoods. Transparent pricing, same-day service. Book online.`,
+    title: `Hauling & Moving Help in ${city.name}, ${city.stateAbbr} | HaulKind`,
+    description: `Professional hauling, furniture pickup, moving help, and more in ${city.name}, ${city.stateAbbr}. Serving ${city.neighborhoods.length}+ neighborhoods. Transparent pricing, same-day service. Book online.`,
     alternates: { canonical: `/service-areas/${city.stateSlug}/${city.slug}` },
     openGraph: {
       title: `HaulKind Services in ${city.name}, ${city.stateAbbr}`,
-      description: `All HaulKind services available in ${city.name}, ${city.stateAbbr}. ${city.stateAbbr === 'NJ' ? 'Furniture donation pickup, moving labor, furniture assembly' : 'Hauling, moving help, furniture pickup'} and more.`,
+      description: `All HaulKind services available in ${city.name}, ${city.stateAbbr}. Hauling, moving help, furniture pickup and more.`,
       url: `https://haulkind.com/service-areas/${city.stateSlug}/${city.slug}`,
     },
   }
@@ -108,7 +111,7 @@ export default function CityPage({ params }: PageProps) {
               HaulKind Services in {city.name}, {city.stateAbbr}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              Professional {city.stateAbbr === 'NJ' ? 'furniture donation pickup, moving labor, and furniture assembly' : 'hauling, furniture pickup, moving labor, and more'} in {city.name}. Serving {city.neighborhoods.length}+ neighborhoods with transparent pricing and same-day availability.
+              Professional hauling, furniture pickup, moving labor, and more in {city.name}. Serving {city.neighborhoods.length}+ neighborhoods with transparent pricing and same-day availability.
             </p>
             <Link
               href="/quote"

@@ -54,38 +54,8 @@ export const ADS_CITIES: AdsCityData[] = [
     subtitle: 'Media, Springfield, Upper Darby, Havertown — all of Delco covered. Starting at $99.',
     neighborhoods: ['Media', 'Springfield', 'Upper Darby', 'Havertown', 'Drexel Hill', 'Swarthmore', 'Broomall', 'Ridley Park', 'Chester', 'Newtown Square'],
   },
-  // New Jersey — NJ compliance: No "Junk Removal" or "Solid Waste Disposal" (A-901 required)
-  // NJ services: Furniture Donation Pickup, Moving Labor, Furniture Assembly
-  {
-    slug: 'hauling-south-jersey',
-    city: 'South Jersey',
-    state: 'NJ',
-    h1: 'Furniture Donation Pickup & Moving Help in South Jersey',
-    title: 'Furniture Donation Pickup South Jersey NJ — Same-Day Service | HaulKind',
-    metaDescription: 'Furniture donation pickup, moving labor, and furniture assembly across South Jersey. Camden, Cherry Hill, Voorhees and more. Starting at $99.',
-    subtitle: 'Camden, Cherry Hill, Voorhees, Marlton, Mount Laurel and beyond. Donation pickup, moving labor & assembly starting at $99.',
-    neighborhoods: ['Camden', 'Cherry Hill', 'Voorhees', 'Marlton', 'Mount Laurel', 'Haddonfield', 'Collingswood', 'Moorestown', 'Medford', 'Turnersville'],
-  },
-  {
-    slug: 'hauling-trenton',
-    city: 'Trenton',
-    state: 'NJ',
-    h1: 'Furniture Donation Pickup & Moving Help in Trenton',
-    title: 'Furniture Donation Pickup Trenton NJ — Same-Day Service | HaulKind',
-    metaDescription: 'Furniture donation pickup, moving labor, and furniture assembly in Trenton NJ. Starting at $99. Same-day and next-day available.',
-    subtitle: 'Serving Trenton and surrounding Mercer County. Donation pickup, moving labor & assembly.',
-    neighborhoods: ['Downtown Trenton', 'Chambersburg', 'Mill Hill', 'West Ward', 'North Trenton', 'Hamilton', 'Ewing', 'Lawrence', 'Princeton Junction'],
-  },
-  {
-    slug: 'hauling-princeton',
-    city: 'Princeton',
-    state: 'NJ',
-    h1: 'Furniture Donation Pickup & Moving Help in Princeton',
-    title: 'Furniture Donation Pickup Princeton NJ | HaulKind',
-    metaDescription: 'Furniture donation pickup, moving labor, and furniture assembly in Princeton NJ. Starting at $99. Live driver tracking.',
-    subtitle: 'Serving Princeton, West Windsor, Plainsboro and all of central New Jersey. Donation pickup & moving help.',
-    neighborhoods: ['Downtown Princeton', 'West Windsor', 'Plainsboro', 'Lawrenceville', 'Pennington', 'Hopewell', 'Skillman', 'Rocky Hill'],
-  },
+  // NJDEP compliance: ALL New Jersey ads landing pages have been deleted.
+  // New Jersey is no longer a HaulKind service area for hauling/junk-removal.
   // NYC Boroughs
   {
     slug: 'junk-removal-brooklyn',
@@ -158,34 +128,6 @@ export const ADS_CITIES: AdsCityData[] = [
     subtitle: 'White Plains, Yonkers, New Rochelle, Scarsdale and all of Westchester.',
     neighborhoods: ['White Plains', 'Yonkers', 'New Rochelle', 'Scarsdale', 'Mount Vernon', 'Tarrytown', 'Mamaroneck', 'Larchmont', 'Ossining', 'Peekskill'],
   },
-  {
-    slug: 'hauling-jersey-city',
-    city: 'Jersey City',
-    state: 'NJ',
-    h1: 'Furniture Donation Pickup & Moving Help in Jersey City',
-    title: 'Furniture Donation Pickup Jersey City NJ | HaulKind',
-    metaDescription: 'Furniture donation pickup, moving labor, and furniture assembly in Jersey City NJ. Starting at $99. No hidden fees.',
-    subtitle: 'Downtown, the Heights, Journal Square and all of Jersey City. Donation pickup & moving help starting at $99.',
-    neighborhoods: ['Downtown', 'The Heights', 'Journal Square', 'Bergen-Lafayette', 'Greenville', 'West Side', 'McGinley Square', 'Liberty State Park area'],
-  },
-  {
-    slug: 'hauling-newark',
-    city: 'Newark',
-    state: 'NJ',
-    h1: 'Furniture Donation Pickup & Moving Help in Newark',
-    title: 'Furniture Donation Pickup Newark NJ — Same-Day | HaulKind',
-    metaDescription: 'Furniture donation pickup, moving labor, and furniture assembly in Newark NJ starting at $99. Same-day available. Book online.',
-    subtitle: 'Serving all of Newark and surrounding Essex County. Donation pickup, moving labor & assembly.',
-    neighborhoods: ['Ironbound', 'North Ward', 'South Ward', 'West Ward', 'Central Ward', 'Vailsburg', 'Forest Hill', 'Roseville', 'University Heights'],
-  },
-  {
-    slug: 'hauling-hoboken',
-    city: 'Hoboken',
-    state: 'NJ',
-    h1: 'Furniture Donation Pickup & Moving Help in Hoboken',
-    title: 'Furniture Donation Pickup Hoboken NJ | HaulKind',
-    metaDescription: 'Furniture donation pickup, moving labor, and furniture assembly in Hoboken NJ. Starting at $99. Book in 60 seconds.',
-    subtitle: 'Furniture donation pickup and moving help across Hoboken. Starting at $99.',
-    neighborhoods: ['Uptown Hoboken', 'Midtown Hoboken', 'Downtown Hoboken', 'Northwest Hoboken', 'Southwest Hoboken'],
-  },
+  // NJDEP compliance: ALL New Jersey ads landing pages (Jersey City, Newark,
+  // Hoboken, and others) have been deleted. New Jersey is no longer a service area.
 ]

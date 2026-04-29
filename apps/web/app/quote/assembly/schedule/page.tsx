@@ -52,7 +52,7 @@ export default function AssemblySchedulePage() {
       return
     }
     if (usState.length !== 2) {
-      setError('Please enter a valid 2-letter state code (e.g. PA, NJ, NY).')
+      setError('Please enter a valid 2-letter state code (e.g. PA, NY).')
       return
     }
     if (zip.length !== 5) {
