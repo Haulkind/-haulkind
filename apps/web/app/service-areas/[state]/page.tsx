@@ -12,26 +12,29 @@ export const revalidate = 86400
 export const dynamicParams = true
 
 export function generateMetadata({ params }: PageProps): Metadata {
+  // NJDEP compliance: refuse metadata for any New Jersey state page.
+  if (params.state === 'new-jersey') return { robots: { index: false, follow: false } }
+
   const state = getStateBySlug(params.state)
   if (!state) return {}
 
-  const isNJ = state.slug === 'new-jersey'
-  const serviceDesc = isNJ ? 'moving labor, furniture assembly, and donation pickup' : 'hauling, furniture pickup, moving help, and more'
-  const serviceDescShort = isNJ ? 'moving labor, assembly, and donation pickup' : 'hauling and moving help'
-
   return {
-    title: isNJ ? `HaulKind | Moving Labor, Assembly & Hauling in ${state.name}` : `Hauling & Moving Help in ${state.name} | HaulKind`,
-    description: `Professional ${serviceDesc} across ${state.name}. Serving ${state.cities.length} cities with transparent pricing and same-day service. Book online in 60 seconds.`,
+    title: `Hauling & Moving Help in ${state.name} | HaulKind`,
+    description: `Professional hauling, furniture pickup, moving help, and more across ${state.name}. Serving ${state.cities.length} cities with transparent pricing and same-day service. Book online in 60 seconds.`,
     alternates: { canonical: `/service-areas/${state.slug}` },
     openGraph: {
-      title: isNJ ? `HaulKind | Moving Labor, Assembly & Hauling in ${state.name}` : `Hauling & Moving Help in ${state.name} | HaulKind`,
-      description: `Professional ${serviceDescShort} in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`,
+      title: `Hauling & Moving Help in ${state.name} | HaulKind`,
+      description: `Professional hauling and moving help in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`,
       url: `https://haulkind.com/service-areas/${state.slug}`,
     },
   }
 }
 
 export default function StatePage({ params }: PageProps) {
+  // NJDEP compliance: NJ state hub is permanently gone (middleware returns 410).
+  // This notFound() is defense-in-depth in case a request bypasses middleware.
+  if (params.state === 'new-jersey') notFound()
+
   const state = getStateBySlug(params.state)
   if (!state) notFound()
 
@@ -69,10 +72,10 @@ export default function StatePage({ params }: PageProps) {
         <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-20">
           <div className="container mx-auto px-4 text-center max-w-4xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              {state.slug === 'new-jersey' ? 'Moving Labor, Assembly & Hauling' : 'Hauling & Moving Help'} in {state.name}
+              Hauling &amp; Moving Help in {state.name}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional {state.slug === 'new-jersey' ? 'moving labor, furniture assembly, donation pickup, and hauling services' : 'hauling, furniture pickup, moving labor, and more'} across {state.cities.length} cities in {state.name}. Find your city below and book online in 60 seconds.
+              HaulKind provides professional hauling, furniture pickup, moving labor, and more across {state.cities.length} cities in {state.name}. Find your city below and book online in 60 seconds.
             </p>
             <Link
               href="/quote"

@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'How It Works - Book Hauling & Moving Help in 3 Easy Steps',
-  description: 'Get a quote, book online, and track your driver in real time. Simple, transparent hauling and moving help in PA, NY & NJ. No hidden fees.',
+  description: 'Get a quote, book online, and track your driver in real time. Simple, transparent hauling and moving help in PA & NY. No hidden fees.',
   alternates: { canonical: '/how-it-works' },
   openGraph: {
     title: 'How HaulKind Works - 3 Easy Steps',

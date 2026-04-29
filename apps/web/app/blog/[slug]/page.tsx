@@ -203,7 +203,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
               <div>
                 <h3 className="font-bold text-gray-900">{post.author}</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Fast, fair hauling & moving help in PA, NJ &amp; NY. Licensed &amp; insured, real-time GPS tracking, same-day service available.
+                  Fast, fair hauling & moving help in PA &amp; NY. Licensed &amp; insured, real-time GPS tracking, same-day service available.
                 </p>
               </div>
             </div>

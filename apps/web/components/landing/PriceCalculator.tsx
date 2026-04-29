@@ -33,8 +33,10 @@ const PRICED_ITEMS = [
   { id: 'yard_full', name: 'Yard Debris (Full Truck)', icon: '🌳', price: 899 },
 ]
 
-// Items BLOCKED for NJ ZIP codes (solid waste / entulho — regulated by NJDEP)
-// Furniture, appliances, electronics are ALLOWED because they are donation-eligible
+// NJDEP compliance: items that may NOT be offered to a New Jersey ZIP at all.
+// These are hard-removed from the rendered DOM (not hidden via CSS) when the
+// user types an NJ ZIP. Furniture/appliances/electronics are still offered
+// only via Donation Pickup, never via Hauling/Junk Removal.
 const NJ_BLOCKED_ITEMS = new Set([
   'garage_small', 'garage_medium', 'garage_large',
   'yard_partial', 'yard_full',
@@ -49,10 +51,10 @@ export default function PriceCalculator() {
   // Quantity map: itemId -> quantity (0 means not selected)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({})
   const [showModal, setShowModal] = useState(false)
-  // NJ ZIP code compliance check
+  // NJDEP compliance: NJ ZIP detection drives hard DOM removal of any service
+  // option tied to "junk", "hauling", "removal", or "cleanout".
   const [userZip, setUserZip] = useState('')
   const isNJ = isNJZip(userZip)
-  const junkRemovalBlocked = isNJ
 
   const setQuantity = useCallback((itemId: string, qty: number) => {
     setItemQuantities(prev => {
@@ -218,10 +220,11 @@ export default function PriceCalculator() {
               onChange={(e) => {
                 const val = e.target.value.replace(/\D/g, '').slice(0, 5)
                 setUserZip(val)
-                // Auto-switch away from junk-removal if NJ ZIP detected
+                // NJDEP compliance: as soon as an NJ ZIP is typed, force the
+                // service away from anything resembling junk/hauling/removal.
                 if (isNJZip(val)) {
                   if (serviceType === 'junk-removal') {
-                    setServiceType('donation')
+                    setServiceType('labor')
                   }
                   // Clear any regulated (non-allowed) items for NJ
                   setItemQuantities(prev => {
@@ -236,10 +239,10 @@ export default function PriceCalculator() {
               placeholder="Enter your ZIP code"
               className="w-full sm:w-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
             />
-            {junkRemovalBlocked && (
+            {isNJ && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ Hauling and solid waste removal (Yard Debris, Garage Clearing) are not available in New Jersey (NJDEP regulation). Donation Pickup for furniture, appliances, and electronics is available. You can also choose Moving Labor or Furniture Assembly.
+                  In New Jersey, HaulKind offers Moving Labor, Furniture Assembly, Mattress Swap, and Donation Pickup. Other services are not available at this address.
                 </p>
               </div>
             )}
@@ -251,22 +254,23 @@ export default function PriceCalculator() {
               Service Type
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <button
-                onClick={() => { if (!junkRemovalBlocked) setServiceType('junk-removal') }}
-                disabled={junkRemovalBlocked}
-                className={`relative p-4 rounded-lg border-2 text-left transition ${
-                  junkRemovalBlocked
-                    ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
-                    : serviceType === 'junk-removal'
+              {/* NJDEP compliance: Hauling / Junk Removal option is hard-removed
+                  from the rendered DOM whenever the user's ZIP is in NJ.
+                  Inspector requirement: must NOT be present in inspect-element. */}
+              {!isNJ && (
+                <button
+                  onClick={() => setServiceType('junk-removal')}
+                  className={`relative p-4 rounded-lg border-2 text-left transition ${
+                    serviceType === 'junk-removal'
                       ? 'border-teal-500 bg-teal-50'
                       : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
-                <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
-                <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
-                {junkRemovalBlocked && <div className="text-xs text-red-500 mt-1 font-medium">Not available for NJ addresses</div>}
-              </button>
+                  }`}
+                >
+                  <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
+                  <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
+                  <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
+                </button>
+              )}
               <button
                 onClick={() => setServiceType('donation')}
                 className={`relative p-4 rounded-lg border-2 text-left transition ${

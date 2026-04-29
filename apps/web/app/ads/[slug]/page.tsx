@@ -25,7 +25,9 @@ export function generateMetadata({ params }: PageProps): Metadata {
 
 export default function AdsPage({ params }: PageProps) {
   const city = ADS_CITIES.find((c) => c.slug === params.slug)
-  if (!city) notFound()
+  // NJDEP compliance: refuse to render any New Jersey ads landing page
+  // (defense-in-depth — middleware also returns HTTP 410 for these paths).
+  if (!city || city.state === 'NJ') notFound()
 
   return (
     <AdsLandingPage

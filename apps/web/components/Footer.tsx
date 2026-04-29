@@ -19,7 +19,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm mb-4">
-              Fast local moving help, furniture assembly &amp; donation pickups in Pennsylvania, New Jersey &amp; New York. Hauling services available in PA only. No memberships. Track your driver live.
+              Fast local moving help, furniture assembly &amp; donation pickups in Pennsylvania and New York. Hauling services available in PA only. No memberships. Track your driver live.
             </p>
             <a href="tel:+16094568188" className="text-teal-400 hover:text-teal-300 font-semibold text-sm transition">
               (609) 456-8188

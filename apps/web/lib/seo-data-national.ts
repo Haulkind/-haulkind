@@ -36,32 +36,32 @@ export function generateCityDescription(city: GeoCity): string {
 
 // ----- Slug utilities for nationwide scale -----
 
-// NJ compliance: these service categories must NOT generate pages for NJ cities
-const NJ_BLOCKED_CATEGORIES = new Set(['removal', 'cleanout'])
+// NJDEP compliance: NO service+city pages may be generated for ANY NJ city.
+// Inspector Chris Farrar (NJDEP) requires complete removal of all junk-removal
+// content tied to New Jersey. NJ paths return HTTP 410 Gone via middleware,
+// and these helpers refuse to resolve any NJ slug as a defense-in-depth check.
 
-/** Get all valid service+city slug combinations */
+/** Get all valid service+city slug combinations (NJ cities excluded entirely) */
 export function getAllSlugsNational(): string[] {
   const cities = getAllCities()
   const slugs: string[] = []
   for (const service of SERVICES) {
     for (const city of cities) {
-      // Skip waste-related services for NJ cities (NJDEP compliance)
-      if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) continue
+      if (city.stateAbbr === 'NJ') continue
       slugs.push(`${service.slug}-${city.slug}`)
     }
   }
   return slugs
 }
 
-/** Parse a slug back to service + city (works with nationwide data) */
+/** Parse a slug back to service + city (works with nationwide data; NJ refused) */
 export function parseSlugNational(slug: string): { service: ServiceData; city: GeoCity } | null {
   for (const service of SERVICES) {
     if (slug.startsWith(service.slug + '-')) {
       const citySlug = slug.slice(service.slug.length + 1)
       const city = getCityBySlug(citySlug)
       if (!city) continue
-      // Block waste-related service pages for NJ cities (NJDEP compliance)
-      if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) return null
+      if (city.stateAbbr === 'NJ') return null
       return { service, city }
     }
   }

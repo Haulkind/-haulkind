@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Mattress Swap & Removal Service | Same-Day | HaulKind',
-  description: 'Professional mattress removal and new mattress setup starting at $99. We remove your old mattress and set up the new one. Same-day available in PA, NJ & NY.',
+  description: 'Professional mattress removal and new mattress setup starting at $99. We remove your old mattress and set up the new one. Same-day available in PA & NY.',
   alternates: { canonical: 'https://haulkind.com/mattress-swap' },
   openGraph: {
     title: 'Mattress Swap Service — Starting at $99 | HaulKind',

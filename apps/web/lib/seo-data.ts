@@ -198,7 +198,7 @@ export const SERVICES: ServiceData[] = [
     name: 'Curbside Pickup',
     slug: 'curbside-pickup',
     shortName: 'curbside pickup',
-    description: 'Already moved your items to the curb but the city will not pick them up? HaulKind offers fast curbside pickup for bulky items, furniture, appliances, and general junk that municipal trash services do not handle.',
+    description: 'Already moved your items to the curb? HaulKind offers fast curbside pickup for bulky furniture, appliances, and household items.',
     category: 'pickup',
     items: ['Bulky furniture left at the curb', 'Mattresses and box springs', 'Large appliances', 'Bags of yard waste or debris', 'Construction materials and lumber', 'Old grills and outdoor equipment', 'Broken electronics', 'Bagged clothing and household items', 'Rolled carpeting', 'Boxes of household junk'],
     benefits: ['Fast same-day or next-day pickup', 'No need to be home for pickup', 'Lower cost since items are already outside', 'We clean up the area after pickup', 'Great for post-move or renovation cleanup'],
@@ -246,6 +246,7 @@ export function generateFAQs(service: ServiceData, city: CityData): { question: 
   ]
 
   // Add service-specific FAQ (only for non-NJ or non-waste services)
+  // NJ pages are 410 Gone — these branches never run for NJ cities.
   if (service.category === 'removal' && city.stateAbbr !== 'NJ') {
     faqs.push({
       question: `What happens to my items after ${service.shortName}?`,
@@ -281,16 +282,16 @@ export function generatePageContent(service: ServiceData, city: CityData) {
   return { slug, url, title, metaDescription, h1 }
 }
 
-// NJ compliance: these service categories must NOT generate pages for NJ cities
-const NJ_BLOCKED_CATEGORIES = new Set(['removal', 'cleanout'])
+// NJDEP compliance: NO service pages may be generated for ANY New Jersey city.
+// All NJ-targeted service pages must return HTTP 410 Gone (handled by middleware
+// + defense-in-depth notFound() in route handlers).
 
 // Get all valid slug combinations for static generation
 export function getAllSlugs(): string[] {
   const slugs: string[] = []
   for (const service of SERVICES) {
     for (const city of CITIES) {
-      // Skip waste-related services for NJ cities (NJDEP compliance)
-      if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) continue
+      if (city.stateAbbr === 'NJ') continue
       slugs.push(`${service.slug}-${city.slug}`)
     }
   }
@@ -302,8 +303,7 @@ export function parseSlug(slug: string): { service: ServiceData; city: CityData 
   for (const service of SERVICES) {
     for (const city of CITIES) {
       if (slug === `${service.slug}-${city.slug}`) {
-        // Block waste-related service pages for NJ cities (NJDEP compliance)
-        if (city.stateAbbr === 'NJ' && NJ_BLOCKED_CATEGORIES.has(service.category)) return null
+        if (city.stateAbbr === 'NJ') return null
         return { service, city }
       }
     }
