@@ -26,7 +26,6 @@ export default function MovingLaborPage() {
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: 'Moving Labor',
     url: 'https://haulkind.com/services/moving-labor',
@@ -185,9 +184,9 @@ export default function MovingLaborPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-3xl font-bold mb-6">Moving Labor Service Areas</h2>
           <p className="text-gray-700 text-lg mb-6">
-            HaulKind moving helpers are available across the tri-state area. Whether you're in downtown Philadelphia, a Brooklyn walk-up, or a suburban home in New Jersey, we've got you covered.
+            HaulKind moving helpers are available across Pennsylvania and New York. Whether you're in downtown Philadelphia, a Brooklyn walk-up, or a suburban home outside Pittsburgh, we've got you covered.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-bold text-lg mb-3 text-primary-600">Pennsylvania</h3>
               <ul className="space-y-1 text-gray-700">
@@ -200,12 +199,7 @@ export default function MovingLaborPage() {
                 <li>New York City</li><li>Buffalo</li><li>Rochester</li><li>Syracuse</li><li>Albany</li><li>Yonkers</li><li>White Plains</li><li>Long Island</li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 text-primary-600">New Jersey</h3>
-              <ul className="space-y-1 text-gray-700">
-                <li>Newark</li><li>Jersey City</li><li>Paterson</li><li>Elizabeth</li><li>Trenton</li><li>Edison</li><li>Woodbridge</li><li>Cherry Hill</li>
-              </ul>
-            </div>
+
           </div>
         </div>
       </section>

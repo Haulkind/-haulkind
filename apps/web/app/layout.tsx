@@ -104,7 +104,6 @@ export default function RootLayout({
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     serviceType: ['Hauling', 'Moving Labor', 'Donation Pickup', 'Furniture Assembly', 'Mattress Swap', 'Loading & Unloading'],
     priceRange: '$79 - $529',

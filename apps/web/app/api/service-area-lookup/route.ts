@@ -5,7 +5,11 @@ const RAILWAY_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-pr
 const TIMEOUT_MS = 8000;
 
 // Approved states - all addresses in these states are automatically covered
-const APPROVED_STATES = ['NJ', 'MA', 'PA', 'NY', 'CT'];
+// NJDEP compliance: NJ removed from approved states. HaulKind does not service
+// New Jersey for hauling/junk-removal. Drivers in NJ may still pass through NJ
+// addresses for Donation Pickup pickup-in-PA-deliver-in-NY style flows, but
+// this API is for service-area approval and must not auto-approve NJ.
+const APPROVED_STATES = ['MA', 'PA', 'NY', 'CT'];
 
 export async function GET(request: NextRequest) {
   // Rate limit: 30 lookups per minute per IP

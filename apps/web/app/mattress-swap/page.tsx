@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://haulkind.com/mattress-swap' },
   openGraph: {
     title: 'Mattress Swap Service — Starting at $99 | HaulKind',
-    description: 'We remove your old mattress and set up your new one. Same-day service. No hidden fees. Serving Philadelphia, NJ & NY.',
+    description: 'We remove your old mattress and set up your new one. Same-day service. No hidden fees. Serving Philadelphia, PA & NY.',
     url: 'https://haulkind.com/mattress-swap',
     type: 'website',
   },
@@ -69,7 +69,7 @@ export default function MattressSwapLandingPage() {
       url: 'https://haulkind.com',
       telephone: '(609) 456-8188',
     },
-    areaServed: ['Philadelphia, PA', 'Camden, NJ', 'Cherry Hill, NJ', 'Trenton, NJ', 'South Jersey', 'NYC Metro Area'],
+    areaServed: ['Philadelphia, PA', 'Pittsburgh, PA', 'Allentown, PA', 'Bucks County, PA', 'Montgomery County, PA', 'Delaware County, PA', 'New York, NY', 'Brooklyn, NY', 'Buffalo, NY', 'Rochester, NY'],
     offers: {
       '@type': 'Offer',
       price: '99',
@@ -213,7 +213,7 @@ export default function MattressSwapLandingPage() {
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-3xl font-bold mb-6">Areas We Serve</h2>
             <p className="text-gray-600 mb-4">
-              Philadelphia, Camden NJ, Cherry Hill, Mount Laurel, Trenton, Princeton, and the greater NYC metro area.
+              Philadelphia, Pittsburgh, Allentown, Bucks County, Montgomery County, Delaware County, and the greater NYC metro area.
             </p>
             <Link href="/service-areas" className="text-purple-600 font-semibold hover:text-purple-700 transition">
               See all service areas &rarr;

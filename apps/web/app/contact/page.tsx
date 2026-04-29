@@ -29,7 +29,6 @@ export default function ContactPage() {
     areaServed: [
       { '@type': 'State', name: 'Pennsylvania' },
       { '@type': 'State', name: 'New York' },
-      { '@type': 'State', name: 'New Jersey' },
     ],
     openingHours: 'Mo-Su 07:00-19:00',
   }

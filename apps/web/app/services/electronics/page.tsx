@@ -178,7 +178,7 @@ export default function ElectronicsPage() {
               </ul>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-6">Electronics pickup services are currently available in Pennsylvania only. In New Jersey, HaulKind offers Furniture Assembly, Moving Labor, and Donation Pickup.</p>
+          <p className="text-sm text-gray-500 mt-6">Electronics pickup services are currently available in Pennsylvania and New York only.</p>
         </div>
       </section>
 
@@ -237,14 +237,6 @@ export default function ElectronicsPage() {
         </div>
       </section>
 
-      {/* NJ Disclaimer */}
-      <section className="py-6 bg-gray-100">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <p className="text-xs text-gray-500 leading-relaxed">
-            In New Jersey, HaulKind strictly operates as a courier providing Furniture Assembly, Moving Labor, and Usable Furniture Donation Drop-offs only. We do not handle or transport solid waste in NJ.
-          </p>
-        </div>
-      </section>
     </div>
   )
 }
