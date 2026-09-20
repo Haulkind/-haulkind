@@ -364,13 +364,13 @@ export default function DashboardPage() {
               aria-label="Available for orders"
               onClick={toggleOnline}
               disabled={toggling}
-              className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+              className={`relative w-12 h-7 shrink-0 rounded-full transition-colors duration-200 ${
                 isOnline ? 'bg-green-500' : 'bg-gray-500'
               } disabled:opacity-50`}
             >
               <span
-                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
-                  isOnline ? 'translate-x-5' : 'translate-x-0.5'
+                className={`absolute left-0.5 top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
+                  isOnline ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>
