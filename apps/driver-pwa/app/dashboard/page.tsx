@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOrder, getProfile, sendDriverLocation, type Order } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import Sidebar from '@/components/Sidebar'
+import DriverLogo from '@/components/DriverLogo'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
@@ -365,7 +366,7 @@ export default function DashboardPage() {
 
           {/* Title + order count */}
           <div className="text-white text-center">
-            <h1 className="text-lg font-bold leading-tight">Haulkind</h1>
+            <h1><DriverLogo size={40} className="mx-auto" /></h1>
             <p className="text-xs text-primary-200">{nearbyCount} orders nearby</p>
           </div>
 

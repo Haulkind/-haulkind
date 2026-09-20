@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import DriverLogo from '@/components/DriverLogo'
 
 export default function InstallPage() {
   const [isIOS, setIsIOS] = useState(false)
@@ -20,9 +21,7 @@ export default function InstallPage() {
   if (isStandalone) {
     return (
       <div className="min-h-screen bg-primary-900 text-white flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
-          <span className="text-4xl font-black text-white">HK</span>
-        </div>
+        <DriverLogo className="mb-6" priority />
         <h1 className="text-2xl font-bold mb-3">App Installed!</h1>
         <p className="text-primary-200 mb-8">HaulKind Drive is ready to use.</p>
         <Link
@@ -39,9 +38,7 @@ export default function InstallPage() {
     <div className="min-h-screen bg-primary-900 text-white">
       {/* Hero */}
       <div className="px-6 pt-16 pb-8 text-center">
-        <div className="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-          <span className="text-5xl font-black text-white">HK</span>
-        </div>
+        <DriverLogo size={96} className="mx-auto mb-6" priority />
         <h1 className="text-3xl font-black mb-2">HaulKind Drive</h1>
         <p className="text-primary-200 text-lg">Your driver app for iOS</p>
       </div>
