@@ -412,7 +412,7 @@ export function registerWebCompatRoutes(app: Express) {
       }
 
       const updatedResult = await pool.query(
-        "SELECT *, " + (tableName === "jobs" ? SERVICE_DATE_SQL : "pickup_date::date::text") + " AS service_date FROM " + tableName + " WHERE id::text = $1",
+        "SELECT *, " + (tableName === "jobs" ? SERVICE_DATE_SQL + " AS service_date" : "pickup_date::date::text AS service_date, false AS eta_supported") + " FROM " + tableName + " WHERE id::text = $1",
         [id]
       );
       const updatedOrder = updatedResult.rows[0];
