@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: 'HaulKind - Track Your Order',
   description: 'Track your order in real time, manage bookings, and get notifications.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/favicon-32.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
   robots: {
     index: false,
     follow: false,
@@ -42,7 +46,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-KNBG3C48');
         `}</Script>
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-KCC7J1ZT6Y" strategy="afterInteractive" />
