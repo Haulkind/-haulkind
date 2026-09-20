@@ -11,7 +11,7 @@ export default function DriverLogo({
 }) {
   return (
     <Image
-      src="/icons/icon-512.png"
+      src="/icons/icon-512.png?v=2"
       alt="HaulKind Drive"
       width={size}
       height={size}
