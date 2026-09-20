@@ -9,6 +9,7 @@ import Sidebar from '@/components/Sidebar'
 import DriverLogo from '@/components/DriverLogo'
 import { trackDriverLocation, type LocationStatus } from '@/lib/driverLocation'
 import { formatPayout } from '@/lib/driverPayout'
+import { formatDistance, getOrderDistance } from '@/lib/orderLocation'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
@@ -95,18 +96,6 @@ function showBrowserNotification(count: number, firstOrder: Order | undefined) {
   }
 }
 
-// Haversine distance in miles between two lat/lng pairs
-function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3958.8 // Earth radius in miles
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 // Check if a date string is today
 function isToday(dateStr: string | undefined | null): boolean {
   if (!dateStr) return true
@@ -121,7 +110,6 @@ export default function DashboardPage() {
   const [toggling, setToggling] = useState(false)
   const [availableOrders, setAvailableOrders] = useState<Order[]>([])
   const [todayOrders, setTodayOrders] = useState<Order[]>([])
-  const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
   const [tab, setTab] = useState<OrderTab>('all')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -251,8 +239,6 @@ export default function DashboardPage() {
       hasCompletedFirstFetchRef.current = true
       previousOrderIdsRef.current = currentIds
       setAvailableOrders(newAvailable)
-      // Driver's own active orders (assigned/accepted, not completed/cancelled)
-      setAllOrders(myOrdersList)
       setTodayOrders(myOrdersList)
     } catch (err) {
       console.error('Fetch orders error:', err)
@@ -266,9 +252,12 @@ export default function DashboardPage() {
     if (!token) return
     setToggling(true)
     try {
-      await setOnlineStatus(token, !isOnline, lat || undefined, lng || undefined)
+      await setOnlineStatus(token, !isOnline, lat ?? undefined, lng ?? undefined)
       setIsOnline(!isOnline)
-      if (isOnline) setAvailableOrders([])
+      if (isOnline) {
+        setAvailableOrders([])
+        setTodayOrders([])
+      }
     } catch (err: any) {
       if (err.status === 401) {
         alert('Session expired. Please log in again.')
@@ -317,26 +306,24 @@ export default function DashboardPage() {
     )
   }
 
-  const nearbyCount = availableOrders.length
-
-  // Tab logic (matches native app behavior):
-  // "New" tab = available unassigned orders (pending, no driver assigned)
-  // "Today" tab = driver's OWN accepted orders scheduled for TODAY only
-  // "All" tab = driver's OWN active orders (all dates, assigned/accepted)
-  // After cancel: order disappears from All/Today, appears in New
-  // After accept: order disappears from New, appears in All/Today
+  const nearbyOrders = availableOrders.filter(order => {
+    const distance = getOrderDistance(order, lat, lng)
+    return distance === null || distance <= 80
+  })
+  const newCount = nearbyOrders.filter(order => !order.created_at || Date.now() - new Date(order.created_at).getTime() < 86400000).length
   const todayFiltered = todayOrders.filter(o => {
-    const scheduledFor = o.scheduled_for || o.scheduledFor
+    const scheduledFor = o.scheduled_for || o.scheduledFor || o.created_at
     return isToday(scheduledFor)
   })
-  const currentOrders = tab === 'today' ? todayFiltered : tab === 'new' ? availableOrders : allOrders
+  const currentOrders = (isOnline ? tab === 'today' ? todayFiltered : nearbyOrders : [])
+    .slice().sort((a, b) => (getOrderDistance(a, lat, lng) ?? Infinity) - (getOrderDistance(b, lat, lng) ?? Infinity))
 
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col bg-white">
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="z-10 bg-primary-900 shrink-0">
+      <div className="z-10 bg-primary-800 shrink-0">
         <div className="flex items-center justify-between px-4 pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
           {/* Hamburger menu */}
           <button
@@ -350,9 +337,9 @@ export default function DashboardPage() {
           </button>
 
           {/* Title + order count */}
-          <div className="text-white text-center">
-            <h1><DriverLogo size={40} className="mx-auto" /></h1>
-            <p className="text-xs text-primary-200">{nearbyCount} orders nearby</p>
+          <div className="text-white flex-1 ml-3">
+            <h1><DriverLogo size={40} /></h1>
+            <p className="text-xs text-primary-200">{isOnline ? `${currentOrders.length} orders nearby` : "You're offline"}</p>
           </div>
 
           {/* Online toggle */}
@@ -381,20 +368,19 @@ export default function DashboardPage() {
       </div>
 
       <div className="relative flex-1 min-h-0">
-        <MapView lat={lat} lng={lng} accuracy={accuracy} orders={availableOrders} />
-        <button
-          onClick={() => setLocationAttempt(value => value + 1)}
-          className={`absolute top-2 left-3 right-3 z-10 bg-white rounded-lg px-3 py-2 shadow text-xs text-left ${locationStatus === 'live' ? 'text-green-700' : 'text-gray-700'}`}
-        >
-          {{
-            locating: 'Finding your location…',
-            live: 'Live GPS',
-            approximate: `Approximate location${accuracy !== null ? ` · ±${Math.round(accuracy)} m` : ''}`,
-            denied: 'Location blocked · Allow location in browser settings, then retry',
-            unavailable: 'Location unavailable · Check GPS and retry',
-            stale: 'Waiting for a fresh GPS signal · Retry',
-          }[locationStatus]}
-        </button>
+        <MapView
+          lat={lat}
+          lng={lng}
+          accuracy={accuracy}
+          orders={currentOrders}
+          locationStatus={locationStatus}
+          onRetryLocation={() => {
+            if (locationStatus === 'denied') {
+              alert('Allow location for this site in your browser settings to show your distance to orders.')
+            }
+            setLocationAttempt(value => value + 1)
+          }}
+        />
       </div>
 
       <div className="z-10 bg-white border-t border-gray-200 pt-3 shrink-0 flex flex-col min-h-0" style={{ maxHeight: '45%', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
@@ -412,9 +398,9 @@ export default function DashboardPage() {
               }`}
             >
               {t.charAt(0).toUpperCase() + t.slice(1)}
-              {t === 'new' && nearbyCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                  {nearbyCount}
+              {t === 'new' && newCount > 0 && (
+                <span className="inline-flex ml-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full items-center justify-center">
+                  {newCount}
                 </span>
               )}
             </button>
@@ -423,42 +409,43 @@ export default function DashboardPage() {
         </div>
 
         {/* Orders list */}
-        <div className="overflow-y-auto min-h-0 px-4 pb-3">
+        <div className="overflow-y-auto min-h-0 pb-3">
           {currentOrders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-lg font-bold text-gray-900">
-                {tab === 'new' && !isOnline ? 'Go online to see new orders' : 'No orders nearby'}
+                {!isOnline ? 'Go online to see orders' : 'No orders nearby'}
               </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  {tab === 'new' ? 'Orders within 80 miles will appear here' : tab === 'today' ? 'No accepted orders for today' : tab === 'all' ? 'Accept orders from the New tab' : 'Check back soon'}
+                  {tab === 'today' ? 'No accepted orders for today' : 'Orders within 80 miles will appear here'}
                 </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3">
               {currentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                  className="w-[78vw] shrink-0 snap-start bg-white rounded-2xl p-4 border border-gray-200 shadow-md"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      {tab === 'new' && (
-                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">NEW</span>
-                      )}
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusColor(order.status)}`}>
-                        {order.status?.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {formatServiceTypeShort(order.service_type || order.serviceType || 'HAUL_AWAY')}
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400">You earn:</p>
+                      <span className="text-[28px] font-bold text-green-600">
+                        ${formatPayout(order)}
                       </span>
                     </div>
-                    <span className="text-lg font-bold text-green-600">
-                      ${formatPayout(order)}
-                    </span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {(!order.created_at || Date.now() - new Date(order.created_at).getTime() < 86400000) && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">NEW</span>
+                      )}
+                      <span className="bg-blue-100 text-blue-700 rounded-xl px-2.5 py-1 text-xs font-semibold">
+                        {formatDistance(getOrderDistance(order, lat, lng))}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-700 truncate">
-                    {order.pickup_address || order.pickupAddress || 'Address not available'}
-                  </p>
+                  <p className="text-base font-bold text-gray-900 mb-1">{order.service_type || order.serviceType || 'HAUL_AWAY'}</p>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusColor(order.status)}`}>
+                    {order.status?.replace(/_/g, ' ').toUpperCase()}
+                  </span>
                   {order.customer_name && (
                     <p className="text-xs text-gray-500 mt-1">Customer: {order.customer_name}</p>
                   )}
@@ -483,7 +470,7 @@ export default function DashboardPage() {
                         }
                       } catch {}
                     }
-                    return null
+                    return desc ? <p className="text-xs text-gray-500 mt-1 truncate">{desc}</p> : null
                   })()}
                   {(() => {
                     const pu = order.photo_urls || order.photos
@@ -495,24 +482,17 @@ export default function DashboardPage() {
                     }
                     return null
                   })()}
-                  {/* Distance from driver */}
-                  {(() => {
-                    const oLat = Number(order.pickup_lat)
-                    const oLng = Number(order.pickup_lng)
-                    if (lat && lng && oLat && oLng) {
-                      const dist = getDistanceMiles(lat, lng, oLat, oLng)
-                      return <p className="text-xs text-blue-500 mt-1">📍 {dist.toFixed(1)} mi away</p>
-                    }
-                    return null
-                  })()}
                   <p className="text-xs text-gray-400 mt-1">{formatTime(order)}</p>
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    📍 {order.pickup_address || order.pickupAddress || 'Address not available'}
+                  </p>
 
                           {/* Action buttons for new/available orders */}
-                          {tab === 'new' && (
+                          {tab !== 'today' && (
                             <div className="mt-3 space-y-2">
                               <button
                                 onClick={() => router.push(`/orders/${order.id}`)}
-                                className="w-full py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition border border-blue-200"
+                                className="w-full py-2.5 text-sm text-white bg-blue-600 font-semibold hover:bg-blue-700 rounded-lg transition"
                               >
                                 View Details
                               </button>
@@ -535,13 +515,12 @@ export default function DashboardPage() {
                             </div>
                           )}
 
-                          {/* View details / manage for today/all (driver's own orders) */}
-                          {tab !== 'new' && (
+                          {tab === 'today' && (
                             <button
                               onClick={() => router.push(`/orders/${order.id}`)}
                               className="w-full mt-3 py-2 text-sm text-primary-600 font-semibold hover:bg-primary-50 rounded-lg transition"
                             >
-                              {tab === 'all' || tab === 'today' ? 'Manage Order' : 'View Details'}
+                              Manage Order
                             </button>
                           )}
                 </div>
@@ -569,18 +548,6 @@ function statusColor(status: string): string {
   }
 }
 
-function formatServiceTypeShort(type: string): string {
-  const labels: Record<string, string> = {
-    'HAUL_AWAY': 'Hauling',
-    'LABOR_ONLY': 'Moving Labor',
-    'MATTRESS_SWAP': 'Mattress Swap',
-    'FURNITURE_ASSEMBLY': 'Assembly',
-    'DUMPSTER_RENTAL': 'Dumpster',
-    'DONATION_PICKUP': 'Donation',
-  }
-  return labels[type.toUpperCase()] || type.replace(/_/g, ' ')
-}
-
 // Strip pricing info — drivers should only see items, not prices/discounts/totals
 function stripDriverPricing(text: string): string {
   if (!text) return ''
@@ -592,13 +559,17 @@ function stripDriverPricing(text: string): string {
 }
 
 function formatTime(order: Order): string {
-  const d = order.scheduled_for || order.scheduledFor
-  if (!d) return ''
-  try {
-    const date = new Date(d)
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
-      ' · ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  } catch {
-    return ''
+  const d = order.scheduled_for || order.scheduledFor || order.created_at
+  const date = d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible'
+  const windows: Record<string, string> = {
+    ALL_DAY: 'All Day (8AM - 8PM)',
+    MORNING: 'Morning (8AM - 12PM)',
+    AFTERNOON: 'Afternoon (12PM - 4PM)',
+    EVENING: 'Evening (4PM - 8PM)',
   }
+  const windowValue = order.pickup_time_window || order.time_window || ''
+  const scheduled = order.scheduled_for || order.scheduledFor
+  const fallback = scheduled ? new Date(scheduled).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'Any time'
+  const windowLabel = windows[windowValue] || windowValue || fallback
+  return `${date} · ${windowLabel}`
 }

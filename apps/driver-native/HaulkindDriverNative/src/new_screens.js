@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator, Alert,
@@ -289,13 +289,13 @@ function formatTime(dateStr) {
 
 // Convert pickup_time_window to human-readable label
 function formatTimeWindow(order) {
-  const tw = order?.pickup_time_window;
+  const tw = order?.pickup_time_window || order?.time_window;
   if (tw === "ALL_DAY") return "All Day (8AM - 8PM)";
   if (tw === "MORNING") return "Morning (8AM - 12PM)";
   if (tw === "AFTERNOON") return "Afternoon (12PM - 4PM)";
   if (tw === "EVENING") return "Evening (4PM - 8PM)";
   // Fallback to raw time if no time_window stored
-  return formatTime(order?.scheduled_for);
+  return tw || formatTime(order?.scheduled_for || order?.scheduledFor);
 }
 
 function isToday(dateStr) {
@@ -556,7 +556,6 @@ export function HomeScreen({ navigation, route }) {
   const [isOnline, setIsOnline] = useState(false);
   const [orders, setOrders] = useState([]);
   const [myTodayOrders, setMyTodayOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [driverLocation, setDriverLocation] = useState(null);
@@ -610,8 +609,11 @@ export function HomeScreen({ navigation, route }) {
   async function enrichOrdersWithLocation(rawOrders, loc) {
     return Promise.all(rawOrders.map(async (order) => {
       let coords = null;
-      if (order.pickup_lat && order.pickup_lng) {
-        coords = { latitude: parseFloat(order.pickup_lat), longitude: parseFloat(order.pickup_lng) };
+      const latitude = order.pickup_lat == null || order.pickup_lat === "" ? NaN : Number(order.pickup_lat);
+      const longitude = order.pickup_lng == null || order.pickup_lng === "" ? NaN : Number(order.pickup_lng);
+      if (Number.isFinite(latitude) && Math.abs(latitude) <= 90 &&
+          Number.isFinite(longitude) && Math.abs(longitude) <= 180) {
+        coords = { latitude, longitude };
       } else if (order.pickup_address) {
         coords = await geocodeAddress(order.pickup_address);
       }
@@ -628,7 +630,7 @@ export function HomeScreen({ navigation, route }) {
   async function doFetchOrders() {
     const online = isOnlineRef.current;
     const loc = driverLocationRef.current;
-    if (!online) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); setLoading(false); return; }
+    if (!online) { setOrders([]); setMyTodayOrders([]); setLoading(false); return; }
     try {
       // Fetch available orders (unassigned) for ALL and NEW tabs
       const data = await apiGet("/driver/orders/available");
@@ -637,7 +639,7 @@ export function HomeScreen({ navigation, route }) {
       const enriched = await enrichOrdersWithLocation(rawOrders, loc);
 
       const withinRadius = enriched.filter((o) => o.distance === null || o.distance <= RADIUS_MILES);
-      withinRadius.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+      withinRadius.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
       console.log('[FETCH] After radius filter:', withinRadius.length, 'of', enriched.length);
 
       // Vibrate and show notification for new orders
@@ -664,7 +666,7 @@ export function HomeScreen({ navigation, route }) {
       }
       hasCompletedFirstFetchRef.current = true;
       previousOrderIdsRef.current = currentIds;
-      setOrders(withinRadius);
+      setOrders(enriched);
 
       // Fetch driver's own accepted/assigned orders for TODAY tab
       try {
@@ -672,8 +674,8 @@ export function HomeScreen({ navigation, route }) {
         const myRaw = myData?.orders || [];
         const myEnriched = await enrichOrdersWithLocation(myRaw, loc);
         // Only keep today's orders for the TODAY tab
-        const todayOnly = myEnriched.filter((o) => isToday(o.scheduled_for || o.created_at));
-        todayOnly.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+        const todayOnly = myEnriched.filter((o) => isToday(o.scheduled_for || o.scheduledFor || o.created_at));
+        todayOnly.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
         setMyTodayOrders(todayOnly);
       } catch (e) {
         console.log("My orders fetch error:", e);
@@ -696,7 +698,7 @@ export function HomeScreen({ navigation, route }) {
         fetchOrdersRef.current?.();
       }, REFRESH_INTERVAL);
     } else {
-      setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); setLoading(false);
+      setOrders([]); setMyTodayOrders([]); setLoading(false);
     }
     return () => { if (refreshRef.current) { clearInterval(refreshRef.current); refreshRef.current = null; } };
   }, [isOnline]);
@@ -726,20 +728,27 @@ export function HomeScreen({ navigation, route }) {
     }
   }, [route?.params?.refreshTs]);
 
-  // Apply filter
-  useEffect(() => {
-    if (filter === "TODAY") {
-      // Today = only driver's own accepted/assigned orders for today
-      setFilteredOrders([...myTodayOrders]);
-    } else if (filter === "NEW") {
-      // Show ALL available (unassigned) orders in NEW tab — same as ALL but labeled "New"
-      // This ensures cancelled orders that return to available always appear here
-      setFilteredOrders([...orders]);
-    } else {
-      // ALL = all available (unassigned) orders
-      setFilteredOrders([...orders]);
-    }
-  }, [orders, myTodayOrders, filter]);
+  const nearbyOrders = useMemo(() => {
+    const updated = orders.map(order => ({
+      ...order,
+      distance: driverLocation && order.coords
+        ? getDistanceMiles(driverLocation.latitude, driverLocation.longitude, order.coords.latitude, order.coords.longitude)
+        : null,
+    }));
+    return updated.filter(order => order.distance === null || order.distance <= RADIUS_MILES)
+      .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+  }, [orders, driverLocation]);
+
+  const filteredOrders = useMemo(() => {
+    if (!isOnline) return [];
+    if (filter !== "TODAY") return nearbyOrders;
+    return myTodayOrders.map(order => ({
+      ...order,
+      distance: driverLocation && order.coords
+        ? getDistanceMiles(driverLocation.latitude, driverLocation.longitude, order.coords.latitude, order.coords.longitude)
+        : null,
+    })).sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+  }, [isOnline, filter, nearbyOrders, myTodayOrders, driverLocation]);
 
   // When switching to TODAY, refresh immediately (so rescheduled orders move right away)
   useEffect(() => {
@@ -783,7 +792,7 @@ export function HomeScreen({ navigation, route }) {
       }
       return;
     }
-    if (!newStatus) { setOrders([]); setMyTodayOrders([]); setFilteredOrders([]); }
+    if (!newStatus) { setOrders([]); setMyTodayOrders([]); }
   }
 
   async function acceptOrder(order) {
@@ -837,7 +846,7 @@ export function HomeScreen({ navigation, route }) {
 
   // Handle map messages (pin clicks)
   function onMapOrderPress(id) {
-    const order = orders.find((o) => o.id === id) || myTodayOrders.find((o) => o.id === id);
+    const order = filteredOrders.find((o) => String(o.id) === String(id));
     if (order) openOrderDetail(order);
   }
 
@@ -850,19 +859,26 @@ export function HomeScreen({ navigation, route }) {
     const distText = o.distance != null ? `${o.distance.toFixed(1)} mi` : "-- mi";
     return (
       <TouchableOpacity style={[styles.orderCard, index === 0 && { marginLeft: 16 }]} onPress={() => openOrderDetail(o)} activeOpacity={0.9}>
-        {o.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>NEW</Text></View>}
         <View style={styles.cardTopRow}>
           <View>
             <Text style={{ fontSize: 11, color: C.gray, fontWeight: "600" }}>You earn:</Text>
-            <Text style={styles.cardPrice}>${parseFloat(price).toFixed(0)}</Text>
+            <Text style={styles.cardPrice}>${parseFloat(price).toFixed(2)}</Text>
           </View>
-          <View style={styles.cardDistBadge}><Text style={styles.cardDistText}>{distText}</Text></View>
+          <View style={{ alignItems: "flex-end", gap: 6 }}>
+            {o.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>NEW</Text></View>}
+            <View style={styles.cardDistBadge}><Text style={styles.cardDistText}>{distText}</Text></View>
+          </View>
         </View>
         <Text style={styles.cardServiceType}>{o.service_type || "Haul Away"}</Text>
+        <Text style={styles.cardMeta}>{o.status?.replace(/_/g, " ").toUpperCase()}</Text>
+        {o.customer_name && <Text style={styles.cardMeta}>Customer: {o.customer_name}</Text>}
         <Text style={styles.cardDescription} numberOfLines={1}>{o.description || o.service_type || "Junk removal"}</Text>
+        {parsePhotoUrls(o.photo_urls || o.photos).length > 0 && (
+          <Text style={styles.cardMeta}>📷 {parsePhotoUrls(o.photo_urls || o.photos).length} customer photos</Text>
+        )}
         <View style={styles.cardDateRow}>
           <Text style={styles.cardIcon}>📅</Text>
-          <Text style={styles.cardMeta}>{formatDate(o.scheduled_for || o.created_at)}</Text>
+          <Text style={styles.cardMeta}>{formatDate(o.scheduled_for || o.scheduledFor || o.created_at)}</Text>
           <Text style={styles.cardIcon}>  🕐</Text>
           <Text style={styles.cardMeta}>{formatTimeWindow(o)}</Text>
         </View>
@@ -873,6 +889,16 @@ export function HomeScreen({ navigation, route }) {
         <TouchableOpacity style={styles.cardViewBtn} onPress={() => openOrderDetail(o)}>
           <Text style={styles.cardViewBtnText}>View Details</Text>
         </TouchableOpacity>
+        {filter !== "TODAY" && (
+          <View style={{ flexDirection: "row", marginTop: 8 }}>
+            <TouchableOpacity disabled={accepting} style={[styles.declineBtn, { paddingVertical: 10 }]} onPress={() => declineOrder(o)}>
+              <Text style={[styles.declineBtnText, { fontSize: 14 }]}>Decline</Text>
+            </TouchableOpacity>
+            <TouchableOpacity disabled={accepting} style={[styles.acceptBtn, { paddingVertical: 10 }]} onPress={() => acceptOrder(o)}>
+              <Text style={[styles.acceptBtnText, { fontSize: 14 }]}>Accept Order</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </TouchableOpacity>
     );
   }
@@ -884,7 +910,10 @@ export function HomeScreen({ navigation, route }) {
     if (!selectedOrder) return null;
     const o = selectedOrder;
     const price = o.estimated_price || o.final_price || "0";
-    const distText = o.distance != null ? `${o.distance.toFixed(1)} miles away` : "Distance unknown";
+    const distance = driverLocation && o.coords
+      ? getDistanceMiles(driverLocation.latitude, driverLocation.longitude, o.coords.latitude, o.coords.longitude)
+      : null;
+    const distText = distance !== null ? `${distance.toFixed(1)} miles away` : "Distance unknown";
     const timerColor = acceptTimer <= 10 ? C.danger : acceptTimer <= 30 ? C.warning : C.success;
     const timerPct = (acceptTimer / ACCEPT_TIMER_SECONDS) * 100;
 
@@ -986,7 +1015,7 @@ export function HomeScreen({ navigation, route }) {
               <View style={styles.detailMapWrap}>
                 <WebView
                   source={{ html: buildDetailMapHtml(o.coords.latitude, o.coords.longitude) }}
-                  applicationNameForUserAgent="HaulkindDriver/1.0.3 (+https://haulkind.com)"
+                  applicationNameForUserAgent="HaulkindDriver/1.0.4 (+https://haulkind.com)"
                   style={{ flex: 1 }}
                   scrollEnabled={false}
                 />
@@ -1043,15 +1072,6 @@ export function HomeScreen({ navigation, route }) {
   // ============================================================================
   // MAIN RENDER
   // ============================================================================
-  const locationLabel = {
-    locating: "Finding your location…",
-    live: "Live GPS",
-    approximate: `Approximate location${Number.isFinite(driverLocation?.accuracy) ? ` · ±${Math.round(driverLocation.accuracy)} m` : ""}`,
-    denied: "Allow location in Settings",
-    stale: "Waiting for a fresh GPS signal · Retry",
-    unavailable: "Location unavailable · Check GPS and retry",
-  }[locationStatus];
-
   return (
     <View style={[styles.homeContainer, { paddingBottom: isOnline ? 0 : insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={C.primaryDark} translucent={false} />
@@ -1078,17 +1098,23 @@ export function HomeScreen({ navigation, route }) {
 
       {/* MAP */}
       <View style={styles.mapContainer}>
-        <DriverMap location={driverLocation} orders={filteredOrders} radiusMiles={RADIUS_MILES} onOrderPress={onMapOrderPress} />
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel={locationLabel}
-          onPress={() => locationStatus === "denied" || locationStatus === "approximate"
-            ? Linking.openSettings()
-            : setLocationAttempt(attempt => attempt + 1)}
-          style={styles.locationStatus}
-        >
-          <Text style={{ color: locationStatus === "live" ? C.success : C.textSecondary, fontSize: 12 }}>{locationLabel}</Text>
-        </TouchableOpacity>
+        <DriverMap
+          location={driverLocation}
+          locationStatus={locationStatus}
+          onRetryLocation={() => {
+            if (locationStatus === "denied") {
+              Alert.alert("Location permission", "Allow location in Settings to show your distance to orders.", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Settings", onPress: () => Linking.openSettings() },
+              ]);
+            } else {
+              setLocationAttempt(attempt => attempt + 1);
+            }
+          }}
+          orders={filteredOrders}
+          radiusMiles={RADIUS_MILES}
+          onOrderPress={onMapOrderPress}
+        />
 
         {!isOnline && (
           <View style={styles.offlineOverlay}>
@@ -1112,8 +1138,8 @@ export function HomeScreen({ navigation, route }) {
                 <Text style={[styles.filterTabText, filter === f && styles.filterTabTextActive]}>
                   {f === "TODAY" ? "Today" : f === "ALL" ? "All" : "New"}
                 </Text>
-                {f === "NEW" && orders.filter((o) => o.isNew).length > 0 && (
-                  <View style={styles.filterBadge}><Text style={styles.filterBadgeText}>{orders.filter((o) => o.isNew).length}</Text></View>
+                {f === "NEW" && nearbyOrders.filter((o) => o.isNew).length > 0 && (
+                  <View style={styles.filterBadge}><Text style={styles.filterBadgeText}>{nearbyOrders.filter((o) => o.isNew).length}</Text></View>
                 )}
               </TouchableOpacity>
             ))}
@@ -1184,7 +1210,6 @@ const styles = StyleSheet.create({
 
   // Map
   mapContainer: { flex: 1 },
-  locationStatus: { position: "absolute", top: 10, left: 12, right: 12, backgroundColor: C.white, borderRadius: 8, padding: 10, elevation: 2, zIndex: 2 },
   mapLoading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.grayLight },
   mapLoadingText: { marginTop: 8, color: C.textSecondary, fontSize: 14 },
   offlineOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
@@ -1210,7 +1235,7 @@ const styles = StyleSheet.create({
 
   // Cards
   orderCard: { width: CARD_WIDTH, backgroundColor: C.white, borderRadius: 16, padding: 16, marginRight: 12, marginBottom: 16, borderWidth: 1, borderColor: C.border, elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
-  newBadge: { position: "absolute", top: 12, right: 12, backgroundColor: C.newBadge, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, zIndex: 1 },
+  newBadge: { backgroundColor: C.newBadge, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 },
   newBadgeText: { color: C.white, fontSize: 10, fontWeight: "bold", letterSpacing: 0.5 },
   cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   cardPrice: { fontSize: 28, fontWeight: "bold", color: C.success },
