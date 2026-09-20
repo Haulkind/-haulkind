@@ -7,6 +7,7 @@ import { setOnlineStatus, getAvailableOrders, getMyOrders, acceptOrder, rejectOr
 import dynamic from 'next/dynamic'
 import Sidebar from '@/components/Sidebar'
 import DriverLogo from '@/components/DriverLogo'
+import { trackDriverLocation, type LocationStatus } from '@/lib/driverLocation'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
@@ -124,6 +125,9 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
+  const [accuracy, setAccuracy] = useState<number | null>(null)
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>('locating')
+  const [locationAttempt, setLocationAttempt] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const previousOrderIdsRef = useRef<Set<string>>(new Set())
   const hasCompletedFirstFetchRef = useRef(false)
@@ -133,49 +137,31 @@ export default function DashboardPage() {
     if (!isLoading && !token) router.replace('/login')
   }, [token, isLoading, router])
 
-  // Start GPS tracking + send location to backend for admin map
-  const gpsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const latRef = useRef<number | null>(null)
-  const lngRef = useRef<number | null>(null)
-  const gpsSendCountRef = useRef(0)
   useEffect(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return
-    if (!token) {
-      console.log('[PWA GPS] No token yet, skipping GPS tracking')
+    if (!navigator.geolocation) {
+      setLocationStatus('unavailable')
       return
     }
-    console.log('[PWA GPS] Starting GPS tracking with token:', token.substring(0, 20) + '...')
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setLat(pos.coords.latitude)
-        setLng(pos.coords.longitude)
-        latRef.current = pos.coords.latitude
-        lngRef.current = pos.coords.longitude
-        // Send to backend immediately on position change
-        sendDriverLocation(token, pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed)
-          .then((res) => {
-            gpsSendCountRef.current++
-            if (gpsSendCountRef.current <= 5 || gpsSendCountRef.current % 10 === 0) {
-              console.log(`[PWA GPS] Sent #${gpsSendCountRef.current}:`, pos.coords.latitude.toFixed(4), pos.coords.longitude.toFixed(4), 'result:', JSON.stringify(res))
-            }
-          })
-          .catch((err) => console.warn('[PWA GPS] FAILED to send location:', err?.message))
-      },
-      (err) => console.warn('[PWA GPS] Geolocation error:', err.message),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-    )
-    // Send every 15 seconds as a heartbeat (even if position hasn't changed)
-    gpsIntervalRef.current = setInterval(() => {
-      if (latRef.current != null && lngRef.current != null) {
-        sendDriverLocation(token, latRef.current, lngRef.current)
-          .catch((err) => console.warn('[PWA GPS] Heartbeat failed:', err?.message))
-      }
-    }, 15000)
-    return () => {
-      navigator.geolocation.clearWatch(watchId)
-      if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current)
+    if (!token) return
+    let stopTracking: (() => void) | undefined
+    const start = () => {
+      stopTracking?.()
+      if (document.visibilityState !== 'visible') return
+      stopTracking = trackDriverLocation(navigator.geolocation, position => {
+        setLat(position.coords.latitude)
+        setLng(position.coords.longitude)
+        setAccuracy(position.coords.accuracy)
+        sendDriverLocation(token, position.coords.latitude, position.coords.longitude, position.coords.heading, position.coords.speed)
+          .catch(error => console.warn('[PWA GPS] Location sync failed:', error?.message))
+      }, setLocationStatus)
     }
-  }, [token])
+    start()
+    document.addEventListener('visibilitychange', start)
+    return () => {
+      stopTracking?.()
+      document.removeEventListener('visibilitychange', start)
+    }
+  }, [token, locationAttempt])
 
   // Fetch profile on mount to get real name, selfie, and online status
   useEffect(() => {
@@ -344,18 +330,15 @@ export default function DashboardPage() {
   const currentOrders = tab === 'today' ? todayFiltered : tab === 'new' ? availableOrders : allOrders
 
   return (
-    <div className="fixed inset-0 overflow-hidden">
+    <div className="fixed inset-0 overflow-hidden flex flex-col bg-white">
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Map (full screen) — always show available orders so drivers see nearby jobs */}
-      <MapView lat={lat} lng={lng} orders={availableOrders} />
-
-      {/* Top bar overlay */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-primary-900/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 pt-12 pb-3">
+      <div className="z-10 bg-primary-900 shrink-0">
+        <div className="flex items-center justify-between px-4 pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
           {/* Hamburger menu */}
           <button
+            aria-label="Open navigation menu"
             onClick={() => setSidebarOpen(true)}
             className="text-white p-1"
           >
@@ -376,6 +359,9 @@ export default function DashboardPage() {
               {isOnline ? 'ONLINE' : 'OFFLINE'}
             </span>
             <button
+              role="switch"
+              aria-checked={isOnline}
+              aria-label="Available for orders"
               onClick={toggleOnline}
               disabled={toggling}
               className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
@@ -392,15 +378,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom sheet */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-2xl shadow-2xl" style={{ maxHeight: '45vh' }}>
-        {/* Drag handle */}
-        <div className="flex justify-center pt-2 pb-1">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
+      <div className="relative flex-1 min-h-0">
+        <MapView lat={lat} lng={lng} accuracy={accuracy} orders={availableOrders} />
+        <button
+          onClick={() => setLocationAttempt(value => value + 1)}
+          className={`absolute top-2 left-3 right-3 z-10 bg-white rounded-lg px-3 py-2 shadow text-xs text-left ${locationStatus === 'live' ? 'text-green-700' : 'text-gray-700'}`}
+        >
+          {{
+            locating: 'Finding your location…',
+            live: 'Live GPS',
+            approximate: `Approximate location${accuracy !== null ? ` · ±${Math.round(accuracy)} m` : ''}`,
+            denied: 'Location blocked · Allow location in browser settings, then retry',
+            unavailable: 'Location unavailable · Check GPS and retry',
+            stale: 'Waiting for a fresh GPS signal · Retry',
+          }[locationStatus]}
+        </button>
+      </div>
+
+      <div className="z-10 bg-white border-t border-gray-200 pt-3 shrink-0 flex flex-col min-h-0" style={{ maxHeight: '45%', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
 
         {/* Tab bar */}
-        <div className="flex items-center px-4 pb-2 gap-2">
+        <div className="flex items-center px-4 pb-2 gap-2 shrink-0">
           {(['today', 'all', 'new'] as OrderTab[]).map((t) => (
             <button
               key={t}
@@ -423,7 +421,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Orders list */}
-        <div className="overflow-y-auto px-4 pb-8" style={{ maxHeight: '32vh' }}>
+        <div className="overflow-y-auto min-h-0 px-4 pb-3">
           {currentOrders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-lg font-bold text-gray-900">

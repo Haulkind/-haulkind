@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, SafeAreaView,
-  StatusBar, ActivityIndicator, Alert, Animated, Dimensions,
+  View, Text, TouchableOpacity, Modal,
+  ActivityIndicator, Alert, Animated, useWindowDimensions,
   ScrollView, Pressable, Image,
 } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
@@ -17,6 +17,8 @@ import {
 } from './src/new_screens';
 import { OnboardingScreen } from './src/screens/new_OnboardingScreen';
 import driverLogo from './src/assets/haulkind-logo.png';
+import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
+import MenuIcon from './src/MenuIcon';
 
 const COLORS = {
   primary: '#1a3a4a',
@@ -29,16 +31,16 @@ const COLORS = {
   dark: '#111827',
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DRAWER_WIDTH = SCREEN_WIDTH * 0.78;
 const Stack = createNativeStackNavigator();
 
 // Side Menu (Modal-based drawer)
 function SideMenu({ visible, onClose, navigation }) {
+  const { width } = useWindowDimensions();
+  const drawerWidth = Math.min(width * 0.85, 340);
   const [driverName, setDriverName] = useState('Driver');
   const [driverEmail, setDriverEmail] = useState('');
   const [selfieUrl, setSelfieUrl] = useState(null);
-  const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const slideAnim = React.useRef(new Animated.Value(-drawerWidth)).current;
 
   useEffect(() => {
     loadDriverInfo();
@@ -52,9 +54,9 @@ function SideMenu({ visible, onClose, navigation }) {
         useNativeDriver: true,
       }).start();
     } else {
-      slideAnim.setValue(-DRAWER_WIDTH);
+      slideAnim.setValue(-drawerWidth);
     }
-  }, [visible]);
+  }, [visible, slideAnim, drawerWidth]);
 
   const loadDriverInfo = async () => {
     try {
@@ -92,7 +94,7 @@ function SideMenu({ visible, onClose, navigation }) {
 
   const handleClose = () => {
     Animated.timing(slideAnim, {
-      toValue: -DRAWER_WIDTH,
+      toValue: -drawerWidth,
       duration: 200,
       useNativeDriver: true,
     }).start(() => onClose());
@@ -121,23 +123,24 @@ function SideMenu({ visible, onClose, navigation }) {
   };
 
   const menuItems = [
-    { label: 'Dashboard', screen: 'Home', icon: 'H' },
-    { label: 'My Profile', screen: 'Profile', icon: 'P' },
-    { label: 'My Orders', screen: 'MyOrders', icon: 'M' },
-    { label: 'Order History', screen: 'OrderHistory', icon: 'O' },
-    { label: 'Earnings', screen: 'Earnings', icon: 'E' },
-    { label: 'My Documents', screen: 'Documents', icon: 'D' },
-    { label: 'Settings', screen: 'Settings', icon: 'S' },
+    { label: 'Dashboard', screen: 'Home', icon: 'dashboard' },
+    { label: 'My Profile', screen: 'Profile', icon: 'profile' },
+    { label: 'My Orders', screen: 'MyOrders', icon: 'orders' },
+    { label: 'Order History', screen: 'OrderHistory', icon: 'history' },
+    { label: 'Earnings', screen: 'Earnings', icon: 'earnings' },
+    { label: 'My Documents', screen: 'Documents', icon: 'documents' },
+    { label: 'Settings', screen: 'Settings', icon: 'settings' },
   ];
 
   if (!visible) return null;
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={handleClose}>
+    <Modal transparent statusBarTranslucent navigationBarTranslucent visible={visible} animationType="none" onRequestClose={handleClose}>
+      <SafeAreaProvider>
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <Animated.View
           style={{
-            width: DRAWER_WIDTH,
+            width: drawerWidth,
             backgroundColor: COLORS.white,
             transform: [{ translateX: slideAnim }],
             elevation: 20,
@@ -147,15 +150,16 @@ function SideMenu({ visible, onClose, navigation }) {
             shadowRadius: 10,
           }}
         >
-          <SafeAreaView style={{ flex: 1 }}>
+          <View style={{ flex: 1 }}>
+            <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: COLORS.primary }}>
             <View style={{
               backgroundColor: COLORS.primary,
-              paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 48,
+              paddingTop: 48,
               paddingBottom: 20,
               paddingHorizontal: 20,
             }}>
-              <TouchableOpacity onPress={handleClose} style={{ position: 'absolute', top: StatusBar.currentHeight ? StatusBar.currentHeight + 8 : 40, left: 16, zIndex: 10 }}>
-                <Text style={{ fontSize: 22, color: COLORS.white }}>{'<'}</Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close navigation menu" onPress={handleClose} style={{ position: 'absolute', top: 4, left: 8, padding: 12, zIndex: 10 }}>
+                <MenuIcon name="back" color={COLORS.white} />
               </TouchableOpacity>
               {selfieUrl ? (
                 <Image
@@ -181,10 +185,13 @@ function SideMenu({ visible, onClose, navigation }) {
               <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.white }}>{driverName}</Text>
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{driverEmail}</Text>
             </View>
+            </SafeAreaView>
             <ScrollView style={{ flex: 1, paddingTop: 8 }}>
               {menuItems.map((item, index) => (
                 <TouchableOpacity
                   key={index}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
                   onPress={() => navigateTo(item.screen)}
                   style={{
                     flexDirection: 'row', alignItems: 'center',
@@ -198,27 +205,33 @@ function SideMenu({ visible, onClose, navigation }) {
                     backgroundColor: COLORS.grayLight,
                     justifyContent: 'center', alignItems: 'center', marginRight: 14,
                   }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.primary }}>{item.icon}</Text>
+                    <MenuIcon name={item.icon} />
                   </View>
                   <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.dark }}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            <SafeAreaView edges={['bottom', 'left', 'right']}>
             <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', padding: 16 }}>
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Sign Out"
                 onPress={handleLogout}
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 8, gap: 14 }}
               >
+                <MenuIcon name="logout" color={COLORS.danger} />
                 <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.danger }}>Sign Out</Text>
               </TouchableOpacity>
             </View>
-          </SafeAreaView>
+            </SafeAreaView>
+          </View>
         </Animated.View>
         <Pressable
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
           onPress={handleClose}
         />
       </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -244,7 +257,7 @@ function MainApp({ initialRoute }) {
   }, []);
 
   return (
-    <>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
@@ -268,7 +281,7 @@ function MainApp({ initialRoute }) {
           navigation={navigationRef.current}
         />
       </NavigationContainer>
-    </>
+    </SafeAreaProvider>
   );
 }
 

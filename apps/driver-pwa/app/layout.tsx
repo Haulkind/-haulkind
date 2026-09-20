@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
+import 'leaflet/dist/leaflet.css'
 import { AuthProvider } from '@/lib/auth'
 import InstallPrompt from '@/components/InstallPrompt'
 
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
   maximumScale: 1,
   userScalable: false,
   themeColor: '#1e3a8a',

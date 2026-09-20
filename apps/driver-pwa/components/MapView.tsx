@@ -1,172 +1,140 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import type { Circle, CircleMarker, Map as LeafletMap, Marker } from 'leaflet'
 import type { Order } from '@/lib/api'
+import MenuIcon from './MenuIcon'
 
 interface MapViewProps {
   lat: number | null
   lng: number | null
+  accuracy?: number | null
   orders?: Order[]
 }
 
-// Haversine distance in miles
-function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3958.8
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 function getOrderPrice(order: Order): string {
-  const ep = (order as any).estimated_price
-  if (ep && Number(ep) > 0) return Number(ep).toFixed(0)
-  if (order.driver_earnings && Number(order.driver_earnings) > 0) return Number(order.driver_earnings).toFixed(0)
-  if (order.payout && Number(order.payout) > 0) return Number(order.payout).toFixed(0)
+  if (Number(order.estimated_price) > 0) return Number(order.estimated_price).toFixed(0)
+  if (Number(order.driver_earnings) > 0) return Number(order.driver_earnings).toFixed(0)
+  if (Number(order.payout) > 0) return Number(order.payout).toFixed(0)
   if (order.driver_earnings_cents && order.driver_earnings_cents > 0) return (order.driver_earnings_cents / 100).toFixed(0)
-  const price = order.price || order.total || 0
-  if (Number(price) > 0) return Number(price).toFixed(0)
-  return '0'
+  return (Number(order.price || order.total) || 0).toFixed(0)
 }
 
-function isNewOrder(dateStr?: string): boolean {
-  if (!dateStr) return true
-  return (Date.now() - new Date(dateStr).getTime()) / 3600000 < 24
-}
-
-export default function MapView({ lat, lng, orders = [] }: MapViewProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markerRef = useRef<any>(null)
-  const orderMarkersRef = useRef<any[]>([])
-  const leafletRef = useRef<any>(null)
+export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProps) {
+  const router = useRouter()
+  const container = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
+  const markerRef = useRef<CircleMarker | null>(null)
+  const accuracyRef = useRef<Circle | null>(null)
+  const orderMarkers = useRef<Marker[]>([])
+  const leaflet = useRef<typeof import('leaflet') | null>(null)
+  const following = useRef(true)
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !mapRef.current) return
+    let cancelled = false
+    let observer: ResizeObserver | null = null
+    setLoaded(false)
+    setError(false)
 
-    // Dynamically import leaflet
-    const initMap = async () => {
-      const L = (await import('leaflet')).default
-      leafletRef.current = L
-
-      // Add leaflet CSS
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link')
-        link.id = 'leaflet-css'
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-      }
-
-      if (mapInstanceRef.current) return // Already initialized
-
-      const defaultLat = lat || 40.0583
-      const defaultLng = lng || -74.4057
-
-      const map = L.map(mapRef.current!, {
-        zoomControl: false,
-        attributionControl: false,
-      }).setView([defaultLat, defaultLng], 11)
-
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    async function initialize() {
+      const L = await import('leaflet')
+      if (cancelled || !container.current) return
+      leaflet.current = L
+      const map = L.map(container.current, { zoomControl: false }).setView([39.9526, -75.1652], 10)
+      mapRef.current = map
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-      }).addTo(map)
-
-      // Blue dot for driver location
-      const driverIcon = L.divIcon({
-        className: 'driver-marker',
-        html: '<div style="width:16px;height:16px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
       })
-
-      const marker = L.marker([defaultLat, defaultLng], { icon: driverIcon }).addTo(map)
-      mapInstanceRef.current = map
-      markerRef.current = marker
+        .on('tileerror', () => { if (!cancelled) setError(true) })
+        .addTo(map)
+      map.on('dragstart', () => { following.current = false })
+      observer = new ResizeObserver(() => map.invalidateSize())
+      observer.observe(container.current)
       setLoaded(true)
-
-      // Invalidate size after mount
-      setTimeout(() => map.invalidateSize(), 100)
     }
-
-    initMap()
+    initialize().catch(() => { if (!cancelled) setError(true) })
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
-        markerRef.current = null
-        leafletRef.current = null
-        orderMarkersRef.current = []
-      }
+      cancelled = true
+      observer?.disconnect()
+      mapRef.current?.remove()
+      mapRef.current = null
+      markerRef.current = null
+      accuracyRef.current = null
+      orderMarkers.current = []
+      leaflet.current = null
     }
-  }, [])
+  }, [attempt])
 
-  // Update marker position when GPS changes
   useEffect(() => {
-    if (!mapInstanceRef.current || !markerRef.current || !lat || !lng) return
-    markerRef.current.setLatLng([lat, lng])
-    mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom())
-  }, [lat, lng])
-
-  // Update order markers when orders change
-  useEffect(() => {
-    const L = leafletRef.current
-    const map = mapInstanceRef.current
-    if (!L || !map) return
-
-    // Remove existing order markers
-    orderMarkersRef.current.forEach(m => map.removeLayer(m))
-    orderMarkersRef.current = []
-
-    // Add markers for orders with coordinates
-    const bounds: [number, number][] = []
-    if (lat && lng) bounds.push([lat, lng])
-
-    orders.forEach(order => {
-      const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
-      const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
-      if (!oLat || !oLng) return
-
-      const price = getOrderPrice(order)
-      const dist = (lat && lng) ? getDistanceMiles(lat, lng, oLat, oLng).toFixed(1) + 'mi' : ''
-      const isNew = isNewOrder(order.created_at)
-      const bgColor = isNew ? '#ef4444' : '#1a56db'
-
-      const icon = L.divIcon({
-        className: 'order-pin',
-        html: `<div style="background:${bgColor};color:#fff;padding:4px 8px;border-radius:8px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">$${price} <span style="font-size:10px;font-weight:normal;">${dist}</span></div>`,
-        iconSize: [80, 30],
-        iconAnchor: [40, 30],
-      })
-
-      const marker = L.marker([oLat, oLng], { icon }).addTo(map)
-      orderMarkersRef.current.push(marker)
-      bounds.push([oLat, oLng])
-    })
-
-    // Fit bounds if we have order markers
-    if (bounds.length > 1) {
-      map.fitBounds(bounds, { padding: [40, 40] })
+    const L = leaflet.current
+    const map = mapRef.current
+    if (!loaded || !L || !map || lat === null || lng === null) return
+    if (!markerRef.current) {
+      markerRef.current = L.circleMarker([lat, lng], {
+        radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1,
+      }).addTo(map)
+      accuracyRef.current = L.circle([lat, lng], { color: '#3b82f6', weight: 1, fillOpacity: 0.12 }).addTo(map)
+      map.setView([lat, lng], 15)
+    } else {
+      markerRef.current.setLatLng([lat, lng])
+      accuracyRef.current?.setLatLng([lat, lng])
+      if (following.current) map.panTo([lat, lng], { animate: false })
     }
-  }, [orders, lat, lng, loaded])
+    accuracyRef.current?.setRadius(Math.max(0, accuracy || 0))
+  }, [lat, lng, accuracy, loaded])
+
+  useEffect(() => {
+    const L = leaflet.current
+    const map = mapRef.current
+    if (!loaded || !L || !map) return
+    orderMarkers.current.forEach(marker => marker.remove())
+    orderMarkers.current = []
+    for (const order of orders) {
+      if (order.pickup_lat == null || order.pickup_lng == null) continue
+      const latitude = Number(order.pickup_lat)
+      const longitude = Number(order.pickup_lng)
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue
+      const isNew = !order.created_at || Date.now() - new Date(order.created_at).getTime() < 86400000
+      const label = document.createElement('div')
+      label.className = `rounded-lg border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-md whitespace-nowrap ${isNew ? 'bg-red-500' : 'bg-blue-700'}`
+      const distance = lat !== null && lng !== null
+        ? ` ${(map.distance([lat, lng], [latitude, longitude]) / 1609.34).toFixed(1)}mi`
+        : ''
+      label.textContent = `$${getOrderPrice(order)}${distance}`
+      const marker = L.marker([latitude, longitude], {
+        icon: L.divIcon({ className: 'order-pin', html: label, iconSize: [64, 30], iconAnchor: [32, 30] }),
+      }).addTo(map).on('click', () => router.push(`/orders/${order.id}`))
+      orderMarkers.current.push(marker)
+    }
+  }, [orders, loaded, router, lat, lng])
 
   return (
-    <div ref={mapRef} className="absolute inset-0 z-0" style={{ background: '#e8e8e8' }}>
-      {!loaded && (
-        <div className="flex items-center justify-center h-full">
-          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-        </div>
+    <div className="absolute inset-0">
+      <div ref={container} className="absolute inset-0 z-0 bg-gray-200" />
+      {!loaded && !error && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-sm text-gray-600">Loading map…</span></div>}
+      {error && (
+        <button onClick={() => setAttempt(value => value + 1)} className="absolute left-3 bottom-7 z-10 bg-white rounded-lg px-3 py-2 text-sm text-red-700 shadow">
+          Map unavailable · Retry
+        </button>
       )}
-      <style jsx global>{`
-        .order-pin { background: none !important; border: none !important; }
-        .driver-marker { background: none !important; border: none !important; }
-      `}</style>
+      <button
+        aria-label="Center map on my location"
+        disabled={!loaded || lat === null || lng === null}
+        onClick={() => {
+          if (lat === null || lng === null) return
+          following.current = true
+          mapRef.current?.setView([lat, lng], Math.max(mapRef.current.getZoom(), 15))
+        }}
+        className="absolute right-3 bottom-7 z-10 bg-white p-3 rounded-xl text-blue-600 shadow disabled:opacity-50"
+      >
+        <MenuIcon name="location" className="w-6 h-6" />
+      </button>
     </div>
   )
 }

@@ -90,22 +90,15 @@ export default function OrderDetailPage() {
 
     const initDetailMap = async () => {
       const L = (await import('leaflet')).default
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link')
-        link.id = 'leaflet-css'
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-      }
       if (detailMapInstanceRef.current) return
 
       const map = L.map(detailMapRef.current!, {
         zoomControl: false,
-        attributionControl: false,
       }).setView([centerLat, centerLng], 13)
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
       }).addTo(map)
 
       // Pickup location marker (red pin with price)

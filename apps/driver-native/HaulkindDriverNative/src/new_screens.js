@@ -8,7 +8,7 @@ import {
 import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
-import Geolocation from "@react-native-community/geolocation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
@@ -16,6 +16,8 @@ import { menuEmitter } from "./menuEmitter";
 import { launchCamera } from "react-native-image-picker";
 import Sound from "react-native-sound";
 import driverLogo from "./assets/haulkind-logo.png";
+import DriverMap from "./DriverMap";
+import { startDriverLocationTracking } from "./driverLocation";
 
 // Configure Sound to play even in silent mode
 Sound.setCategory("Playback");
@@ -350,66 +352,6 @@ function parsePhotoUrls(raw) {
   return arr.map(normalizePhotoUri).filter(Boolean);
 }
 
-// ============================================================================
-// LEAFLET MAP HTML
-// ============================================================================
-function buildMapHtml(driverLat, driverLng, orders, radiusMiles) {
-  const radiusMeters = radiusMiles * 1609.34;
-  const markers = orders
-    .filter((o) => o.coords)
-    .map((o) => {
-      const price = parseFloat(o.estimated_price || o.final_price || 0).toFixed(0);
-      const dist = o.distance != null ? o.distance.toFixed(1) + "mi" : "";
-      const color = o.isNew ? "#ef4444" : "#1a56db";
-      return `L.marker([${o.coords.latitude}, ${o.coords.longitude}], {
-        icon: L.divIcon({
-          className: 'custom-pin',
-          html: '<div style="background:${color};color:#fff;padding:4px 8px;border-radius:8px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid #fff;">$${price} <span style=\\"font-size:10px;font-weight:normal;\\">${dist}</span></div>',
-          iconSize: [80, 30],
-          iconAnchor: [40, 30]
-        })
-      }).addTo(map).on('click', function() { window.ReactNativeWebView.postMessage(JSON.stringify({type:'orderClick',id:'${o.id}'})); });`;
-    })
-    .join("\n");
-
-  return `<!DOCTYPE html>
-<html><head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  * { margin: 0; padding: 0; }
-  #map { width: 100%; height: 100vh; }
-  .custom-pin { background: none !important; border: none !important; }
-  .leaflet-control-attribution { display: none !important; }
-</style>
-</head><body>
-<div id="map"></div>
-<script>
-  var map = L.map('map', { zoomControl: false }).setView([${driverLat}, ${driverLng}], 10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
-
-  // Driver location
-  L.circleMarker([${driverLat}, ${driverLng}], {
-    radius: 8, fillColor: '#1a56db', color: '#fff', weight: 3, fillOpacity: 1
-  }).addTo(map);
-
-  // 70 mile radius circle
-  L.circle([${driverLat}, ${driverLng}], {
-    radius: ${radiusMeters}, color: '#1a56db', fillColor: '#1a56db', fillOpacity: 0.05, weight: 1, dashArray: '5,5'
-  }).addTo(map);
-
-  // Order markers
-  ${markers}
-
-  // Fit bounds
-  var bounds = [[${driverLat}, ${driverLng}]];
-  ${orders.filter((o) => o.coords).map((o) => `bounds.push([${o.coords.latitude}, ${o.coords.longitude}]);`).join("\n  ")}
-  if (bounds.length > 1) { map.fitBounds(bounds, { padding: [40, 40] }); }
-</script>
-</body></html>`;
-}
-
 // Render a photo inside a WebView — bypasses React Native Image/Fresco data-URI size limits on Android
 function buildPhotoViewerHtml(uri) {
   return `<!DOCTYPE html>
@@ -615,92 +557,33 @@ export function HomeScreen({ navigation, route }) {
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [driverLocation, setDriverLocation] = useState(null);
+  const [locationStatus, setLocationStatus] = useState("locating");
+  const [locationAttempt, setLocationAttempt] = useState(0);
+  const insets = useSafeAreaInsets();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
   const [acceptTimer, setAcceptTimer] = useState(ACCEPT_TIMER_SECONDS);
   const [accepting, setAccepting] = useState(false);
   const previousOrderIdsRef = useRef(new Set());
   const hasCompletedFirstFetchRef = useRef(false);
-  const [mapKey, setMapKey] = useState(0);
   const [fullScreenPhoto, setFullScreenPhoto] = useState(null);
 
   const timerRef = useRef(null);
   const refreshRef = useRef(null);
-  const watchIdRef = useRef(null);
-  const gpsIntervalRef = useRef(null);
   const driverLocationRef = useRef(null);
   const isOnlineRef = useRef(false);
   const fetchOrdersRef = useRef(null);
 
-  // Request location + start real-time tracking
   useEffect(() => {
-    async function requestLoc() {
-      if (Platform.OS === "android") {
-        try {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-            { title: "Location Permission", message: "Haulkind needs your location to show nearby orders.", buttonPositive: "Allow" }
-          );
-          if (granted === PermissionsAndroid.RESULTS.GRANTED) startTracking();
-          else setDriverLocation({ latitude: 39.9526, longitude: -75.1652 });
-        } catch { setDriverLocation({ latitude: 39.9526, longitude: -75.1652 }); }
-      } else startTracking();
-    }
-    function startTracking() {
-      // Send GPS to backend for admin map tracking
-      let gpsSendCount = 0;
-      async function sendLocationToServer(lat, lng, heading, speed) {
-        try {
-          const token = await AsyncStorage.getItem("driver_token");
-          if (!token) {
-            console.warn("[GPS] No token stored — cannot send location to server");
-            return;
-          }
-          const result = await apiPostAuth("/driver/location", { lat, lng, heading: heading ?? null, speed: speed ?? null });
-          gpsSendCount++;
-          if (gpsSendCount <= 5 || gpsSendCount % 10 === 0) {
-            console.log("[GPS] Sent #" + gpsSendCount + " to server:", lat.toFixed(4), lng.toFixed(4), "result:", JSON.stringify(result));
-          }
-        } catch (e) {
-          console.warn("[GPS] FAILED to send location:", e?.message);
-        }
-      }
-      // Get initial position fast
-      Geolocation.getCurrentPosition(
-        (pos) => {
-          setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-          sendLocationToServer(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed);
-        },
-        () => setDriverLocation({ latitude: 39.9526, longitude: -75.1652 }),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-      );
-      // Watch position for real-time tracking (updates when driver moves 50+ meters)
-      watchIdRef.current = Geolocation.watchPosition(
-        (pos) => {
-          setDriverLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-          sendLocationToServer(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed);
-        },
-        (err) => console.log("Watch position error:", err),
-        { enableHighAccuracy: true, distanceFilter: 50, maximumAge: 5000, timeout: 15000 }
-      );
-      // Send location every 15 seconds as a heartbeat (even if driver hasn't moved)
-      gpsIntervalRef.current = setInterval(() => {
-        const loc = driverLocationRef.current;
-        if (loc) sendLocationToServer(loc.latitude, loc.longitude, null, null);
-      }, 15000);
-    }
-    requestLoc();
-    return () => {
-      if (watchIdRef.current !== null) {
-        Geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-      if (gpsIntervalRef.current !== null) {
-        clearInterval(gpsIntervalRef.current);
-        gpsIntervalRef.current = null;
-      }
-    };
-  }, []);
+    return startDriverLocationTracking((position) => {
+      driverLocationRef.current = position;
+      setDriverLocation(position);
+      apiPostAuth("/driver/location", {
+        lat: position.latitude, lng: position.longitude,
+        heading: position.heading ?? null, speed: position.speed ?? null,
+      }).catch(error => console.warn("[GPS] Location sync failed:", error?.message));
+    }, setLocationStatus);
+  }, [locationAttempt]);
 
   // Load profile + request notification permission
   useEffect(() => {
@@ -794,7 +677,6 @@ export function HomeScreen({ navigation, route }) {
         setMyTodayOrders([]);
       }
 
-      setMapKey((k) => k + 1);
     } catch (e) { console.log("Fetch error:", e); } finally { setLoading(false); }
   }
 
@@ -817,11 +699,10 @@ export function HomeScreen({ navigation, route }) {
   }, [isOnline]);
 
   // Also re-fetch when driverLocation first becomes available (for distance calc)
+  const hasLocation = driverLocation !== null;
   useEffect(() => {
-    if (driverLocation && isOnline) {
-      fetchOrdersRef.current?.();
-    }
-  }, [driverLocation]);
+    if (hasLocation && isOnline) fetchOrdersRef.current?.();
+  }, [hasLocation, isOnline]);
 
   // Refresh immediately when screen gains focus (catches rescheduled/cancelled orders)
   useFocusEffect(
@@ -952,15 +833,9 @@ export function HomeScreen({ navigation, route }) {
   function openOrderDetail(order) { setSelectedOrder(order); setShowDetail(true); }
 
   // Handle map messages (pin clicks)
-  function onMapMessage(event) {
-    try {
-      const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === "orderClick") {
-        // Search in both available orders and my today orders
-        const order = orders.find((o) => o.id === msg.id) || myTodayOrders.find((o) => o.id === msg.id);
-        if (order) openOrderDetail(order);
-      }
-    } catch {}
+  function onMapOrderPress(id) {
+    const order = orders.find((o) => o.id === id) || myTodayOrders.find((o) => o.id === id);
+    if (order) openOrderDetail(order);
   }
 
   // ============================================================================
@@ -1164,17 +1039,23 @@ export function HomeScreen({ navigation, route }) {
   // ============================================================================
   // MAIN RENDER
   // ============================================================================
-  const dLat = driverLocation?.latitude || 39.9526;
-  const dLng = driverLocation?.longitude || -75.1652;
+  const locationLabel = {
+    locating: "Finding your location…",
+    live: "Live GPS",
+    approximate: `Approximate location${Number.isFinite(driverLocation?.accuracy) ? ` · ±${Math.round(driverLocation.accuracy)} m` : ""}`,
+    denied: "Allow location in Settings",
+    stale: "Waiting for a fresh GPS signal · Retry",
+    unavailable: "Location unavailable · Check GPS and retry",
+  }[locationStatus];
 
   return (
-    <View style={styles.homeContainer}>
+    <View style={[styles.homeContainer, { paddingBottom: isOnline ? 0 : insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={C.primaryDark} translucent={false} />
 
       {/* TOP BAR */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 10, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
         <View style={styles.topBarLeft}>
-          <TouchableOpacity onPress={() => menuEmitter.open()} style={styles.hamburgerBtn}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Open navigation menu" onPress={() => menuEmitter.open()} style={styles.hamburgerBtn}>
             <View style={styles.hamburgerLine} />
             <View style={styles.hamburgerLine} />
             <View style={styles.hamburgerLine} />
@@ -1193,22 +1074,17 @@ export function HomeScreen({ navigation, route }) {
 
       {/* MAP */}
       <View style={styles.mapContainer}>
-        {driverLocation ? (
-          <WebView
-            key={`map-${mapKey}`}
-            source={{ html: buildMapHtml(dLat, dLng, filteredOrders, RADIUS_MILES) }}
-            style={{ flex: 1 }}
-            onMessage={onMapMessage}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            scrollEnabled={false}
-          />
-        ) : (
-          <View style={styles.mapLoading}>
-            <ActivityIndicator size="large" color={C.primary} />
-            <Text style={styles.mapLoadingText}>Getting your location...</Text>
-          </View>
-        )}
+        <DriverMap location={driverLocation} orders={filteredOrders} radiusMiles={RADIUS_MILES} onOrderPress={onMapOrderPress} />
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={locationLabel}
+          onPress={() => locationStatus === "denied" || locationStatus === "approximate"
+            ? Linking.openSettings()
+            : setLocationAttempt(attempt => attempt + 1)}
+          style={styles.locationStatus}
+        >
+          <Text style={{ color: locationStatus === "live" ? C.success : C.textSecondary, fontSize: 12 }}>{locationLabel}</Text>
+        </TouchableOpacity>
 
         {!isOnline && (
           <View style={styles.offlineOverlay}>
@@ -1225,8 +1101,7 @@ export function HomeScreen({ navigation, route }) {
 
       {/* BOTTOM: FILTERS + CAROUSEL */}
       {isOnline && (
-        <View style={styles.bottomSection}>
-          <View style={styles.dragHandle} />
+        <View style={[styles.bottomSection, { paddingBottom: Math.max(insets.bottom, 12), paddingLeft: insets.left, paddingRight: insets.right }]}>
           <View style={styles.filterRow}>
             {["TODAY", "ALL", "NEW"].map((f) => (
               <TouchableOpacity key={f} style={[styles.filterTab, filter === f && styles.filterTabActive]} onPress={() => setFilter(f)}>
@@ -1241,6 +1116,7 @@ export function HomeScreen({ navigation, route }) {
             <View style={{ marginLeft: "auto" }}><Text style={styles.radiusText}>Within {RADIUS_MILES} mi</Text></View>
           </View>
 
+          <ScrollView style={{ flexShrink: 1 }} nestedScrollEnabled>
           {loading ? (
             <View style={styles.carouselLoading}><ActivityIndicator size="small" color={C.primary} /><Text style={styles.carouselLoadingText}>Loading orders...</Text></View>
           ) : filteredOrders.length === 0 ? (
@@ -1254,6 +1130,7 @@ export function HomeScreen({ navigation, route }) {
               snapToInterval={SCREEN_WIDTH * 0.78 + 12} decelerationRate="fast"
               contentContainerStyle={{ paddingRight: 16 }} />
           )}
+          </ScrollView>
         </View>
       )}
 
@@ -1291,8 +1168,8 @@ const styles = StyleSheet.create({
   halfField: { flex: 1 },
 
   // Home
-  homeContainer: { flex: 1, backgroundColor: C.dark },
-  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: C.primaryDark, paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16 },
+  homeContainer: { flex: 1, backgroundColor: C.white },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: C.primaryDark, paddingBottom: 12 },
   topBarLeft: { flexDirection: "row", alignItems: "center" },
   logoSmall: { width: 40, height: 40, borderRadius: 8, marginBottom: 2 },
   topBarSub: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
@@ -1303,6 +1180,7 @@ const styles = StyleSheet.create({
 
   // Map
   mapContainer: { flex: 1 },
+  locationStatus: { position: "absolute", top: 10, left: 12, right: 12, backgroundColor: C.white, borderRadius: 8, padding: 10, elevation: 2, zIndex: 2 },
   mapLoading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.grayLight },
   mapLoadingText: { marginTop: 8, color: C.textSecondary, fontSize: 14 },
   offlineOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
@@ -1313,7 +1191,7 @@ const styles = StyleSheet.create({
   goOnlineBtnText: { color: C.white, fontSize: 16, fontWeight: "bold", letterSpacing: 1 },
 
   // Bottom section
-  bottomSection: { backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 8, minHeight: 240, elevation: 10, shadowColor: "#000", shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 8 },
+  bottomSection: { backgroundColor: C.white, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border, maxHeight: "45%", elevation: 4 },
   dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: "center", marginBottom: 8 },
 
   // Filters
