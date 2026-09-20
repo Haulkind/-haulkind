@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CustomerLogo from '@/components/CustomerLogo'
 
 export default function InstallBanner() {
   const [showBanner, setShowBanner] = useState(false)
@@ -65,7 +66,7 @@ export default function InstallBanner() {
       {/* Install Banner */}
       <div className="fixed bottom-20 left-4 right-4 bg-white rounded-2xl shadow-2xl p-4 z-50 border border-gray-200 animate-slide-up">
         <div className="flex items-start gap-3">
-          <img src="/icons/icon-192.png" alt="HaulKind" className="w-12 h-12 rounded-xl shrink-0" />
+          <CustomerLogo size={48} />
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900">Install HaulKind</h3>
             <p className="text-sm text-gray-500 mt-0.5">

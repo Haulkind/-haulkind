@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getMyOrders } from '@/lib/api'
 import { getToken, getCustomer, isLoggedIn } from '@/lib/auth'
 import OrderCard from '@/components/OrderCard'
+import CustomerLogo from '@/components/CustomerLogo'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -37,7 +38,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center gap-4 min-h-screen">
+        <CustomerLogo priority />
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
       </div>
     )
@@ -47,10 +49,15 @@ export default function DashboardPage() {
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="bg-primary-600 px-4 pt-12 pb-6">
-        <h1 className="text-2xl font-bold text-white">
-          Hello, {customer?.name?.split(' ')[0] || 'there'}!
-        </h1>
-        <p className="text-primary-200 mt-1">Welcome to HaulKind</p>
+        <div className="flex items-center gap-3">
+          <CustomerLogo size={48} />
+          <div>
+            <h1 className="text-2xl font-bold text-white">
+              Hello, {customer?.name?.split(' ')[0] || 'there'}!
+            </h1>
+            <p className="text-primary-200 mt-1">Welcome to HaulKind</p>
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}

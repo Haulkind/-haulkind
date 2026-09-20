@@ -1,4 +1,4 @@
-const CACHE_NAME = 'haulkind-pwa-v1';
+const CACHE_NAME = 'haulkind-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/auth',
