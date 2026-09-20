@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   description: 'HaulKind Driver App — Manage orders, track earnings, go online.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icons/favicon-32.png',
-    apple: '/icons/apple-touch-icon.png',
+    icon: '/icons/favicon-32.png?v=2',
+    apple: '/icons/apple-touch-icon.png?v=2',
   },
   robots: { index: true, follow: true },
   appleWebApp: {
