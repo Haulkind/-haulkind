@@ -38,6 +38,10 @@ export function startDriverLocationTracking(onPosition, onStatus) {
           onStatus('denied');
           return;
         }
+        Geolocation.setRNConfiguration({
+          skipPermissionRequests: true,
+          locationProvider: 'playServices',
+        });
       }
       if (!isCurrent()) return;
 

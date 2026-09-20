@@ -6,13 +6,14 @@ import MenuIcon from './MenuIcon';
 
 const source = { html: DRIVER_MAP_HTML };
 
-export default function DriverMap({ location, orders, radiusMiles, onOrderPress }) {
+export default function DriverMap({ location, locationStatus, onRetryLocation, orders, radiusMiles, onOrderPress }) {
   const webView = useRef(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const script = mapUpdateScript(location, orders, radiusMiles);
   const latestScript = useRef(script);
   latestScript.current = script;
+  const needsLocation = !location || ['denied', 'unavailable', 'stale'].includes(locationStatus);
 
   useEffect(() => {
     if (ready) webView.current?.injectJavaScript(script);
@@ -44,7 +45,7 @@ export default function DriverMap({ location, orders, radiusMiles, onOrderPress 
       <WebView
         ref={webView}
         source={source}
-        applicationNameForUserAgent="HaulkindDriver/1.0.3 (+https://haulkind.com)"
+        applicationNameForUserAgent="HaulkindDriver/1.0.4 (+https://haulkind.com)"
         style={{ flex: 1 }}
         onMessage={onMessage}
         onLoadStart={() => setReady(false)}
@@ -56,19 +57,30 @@ export default function DriverMap({ location, orders, radiusMiles, onOrderPress 
       />
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel={failed ? 'Reload map' : 'Center map on my location'}
-        disabled={!failed && (!ready || !location)}
+        accessibilityLabel="Show orders on map"
+        disabled={!ready}
+        onPress={() => webView.current?.injectJavaScript('window.showOrders();true;')}
+        style={{ position: 'absolute', right: 12, bottom: 86, backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 4 }}
+      >
+        <MenuIcon name="orders" color="#1a56db" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={failed ? 'Reload map' : needsLocation ? 'Retry location' : 'Center map on my location'}
+        disabled={!failed && !ready}
         onPress={() => {
           if (failed) {
             setFailed(false);
             webView.current?.reload();
+          } else if (needsLocation) {
+            onRetryLocation();
           } else {
             webView.current?.injectJavaScript('window.centerOnDriver();true;');
           }
         }}
         style={{ position: 'absolute', right: 12, bottom: 24, backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 4 }}
       >
-        {failed ? <Text style={{ color: '#1a56db', fontWeight: '600' }}>Reload map</Text> : <MenuIcon name="location" color="#1a56db" />}
+        {failed ? <Text style={{ color: '#1a56db', fontWeight: '600' }}>Reload map</Text> : <MenuIcon name="location" color={needsLocation ? '#b45309' : '#1a56db'} />}
       </TouchableOpacity>
     </View>
   );

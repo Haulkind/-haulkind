@@ -1,31 +1,50 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Circle, CircleMarker, Map as LeafletMap, Marker } from 'leaflet'
 import type { Order } from '@/lib/api'
 import MenuIcon from './MenuIcon'
 import { formatPayout } from '@/lib/driverPayout'
+import { formatDistance, getOrderCoordinates, getOrderDistance } from '@/lib/orderLocation'
+import type { LocationStatus } from '@/lib/driverLocation'
 
 interface MapViewProps {
   lat: number | null
   lng: number | null
   accuracy?: number | null
   orders?: Order[]
+  locationStatus: LocationStatus
+  onRetryLocation: () => void
 }
 
-export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProps) {
+export default function MapView({ lat, lng, accuracy, orders = [], locationStatus, onRetryLocation }: MapViewProps) {
   const router = useRouter()
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const markerRef = useRef<CircleMarker | null>(null)
   const accuracyRef = useRef<Circle | null>(null)
+  const radiusRef = useRef<Circle | null>(null)
   const orderMarkers = useRef<Marker[]>([])
   const leaflet = useRef<typeof import('leaflet') | null>(null)
   const following = useRef(true)
+  const overview = useRef(true)
+  const orderSignature = useRef('')
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const needsLocation = lat === null || lng === null || ['denied', 'unavailable', 'stale'].includes(locationStatus)
+
+  const showOrders = useCallback(() => {
+    const L = leaflet.current
+    const map = mapRef.current
+    if (!L || !map) return
+    following.current = true
+    overview.current = true
+    const points = orderMarkers.current.map(marker => marker.getLatLng())
+    if (markerRef.current) points.push(markerRef.current.getLatLng())
+    if (points.length) map.fitBounds(L.latLngBounds(points), { padding: [65, 55], maxZoom: 15, animate: false })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -59,53 +78,61 @@ export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProp
       mapRef.current = null
       markerRef.current = null
       accuracyRef.current = null
+      radiusRef.current = null
       orderMarkers.current = []
       leaflet.current = null
+      following.current = true
+      overview.current = true
+      orderSignature.current = ''
     }
   }, [attempt])
 
   useEffect(() => {
     const L = leaflet.current
     const map = mapRef.current
-    if (!loaded || !L || !map || lat === null || lng === null) return
-    if (!markerRef.current) {
-      markerRef.current = L.circleMarker([lat, lng], {
-        radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1,
-      }).addTo(map)
-      accuracyRef.current = L.circle([lat, lng], { color: '#3b82f6', weight: 1, fillOpacity: 0.12 }).addTo(map)
-      map.setView([lat, lng], 15)
-    } else {
-      markerRef.current.setLatLng([lat, lng])
-      accuracyRef.current?.setLatLng([lat, lng])
-      if (following.current) map.panTo([lat, lng], { animate: false })
-    }
-    accuracyRef.current?.setRadius(Math.max(0, accuracy || 0))
-  }, [lat, lng, accuracy, loaded])
-
-  useEffect(() => {
-    const L = leaflet.current
-    const map = mapRef.current
     if (!loaded || !L || !map) return
+    const firstLocation = lat !== null && lng !== null && !markerRef.current
+    if (lat !== null && lng !== null) {
+      if (!markerRef.current) {
+        markerRef.current = L.circleMarker([lat, lng], {
+          radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1,
+        }).addTo(map)
+        accuracyRef.current = L.circle([lat, lng], { color: '#3b82f6', weight: 1, fillOpacity: 0.12 }).addTo(map)
+        radiusRef.current = L.circle([lat, lng], { radius: 80 * 1609.34, color: '#1a56db', fillOpacity: 0.03, weight: 1, dashArray: '5,5' }).addTo(map)
+      } else {
+        markerRef.current.setLatLng([lat, lng])
+        accuracyRef.current?.setLatLng([lat, lng])
+        radiusRef.current?.setLatLng([lat, lng])
+      }
+      accuracyRef.current?.setRadius(Math.max(0, accuracy || 0))
+    }
     orderMarkers.current.forEach(marker => marker.remove())
     orderMarkers.current = []
+    const signature: string[] = []
     for (const order of orders) {
-      if (order.pickup_lat == null || order.pickup_lng == null) continue
-      const latitude = Number(order.pickup_lat)
-      const longitude = Number(order.pickup_lng)
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue
+      const coordinates = getOrderCoordinates(order)
+      if (!coordinates) continue
+      signature.push(JSON.stringify([order.id, ...coordinates]))
       const isNew = !order.created_at || Date.now() - new Date(order.created_at).getTime() < 86400000
       const label = document.createElement('div')
-      label.className = `rounded-lg border-2 border-white px-2 py-1 text-xs font-bold text-white shadow-md whitespace-nowrap ${isNew ? 'bg-red-500' : 'bg-blue-700'}`
-      const distance = lat !== null && lng !== null
-        ? ` ${(map.distance([lat, lng], [latitude, longitude]) / 1609.34).toFixed(1)}mi`
-        : ''
-      label.textContent = `$${formatPayout(order, 0)}${distance}`
-      const marker = L.marker([latitude, longitude], {
-        icon: L.divIcon({ className: 'order-pin', html: label, iconSize: [64, 30], iconAnchor: [32, 30] }),
+      label.className = `rounded-lg border-2 border-white px-2 py-1 text-xs text-center font-bold text-white shadow-md whitespace-pre ${isNew ? 'bg-red-500' : 'bg-blue-700'}`
+      label.textContent = `$${formatPayout(order)}\n${formatDistance(getOrderDistance(order, lat, lng))}`
+      const marker = L.marker(coordinates, {
+        icon: L.divIcon({ className: 'order-pin', html: label, iconSize: [96, 44], iconAnchor: [48, 44] }),
       }).addTo(map).on('click', () => router.push(`/orders/${order.id}`))
       orderMarkers.current.push(marker)
     }
-  }, [orders, loaded, router, lat, lng])
+    const nextSignature = JSON.stringify(signature.sort())
+    if (following.current) {
+      if (overview.current && (firstLocation || nextSignature !== orderSignature.current ||
+          (markerRef.current && !map.getBounds().contains(markerRef.current.getLatLng())))) {
+        showOrders()
+      } else if (!overview.current && markerRef.current) {
+        map.panTo(markerRef.current.getLatLng(), { animate: false })
+      }
+    }
+    orderSignature.current = nextSignature
+  }, [orders, loaded, router, lat, lng, accuracy, showOrders])
 
   return (
     <div className="absolute inset-0">
@@ -117,14 +144,27 @@ export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProp
         </button>
       )}
       <button
-        aria-label="Center map on my location"
-        disabled={!loaded || lat === null || lng === null}
+        aria-label="Show orders on map"
+        disabled={!loaded}
+        onClick={showOrders}
+        className="absolute right-3 bottom-[86px] z-10 bg-white p-3 rounded-xl text-blue-600 shadow disabled:opacity-50"
+      >
+        <MenuIcon name="orders" className="w-6 h-6" />
+      </button>
+      <button
+        aria-label={needsLocation ? 'Retry location' : 'Center map on my location'}
+        disabled={!loaded}
         onClick={() => {
+          if (needsLocation) {
+            onRetryLocation()
+            return
+          }
           if (lat === null || lng === null) return
           following.current = true
+          overview.current = false
           mapRef.current?.setView([lat, lng], Math.max(mapRef.current.getZoom(), 15))
         }}
-        className="absolute right-3 bottom-7 z-10 bg-white p-3 rounded-xl text-blue-600 shadow disabled:opacity-50"
+        className={`absolute right-3 bottom-7 z-10 bg-white p-3 rounded-xl shadow disabled:opacity-50 ${needsLocation ? 'text-amber-700' : 'text-blue-600'}`}
       >
         <MenuIcon name="location" className="w-6 h-6" />
       </button>
