@@ -9,6 +9,8 @@ import {
   streamLocation, type Order,
 } from '@/lib/api'
 import SignaturePad from '@/components/SignaturePad'
+import type { Map as LeafletMap } from 'leaflet'
+import { formatPayout } from '@/lib/driverPayout'
 
 // Parse a photo field that may come back as string[] (JSON), |||-separated string, or array
 function parsePhotoField(field: unknown): string[] {
@@ -60,7 +62,7 @@ export default function OrderDetailPage() {
   const [driverLat, setDriverLat] = useState<number | null>(null)
   const [driverLng, setDriverLng] = useState<number | null>(null)
   const detailMapRef = useRef<HTMLDivElement>(null)
-  const detailMapInstanceRef = useRef<any>(null)
+  const detailMapInstanceRef = useRef<LeafletMap | null>(null)
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
@@ -82,6 +84,8 @@ export default function OrderDetailPage() {
   // Initialize mini-map on order detail page showing pickup location
   useEffect(() => {
     if (!order || !detailMapRef.current || detailMapInstanceRef.current) return
+    let cancelled = false
+    let observer: ResizeObserver | null = null
     const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
     const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
     // Use pickup coords, or driver coords, or default NJ
@@ -90,11 +94,13 @@ export default function OrderDetailPage() {
 
     const initDetailMap = async () => {
       const L = (await import('leaflet')).default
-      if (detailMapInstanceRef.current) return
+      if (cancelled || !detailMapRef.current || detailMapInstanceRef.current) return
 
-      const map = L.map(detailMapRef.current!, {
+      const map = L.map(detailMapRef.current, {
         zoomControl: false,
+        zoomAnimation: false,
       }).setView([centerLat, centerLng], 13)
+      detailMapInstanceRef.current = map
 
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -129,13 +135,15 @@ export default function OrderDetailPage() {
         map.fitBounds([[oLat, oLng], [driverLat, driverLng]], { padding: [30, 30] })
       }
 
-      detailMapInstanceRef.current = map
-      setTimeout(() => map.invalidateSize(), 100)
+      observer = new ResizeObserver(() => map.invalidateSize())
+      observer.observe(detailMapRef.current)
     }
 
     initDetailMap()
 
     return () => {
+      cancelled = true
+      observer?.disconnect()
       if (detailMapInstanceRef.current) {
         detailMapInstanceRef.current.remove()
         detailMapInstanceRef.current = null
@@ -835,15 +843,6 @@ function statusBadge(status: string): string {
     case 'signed': return 'bg-blue-800 text-blue-100'
     default: return 'bg-primary-800 text-primary-100'
   }
-}
-
-function formatPayout(order: Order): string {
-  const cents = order.driver_earnings_cents || order.driver_earnings
-  if (cents && cents > 100) return (cents / 100).toFixed(2)
-  if (order.payout) return order.payout.toFixed(2)
-  if (order.driver_earnings) return order.driver_earnings.toFixed(2)
-  const price = order.price || order.total || 0
-  return (price * 0.7).toFixed(2)
 }
 
 function formatDate(order: Order): string {

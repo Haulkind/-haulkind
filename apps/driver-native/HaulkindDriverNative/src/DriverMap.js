@@ -44,7 +44,7 @@ export default function DriverMap({ location, orders, radiusMiles, onOrderPress 
       <WebView
         ref={webView}
         source={source}
-        applicationNameForUserAgent="HaulkindDriver/1.0.2 (+https://haulkind.com)"
+        applicationNameForUserAgent="HaulkindDriver/1.0.3 (+https://haulkind.com)"
         style={{ flex: 1 }}
         onMessage={onMessage}
         onLoadStart={() => setReady(false)}
