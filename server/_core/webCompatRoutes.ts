@@ -16,6 +16,8 @@
 import { Express, Request, Response } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { driverIdentity } from "./driverAuth";
+import { SERVICE_DATE_SQL, noStore, orderPolicy, serializeOrder, type OrderRow } from "./orderPolicy";
 
 // Approved states for service area coverage
 const APPROVED_STATES = ["NJ", "MA", "PA", "NY", "CT"];
@@ -64,6 +66,7 @@ async function getPgPool() {
 }
 
 export function registerWebCompatRoutes(app: Express) {
+  app.use("/jobs", noStore);
   // ================================================================
   // POST /quotes - Calculate a price quote
   // ================================================================
@@ -256,7 +259,7 @@ export function registerWebCompatRoutes(app: Express) {
           pickup_time_window, photo_urls,
           created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
-        RETURNING *`,
+        RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
         [
           customerName || "Web Customer",
           customerPhone || "",
@@ -298,7 +301,7 @@ export function registerWebCompatRoutes(app: Express) {
         status: job.status,
         total: totalAmount,
         trackingToken,
-        order: job,
+        order: serializeOrder(job, { kind: "public" }),
       });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
@@ -319,9 +322,9 @@ export function registerWebCompatRoutes(app: Express) {
       }
 
       // Check jobs table first (primary), then orders table (legacy)
-      let result = await pool.query("SELECT * FROM jobs WHERE id::text = $1", [id]);
+      let result = await pool.query(`SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id::text = $1`, [id]);
       if (result.rows.length === 0) {
-        result = await pool.query("SELECT * FROM orders WHERE id::text = $1", [id]);
+        result = await pool.query("SELECT *, pickup_date::date::text AS service_date, false AS eta_supported FROM orders WHERE id::text = $1", [id]);
       }
 
       if (result.rows.length === 0) {
@@ -346,7 +349,7 @@ export function registerWebCompatRoutes(app: Express) {
         id: order.id,
         status: order.status,
         total,
-        order,
+        order: serializeOrder(order, { kind: "public" }),
       });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
@@ -378,10 +381,11 @@ export function registerWebCompatRoutes(app: Express) {
         return res.status(404).json({ error: "Job not found", success: false });
       }
 
-      await pool.query(
-        "UPDATE " + tableName + " SET status = $1, updated_at = NOW() WHERE id::text = $2",
+      const dispatched = await pool.query(
+        "UPDATE " + tableName + " SET status = $1, updated_at = NOW() WHERE id::text = $2 AND assigned_driver_id IS NULL AND status IN ('pending', 'draft', 'quoted', 'paid', 'dispatching') RETURNING id",
         ["dispatching", id]
       );
+      if (!dispatched.rows.length) return res.status(409).json({ error: "Order cannot be dispatched in its current state", success: false });
 
       try {
         const driversResult = await pool.query(
@@ -408,7 +412,7 @@ export function registerWebCompatRoutes(app: Express) {
       }
 
       const updatedResult = await pool.query(
-        "SELECT * FROM " + tableName + " WHERE id::text = $1",
+        "SELECT *, " + (tableName === "jobs" ? SERVICE_DATE_SQL : "pickup_date::date::text") + " AS service_date FROM " + tableName + " WHERE id::text = $1",
         [id]
       );
       const updatedOrder = updatedResult.rows[0];
@@ -418,7 +422,7 @@ export function registerWebCompatRoutes(app: Express) {
       res.json({
         success: true,
         message: "Payment processed successfully",
-        job: updatedOrder,
+        job: serializeOrder(updatedOrder, { kind: "public" }),
       });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
@@ -506,8 +510,26 @@ export function registerWebCompatRoutes(app: Express) {
   // Stores photos as data URIs in memory (for MVP). In production,
   // upload to S3/Cloudinary and return real URLs.
   // ================================================================
-  app.post("/upload-photos", async (req: Request, res: Response) => {
+  app.post("/upload-photos", noStore, async (req: Request, res: Response) => {
     try {
+      const driverId = driverIdentity(req);
+      const orderId: unknown = req.body?.order_id;
+      if (driverId || orderId !== undefined) {
+        if (!driverId) return res.status(401).json({ error: "Driver authorization required" });
+        if (typeof orderId !== "string" || !orderId) {
+          return res.status(400).json({ error: "order_id required for driver photos" });
+        }
+        const pool = await getPgPool();
+        if (!pool) return res.status(503).json({ error: "Database not available" });
+        const result = await pool.query(
+          `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id = $1 AND assigned_driver_id = $2`,
+          [orderId, driverId]
+        );
+        const order: OrderRow | undefined = result.rows[0];
+        if (!order || !orderPolicy(order, { kind: "driver", driverId }).can_upload_photos) {
+          return res.status(409).json({ error: "Photos require your active assigned order on its service day", code: "invalid_state" });
+        }
+      }
       const { photos } = req.body; // array of { data: base64string, name: string, type: string }
       if (!photos || !Array.isArray(photos) || photos.length === 0) {
         return res.status(400).json({ error: "No photos provided", success: false });

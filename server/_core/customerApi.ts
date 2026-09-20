@@ -2,6 +2,8 @@ import type { Express, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { requireAdmin } from "./adminAuth";
+import { ACTIVE_STATUSES, SERVICE_DATE_SQL, noStore, serializeOrder, type OrderRow } from "./orderPolicy";
 
 // Use raw pg connection since DATABASE_URL is PostgreSQL
 let pgPool: any = null;
@@ -61,6 +63,7 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 }
 
 export function registerCustomerApiRoutes(app: Express) {
+  app.use("/customer/orders", noStore);
   // ================================================================
   // ENSURE TABLES EXIST
   // ================================================================
@@ -361,10 +364,7 @@ export function registerCustomerApiRoutes(app: Express) {
       console.log("[CustomerApi] GET /customer/orders - customerId:", decoded.customerId, "email:", decoded.email, "status:", status);
       
       let query = `
-        SELECT id, customer_name, customer_phone, customer_email, service_type, status,
-               pickup_address, pickup_lat, pickup_lng, description, estimated_price,
-               items_json, scheduled_for, pickup_time_window, assigned_driver_id,
-               tracking_token, created_at, updated_at, paid_at
+        SELECT *, ${SERVICE_DATE_SQL} AS service_date
         FROM jobs
         WHERE (customer_account_id = $1 OR LOWER(customer_email) = LOWER($2))
       `;
@@ -383,7 +383,7 @@ export function registerCustomerApiRoutes(app: Express) {
 
       // Enrich with driver info if assigned
       const orders = await Promise.all(
-        result.rows.map(async (order: any) => {
+        (result.rows as OrderRow[]).map(async (order) => {
           if (order.assigned_driver_id) {
             try {
               const driverResult = await pool.query(
@@ -397,7 +397,7 @@ export function registerCustomerApiRoutes(app: Express) {
               // ignore
             }
           }
-          return order;
+          return serializeOrder(order, { kind: "customer" });
         })
       );
 
@@ -424,7 +424,7 @@ export function registerCustomerApiRoutes(app: Express) {
       }
 
       const result = await pool.query(
-        `SELECT * FROM jobs WHERE id = $1 AND (customer_account_id = $2 OR LOWER(customer_email) = LOWER($3))`,
+        `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id = $1 AND (customer_account_id = $2 OR LOWER(customer_email) = LOWER($3))`,
         [req.params.id, decoded.customerId, decoded.email]
       );
 
@@ -452,7 +452,7 @@ export function registerCustomerApiRoutes(app: Express) {
       // Get driver location if assigned and in_progress
       if (
         order.assigned_driver_id &&
-        ["assigned", "in_progress", "en_route", "arrived"].includes(order.status)
+        ACTIVE_STATUSES.includes(order.status)
       ) {
         try {
           const locResult = await pool.query(
@@ -484,7 +484,7 @@ export function registerCustomerApiRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, order });
+      res.json({ success: true, order: serializeOrder(order, { kind: "customer" }) });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to get order", details: msg });
@@ -513,12 +513,13 @@ export function registerCustomerApiRoutes(app: Express) {
         return res.status(500).json({ error: "Database not available" });
       }
 
-      let order = null;
+      let order: OrderRow | null = null;
+      let verifiedCustomer = false;
 
       // Look up by tracking token first
       if (token) {
         const result = await pool.query(
-          "SELECT * FROM jobs WHERE tracking_token = $1",
+          `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE tracking_token = $1`,
           [token]
         );
         if (result.rows.length > 0) {
@@ -531,7 +532,7 @@ export function registerCustomerApiRoutes(app: Express) {
           );
           if (tokenResult.rows.length > 0) {
             const jobResult = await pool.query(
-              "SELECT * FROM jobs WHERE id = $1",
+              `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id = $1`,
               [tokenResult.rows[0].job_id]
             );
             if (jobResult.rows.length > 0) {
@@ -539,12 +540,13 @@ export function registerCustomerApiRoutes(app: Express) {
             }
           }
         }
+        verifiedCustomer = order !== null;
       }
 
       // Look up by order ID
       if (!order && orderId) {
         const result = await pool.query(
-          "SELECT * FROM jobs WHERE id::text = $1",
+          `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id::text = $1`,
           [orderId]
         );
         if (result.rows.length > 0) {
@@ -555,6 +557,12 @@ export function registerCustomerApiRoutes(app: Express) {
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
+      const decoded = verifyCustomerToken(req);
+      if (decoded && (
+        (decoded.customerId && String(order.customer_account_id) === String(decoded.customerId)) ||
+        (typeof decoded.email === "string" && typeof order.customer_email === "string" &&
+          decoded.email.toLowerCase() === order.customer_email.toLowerCase())
+      )) verifiedCustomer = true;
 
       // Get driver info if assigned
       if (order.assigned_driver_id) {
@@ -580,8 +588,8 @@ export function registerCustomerApiRoutes(app: Express) {
             const loc = locResult.rows[0];
             const driverLat = parseFloat(loc.lat);
             const driverLng = parseFloat(loc.lng);
-            const pickupLat = parseFloat(order.pickup_lat);
-            const pickupLng = parseFloat(order.pickup_lng);
+            const pickupLat = parseFloat(String(order.pickup_lat));
+            const pickupLng = parseFloat(String(order.pickup_lng));
             const distanceKm = haversineDistance(driverLat, driverLng, pickupLat, pickupLng);
             const distanceMiles = distanceKm * 0.621371;
             const etaMinutes = Math.max(1, Math.round((distanceKm / 40) * 60));
@@ -601,7 +609,7 @@ export function registerCustomerApiRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, order });
+      res.json({ success: true, order: serializeOrder(order, { kind: verifiedCustomer ? "customer" : "public" }) });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to track order", details: msg });
@@ -684,6 +692,8 @@ export function registerCustomerApiRoutes(app: Express) {
   // ================================================================
   app.post(
     "/internal/generate-tracking-token",
+    requireAdmin,
+    noStore,
     async (req: Request, res: Response) => {
       try {
         const { jobId } = req.body;

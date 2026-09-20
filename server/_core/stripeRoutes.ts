@@ -24,6 +24,7 @@
 
 import type { Express, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { noStore } from "./orderPolicy";
 
 // ============================================================================
 // DATABASE CONNECTION
@@ -701,10 +702,13 @@ export function registerStripeRoutes(app: Express) {
   // JOB COMPLETION — mark completed + eligible for payout
   // POST /api/jobs/:id/complete
   // ==========================================================================
-  app.post("/api/jobs/:id/complete", async (req: Request, res: Response) => {
+  app.post("/api/jobs/:id/complete", noStore, async (req: Request, res: Response) => {
     try {
       const decoded = verifyAnyToken(req);
       if (!decoded) return res.status(401).json({ error: "Unauthorized" });
+      if (decoded.role !== "admin" && decoded.role !== "driver") {
+        return res.status(403).json({ error: "Assigned driver or admin access required" });
+      }
 
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: "Database not available" });
@@ -718,6 +722,12 @@ export function registerStripeRoutes(app: Express) {
       }
 
       const job = jobResult.rows[0];
+      if (decoded.role !== "admin" && String(job.assigned_driver_id) !== String(decoded.driverId)) {
+        return res.status(404).json({ error: "Assigned job not found" });
+      }
+      if (job.status === "completed") {
+        return res.json({ success: true, payoutStatus: job.payout_status, duplicate: true });
+      }
 
       // Check if driver has payouts enabled
       let payoutStatus = "not_eligible";
@@ -731,10 +741,17 @@ export function registerStripeRoutes(app: Express) {
         }
       }
 
-      await pool.query(
-        `UPDATE jobs SET status = 'completed', completed_at = NOW(), payout_status = $1, updated_at = NOW() WHERE id = $2`,
-        [payoutStatus, jobId]
+      const completed = await pool.query(
+        `UPDATE jobs SET status = 'completed', completed_at = NOW(), payout_status = $1, updated_at = NOW()
+         WHERE id = $2 AND status NOT IN ('completed', 'cancelled', 'refunded')
+           AND ($3::boolean OR (assigned_driver_id::text = $4 AND status = 'signed'
+             AND NULLIF(completion_photos, '') IS NOT NULL AND NULLIF(signature_data, '') IS NOT NULL))
+         RETURNING id`,
+        [payoutStatus, jobId, decoded.role === "admin", String(decoded.driverId)]
       );
+      if (!completed.rows.length) {
+        return res.status(409).json({ error: "Completion requires photos and signature on your assigned order", code: "invalid_state" });
+      }
 
       // Create ledger event
       await createLedgerEvent(pool, "job_completed", job.assigned_driver_id, jobId, job.driver_earnings_cents || 0, {

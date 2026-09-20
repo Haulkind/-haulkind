@@ -1,7 +1,14 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import { requireAdmin } from "./adminAuth";
+import {
+  ACTIVE_STATUSES, AVAILABLE_STATUSES, ETA_STATUSES, PRE_TRIP_STATUSES,
+  SERVICE_DATE_SQL, SERVICE_DAY_SQL, arrivalInstants, calendarDate,
+  easternDate, ensureOrderEtaSchema, nextDate, noStore, serializeOrder,
+  type OrderRow,
+} from "./orderPolicy";
 
 // Driver commission rate: drivers receive 70% of the order value
 const DRIVER_COMMISSION_RATE = 0.70;
@@ -30,8 +37,8 @@ function applyDriverCommission(order: any): any {
   return copy;
 }
 
-function applyDriverCommissionToList(orders: any[]): any[] {
-  return orders.map(applyDriverCommission);
+function applyDriverCommissionToList(orders: OrderRow[], driverId: string) {
+  return orders.map(order => applyDriverCommission(serializeOrder(order, { kind: "driver", driverId: String(driverId) })));
 }
 
 // Use raw pg connection since DATABASE_URL is PostgreSQL
@@ -71,6 +78,19 @@ async function getPgPool() {
   }
 }
 
+export function driverIdentity(req: Request): string | null {
+  const token = req.headers.authorization?.replace(/^Bearer /, "");
+  if (!req.headers.authorization?.startsWith("Bearer ") || !token) return null;
+  try {
+    const decoded: unknown = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    if (typeof decoded !== "object" || decoded === null || !("role" in decoded) || decoded.role !== "driver") return null;
+    if (!("driverId" in decoded) || (typeof decoded.driverId !== "string" && typeof decoded.driverId !== "number")) return null;
+    return String(decoded.driverId);
+  } catch {
+    return null;
+  }
+}
+
 // JWT middleware helper
 function verifyToken(req: any): any {
   const authHeader = req.headers.authorization;
@@ -98,17 +118,15 @@ function startOverdueCron() {
       if (!pool) return;
 
       // Current time in US Eastern (ET)
-      const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-      const hour = nowET.getHours();
+      const now = new Date();
+      const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', hourCycle: 'h23' }).format(now));
 
       // Only act between 9PM and midnight ET
       if (hour < 21) return;
 
       // Find overdue orders: assigned to a driver, not completed, scheduled_for <= today
-      const todayStr = nowET.toISOString().split('T')[0]; // YYYY-MM-DD
-      const tomorrowDate = new Date(nowET);
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-      const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+      const todayStr = easternDate(now);
+      const tomorrowStr = nextDate(todayStr);
 
       const result = await pool.query(
         `SELECT id, assigned_driver_id, scheduled_for FROM jobs
@@ -121,14 +139,17 @@ function startOverdueCron() {
       if (result.rows.length > 0) {
         console.log(`[Cron] Found ${result.rows.length} overdue orders to unassign`);
         for (const row of result.rows) {
-          await pool.query(
+          const unassigned = await pool.query(
             `UPDATE jobs SET status = 'pending', assigned_driver_id = NULL,
                     scheduled_for = ($1::date + TIME '04:00:00'),
                     updated_at = NOW()
-             WHERE id = $2`,
-            [tomorrowStr, row.id]
+             WHERE id = $2 AND assigned_driver_id = $3
+               AND status IN ('accepted', 'assigned', 'en_route', 'arrived', 'in_progress', 'scheduled')
+               AND (scheduled_for::date <= $4::date OR scheduled_for IS NULL)
+             RETURNING id`,
+            [tomorrowStr, row.id, row.assigned_driver_id, todayStr]
           );
-          console.log(`[Cron] Unassigned order ${row.id}, rescheduled to ${tomorrowStr}`);
+          if (unassigned.rows.length) console.log(`[Cron] Unassigned order ${row.id}, rescheduled to ${tomorrowStr}`);
         }
       }
     } catch (e) {
@@ -140,21 +161,24 @@ function startOverdueCron() {
 }
 
 export function registerDriverAuthRoutes(app: Express) {
+  app.use('/driver/orders', noStore, (req, res, next) => {
+    if (!driverIdentity(req)) return res.status(401).json({ error: 'Unauthorized' });
+    next();
+  });
+  app.use('/api/orders', noStore);
 
   // Start the overdue cron job
   startOverdueCron();
 
   // POST /admin/orders/process-overdue - Manual trigger for overdue check (admin only)
-  app.post('/admin/orders/process-overdue', async (req, res) => {
+  app.post('/admin/orders/process-overdue', requireAdmin, async (req, res) => {
     try {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const tomorrowDate = new Date(now);
-      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-      const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+      const todayStr = easternDate(now);
+      const tomorrowStr = nextDate(todayStr);
 
       const result = await pool.query(
         `SELECT id, assigned_driver_id, scheduled_for, status FROM jobs
@@ -164,16 +188,19 @@ export function registerDriverAuthRoutes(app: Express) {
         [todayStr]
       );
 
-      const processed = [];
+      const processed: { id: string; old_status: string; new_scheduled: string }[] = [];
       for (const row of result.rows) {
-        await pool.query(
+        const unassigned = await pool.query(
           `UPDATE jobs SET status = 'pending', assigned_driver_id = NULL,
                   scheduled_for = ($1::date + TIME '04:00:00'),
                   updated_at = NOW()
-           WHERE id = $2`,
-          [tomorrowStr, row.id]
+           WHERE id = $2 AND assigned_driver_id = $3
+             AND status IN ('accepted', 'assigned', 'en_route', 'arrived', 'in_progress', 'scheduled')
+             AND (scheduled_for::date < $4::date OR scheduled_for IS NULL)
+           RETURNING id`,
+          [tomorrowStr, row.id, row.assigned_driver_id, todayStr]
         );
-        processed.push({ id: row.id, old_status: row.status, new_scheduled: tomorrowStr });
+        if (unassigned.rows.length) processed.push({ id: row.id, old_status: row.status, new_scheduled: tomorrowStr });
       }
 
       res.json({ success: true, processed: processed.length, orders: processed });
@@ -242,6 +269,7 @@ export function registerDriverAuthRoutes(app: Express) {
           )
         `);
         console.log('[DriverAuth] Jobs table ensured');
+        await ensureOrderEtaSchema(pool);
 
         // Ensure additional columns exist on jobs table
         try {
@@ -368,7 +396,7 @@ export function registerDriverAuthRoutes(app: Express) {
           pickup_lat, pickup_lng,
           created_at, updated_at
         ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
-        RETURNING *`,
+        RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
         [
           customerName,
           customerPhone || '',
@@ -387,7 +415,7 @@ export function registerDriverAuthRoutes(app: Express) {
 
       const job = result.rows[0];
       console.log(`[Orders] New job created: ${job.id} - ${customerName}`);
-      res.json({ success: true, order: job });
+      res.json({ success: true, order: serializeOrder(job, { kind: "public" }) });
     } catch (err: any) {
       console.error('Create order error:', err);
       res.status(500).json({ error: 'Failed to create order', details: err.message });
@@ -401,7 +429,7 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!pool) return res.status(500).json({ error: 'Database not available' });
 
       const { status, limit = 50 } = req.query;
-      let query = 'SELECT * FROM jobs WHERE 1=1';
+      let query = `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE 1=1`;
       const params: any[] = [];
       let idx = 1;
 
@@ -413,7 +441,7 @@ export function registerDriverAuthRoutes(app: Express) {
       params.push(limit);
 
       const result = await pool.query(query, params);
-      res.json({ orders: result.rows, total: result.rows.length });
+      res.json({ orders: (result.rows as OrderRow[]).map(order => serializeOrder(order, { kind: "public" })), total: result.rows.length });
     } catch (err: any) {
       console.error('List orders error:', err);
       res.status(500).json({ error: 'Failed to list orders' });
@@ -421,7 +449,7 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // PUT /api/orders/:id/assign - Assign order to driver (admin)
-  app.put('/api/orders/:id/assign', async (req, res) => {
+  app.put('/api/orders/:id/assign', requireAdmin, async (req, res) => {
     try {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
@@ -429,10 +457,12 @@ export function registerDriverAuthRoutes(app: Express) {
       const { driver_id } = req.body;
       if (!driver_id) return res.status(400).json({ error: 'driver_id required' });
 
-      await pool.query(
-        `UPDATE jobs SET assigned_driver_id = $1, status = 'assigned', updated_at = NOW() WHERE id = $2`,
+      const assigned = await pool.query(
+        `UPDATE jobs SET assigned_driver_id = $1, status = 'assigned', updated_at = NOW()
+         WHERE id = $2 AND status NOT IN ('completed', 'cancelled', 'refunded') RETURNING id`,
         [driver_id, req.params.id]
       );
+      if (!assigned.rows.length) return res.status(409).json({ error: 'Order unavailable for assignment' });
 
       // Create assignment record
       await pool.query(
@@ -1050,10 +1080,10 @@ export function registerDriverAuthRoutes(app: Express) {
       while (retries < 2) {
         try {
           jobsResult = await pool.query(
-            `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
+            `SELECT id, customer_name, service_type, status, assigned_driver_id,
                     pickup_address, pickup_lat::double precision as pickup_lat, pickup_lng::double precision as pickup_lng,
                     description, estimated_price,
-                    items_json, scheduled_for, pickup_time_window, photo_urls, created_at
+                    items_json, scheduled_for, ${SERVICE_DATE_SQL} AS service_date, pickup_time_window, photo_urls, created_at
              FROM jobs WHERE status IN ('pending', 'dispatching', 'paid', 'scheduled') AND assigned_driver_id IS NULL
              ORDER BY created_at DESC LIMIT 50`
           );
@@ -1119,7 +1149,7 @@ export function registerDriverAuthRoutes(app: Express) {
 
       console.log('[DriverAuth] GET /driver/orders/available - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length + ' total:' + allOrders.length);
 
-      res.json({ orders: applyDriverCommissionToList(allOrders) });
+      res.json({ orders: applyDriverCommissionToList(allOrders, decoded.driverId) });
     } catch (err: any) {
       console.error('[DriverAuth] GET /driver/orders/available CRITICAL ERROR:', err?.message, err?.stack);
       // Return 500 so apps know there's an error (don't silently return empty)
@@ -1243,13 +1273,13 @@ export function registerDriverAuthRoutes(app: Express) {
 
       try {
         const result = await pool.query(
-          `SELECT DISTINCT ON (j.id) j.* FROM jobs j 
+          `SELECT DISTINCT ON (j.id) j.*, j.scheduled_for::date::text AS service_date FROM jobs j
            JOIN job_assignments ja ON j.id = ja.job_id 
            WHERE ja.driver_id = $1 AND j.status = 'completed'
            ORDER BY j.id, j.updated_at DESC LIMIT 50`,
           [decoded.driverId]
         );
-        res.json({ orders: applyDriverCommissionToList(result.rows || []) });
+        res.json({ orders: applyDriverCommissionToList(result.rows || [], decoded.driverId) });
       } catch (e) {
         res.json({ orders: [] });
       }
@@ -1298,10 +1328,13 @@ export function registerDriverAuthRoutes(app: Express) {
       const orderId = req.params.id;
       
       // Update job status
-      await pool.query(
-        "UPDATE jobs SET status = 'assigned', assigned_driver_id = $1, updated_at = NOW() WHERE id = $2",
-        [decoded.driverId, orderId]
+      const result = await pool.query(
+        `UPDATE jobs SET status = 'assigned', assigned_driver_id = $1, updated_at = NOW()
+         WHERE id = $2 AND assigned_driver_id IS NULL AND status = ANY($3::text[])
+         RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
+        [decoded.driverId, orderId, AVAILABLE_STATUSES]
       );
+      if (!result.rows.length) return res.status(409).json({ error: 'Order is no longer available', code: 'order_unavailable' });
 
       // Create assignment record (prevent duplicates for same job+driver)
       try {
@@ -1319,7 +1352,7 @@ export function registerDriverAuthRoutes(app: Express) {
         // ignore duplicate
       }
 
-      res.json({ success: true, message: 'Order accepted' });
+      res.json({ success: true, message: 'Order accepted', order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId: String(decoded.driverId) })) });
     } catch (err: any) {
       console.error('Accept order error:', err);
       res.status(500).json({ error: 'Failed to accept order' });
@@ -1334,6 +1367,13 @@ export function registerDriverAuthRoutes(app: Express) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
+      const pool = await getPgPool();
+      if (!pool) return res.status(503).json({ error: 'Database not available' });
+      const result = await pool.query(
+        'SELECT id FROM jobs WHERE id = $1 AND assigned_driver_id IS NULL AND status = ANY($2::text[])',
+        [req.params.id, AVAILABLE_STATUSES]
+      );
+      if (!result.rows.length) return res.status(409).json({ error: 'Order is no longer available', code: 'order_unavailable' });
       res.json({ success: true, message: 'Order rejected' });
     } catch (err: any) {
       console.error('Reject order error:', err);
@@ -1358,14 +1398,17 @@ export function registerDriverAuthRoutes(app: Express) {
       
       // Fetch order to calculate earnings
       const orderResult = await pool.query(
-        "SELECT estimated_price, price_total_cents, status FROM jobs WHERE id = $1",
-        [orderId]
+        "SELECT estimated_price, price_total_cents, status FROM jobs WHERE id = $1 AND assigned_driver_id = $2",
+        [orderId, decoded.driverId]
       );
+      if (!orderResult.rows.length) return res.status(404).json({ error: 'Assigned order not found', code: 'order_not_found' });
 
       // Guard: prevent completing an already-completed order (no duplicate earnings)
       if (orderResult.rows.length > 0 && orderResult.rows[0].status === 'completed') {
         console.log(`[DriverAuth] Order ${orderId} already completed — blocking duplicate completion`);
-        return res.json({ success: true, message: 'Order already completed', duplicate: true });
+        const result = await pool.query(`SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id = $1 AND assigned_driver_id = $2`, [orderId, decoded.driverId]);
+        if (!result.rows.length) return res.status(409).json({ error: 'Order changed', code: 'order_changed' });
+        return res.json({ success: true, message: 'Order already completed', duplicate: true, order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId: String(decoded.driverId) })) });
       }
       
       let priceTotalCents = 0;
@@ -1383,7 +1426,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const platformFeeCents = Math.round(priceTotalCents * 0.30);
       const driverEarningsCents = priceTotalCents - platformFeeCents;
       
-      await pool.query(
+      const result = await pool.query(
         `UPDATE jobs SET 
           status = 'completed', 
           completed_at = NOW(), 
@@ -1392,13 +1435,16 @@ export function registerDriverAuthRoutes(app: Express) {
           platform_fee_cents = COALESCE(NULLIF(platform_fee_cents, 0), $3),
           driver_earnings_cents = COALESCE(NULLIF(driver_earnings_cents, 0), $4),
           payout_status = COALESCE(NULLIF(payout_status, ''), 'eligible')
-        WHERE id = $1`,
-        [orderId, priceTotalCents, platformFeeCents, driverEarningsCents]
+        WHERE id = $1 AND assigned_driver_id = $5 AND status = 'signed'
+          AND NULLIF(completion_photos, '') IS NOT NULL AND NULLIF(signature_data, '') IS NOT NULL
+          RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
+        [orderId, priceTotalCents, platformFeeCents, driverEarningsCents, decoded.driverId]
       );
+      if (!result.rows.length) return res.status(409).json({ error: 'Completion requires photos and signature on your assigned order', code: 'invalid_state' });
 
       console.log(`[DriverAuth] Order ${orderId} completed: total=${priceTotalCents}c, platform=${platformFeeCents}c, driver=${driverEarningsCents}c`);
 
-      res.json({ success: true, message: 'Order completed', earnings: { priceTotalCents, platformFeeCents, driverEarningsCents } });
+      res.json({ success: true, message: 'Order completed', order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId: String(decoded.driverId) })), earnings: { priceTotalCents, platformFeeCents, driverEarningsCents } });
     } catch (err: any) {
       console.error('Complete order error:', err);
       res.status(500).json({ error: 'Failed to complete order' });
@@ -1535,57 +1581,83 @@ export function registerDriverAuthRoutes(app: Express) {
     }
   });
 
-  // POST /driver/orders/:id/start-trip - Driver starts driving to pickup
-  app.post('/driver/orders/:id/start-trip', async (req, res) => {
-    try {
-      const decoded = verifyToken(req);
-      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
-      const pool = await getPgPool();
-      if (!pool) return res.status(500).json({ error: 'Database not available' });
-      await pool.query(
-        "UPDATE jobs SET status = 'en_route', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId]
-      );
-      res.json({ success: true, message: 'Trip started - en route to pickup' });
-    } catch (err: any) {
-      console.error('Start trip error:', err);
-      res.status(500).json({ error: 'Failed to start trip' });
-    }
-  });
+  for (const action of [
+    { path: 'start-trip', from: PRE_TRIP_STATUSES, to: 'en_route' },
+    { path: 'arrived', from: ['en_route'], to: 'arrived' },
+    { path: 'start-work', from: ['arrived'], to: 'in_progress' },
+  ]) {
+    app.post(`/driver/orders/:id/${action.path}`, async (req, res) => {
+      try {
+        const driverId = driverIdentity(req);
+        if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
+        const pool = await getPgPool();
+        if (!pool) return res.status(503).json({ error: 'Database not available' });
+        const current = await pool.query(
+          `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs WHERE id = $1 AND assigned_driver_id = $2`,
+          [req.params.id, driverId]
+        );
+        const order: OrderRow | undefined = current.rows[0];
+        if (!order) return res.status(404).json({ error: 'Assigned order not found', code: 'order_not_found' });
+        if (!calendarDate(order.service_date) || order.service_date !== easternDate()) {
+          return res.status(409).json({ error: 'Action is only available on the scheduled service day', code: 'not_service_day' });
+        }
+        const result = await pool.query(
+          `UPDATE jobs SET status = $3, updated_at = NOW()
+           WHERE id = $1 AND assigned_driver_id = $2 AND status = ANY($4::text[]) AND ${SERVICE_DAY_SQL}
+           RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
+          [req.params.id, driverId, action.to, [...action.from, action.to]]
+        );
+        if (!result.rows.length) return res.status(409).json({ error: 'Order cannot perform this action in its current state', code: 'invalid_state' });
+        res.json({ success: true, order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId })) });
+      } catch (error) {
+        console.error(`[DriverAuth] ${action.path} error:`, error);
+        res.status(500).json({ error: 'Failed to update order' });
+      }
+    });
+  }
 
-  // POST /driver/orders/:id/arrived - Driver arrived at pickup location
-  app.post('/driver/orders/:id/arrived', async (req, res) => {
+  app.post('/driver/orders/:id/eta', async (req, res) => {
     try {
-      const decoded = verifyToken(req);
-      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const driverId = driverIdentity(req);
+      if (!driverId) return res.status(401).json({ error: 'Unauthorized' });
+      const arrivalTime: unknown = req.body?.arrival_time;
+      if (typeof arrivalTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(arrivalTime)) {
+        return res.status(400).json({ error: 'arrival_time must be HH:MM (24-hour)', code: 'invalid_arrival_time' });
+      }
       const pool = await getPgPool();
-      if (!pool) return res.status(500).json({ error: 'Database not available' });
-      await pool.query(
-        "UPDATE jobs SET status = 'arrived', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId]
+      if (!pool || !await ensureOrderEtaSchema(pool)) {
+        return res.status(503).json({ error: 'Arrival time storage is not ready', code: 'eta_unavailable', eta_available: false });
+      }
+      const current = await pool.query(
+        `SELECT *, ${SERVICE_DATE_SQL} AS service_date, updated_at::text AS eta_revision FROM jobs WHERE id = $1 AND assigned_driver_id = $2`,
+        [req.params.id, driverId]
       );
-      res.json({ success: true, message: 'Arrived at pickup location' });
-    } catch (err: any) {
-      console.error('Arrived error:', err);
-      res.status(500).json({ error: 'Failed to update arrival' });
-    }
-  });
-
-  // POST /driver/orders/:id/start-work - Driver starts the actual work
-  app.post('/driver/orders/:id/start-work', async (req, res) => {
-    try {
-      const decoded = verifyToken(req);
-      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
-      const pool = await getPgPool();
-      if (!pool) return res.status(500).json({ error: 'Database not available' });
-      await pool.query(
-        "UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId]
+      const order: OrderRow | undefined = current.rows[0];
+      if (!order) return res.status(404).json({ error: 'Assigned order not found', code: 'order_not_found' });
+      const serviceDate = calendarDate(order.service_date);
+      if (!serviceDate) return res.status(409).json({ error: 'A valid service date is required', code: 'invalid_service_date' });
+      if (!ETA_STATUSES.includes(order.status)) return res.status(409).json({ error: 'Arrival time cannot be changed in this state', code: 'invalid_state' });
+      const now = new Date();
+      const candidates = arrivalInstants(serviceDate, arrivalTime);
+      if (!candidates.length) return res.status(400).json({ error: 'This local time does not exist on the service date', code: 'invalid_arrival_time' });
+      const arrival = candidates.find(candidate => candidate.getTime() > now.getTime());
+      if (serviceDate < easternDate(now) || !arrival) {
+        return res.status(400).json({ error: 'Arrival time must be in the future on the service date', code: 'arrival_time_in_past' });
+      }
+      const result = await pool.query(
+        `UPDATE jobs SET driver_eta_at = $3, driver_eta_updated_at = NOW(),
+           driver_eta_driver_id = $2, driver_eta_service_date = $4::date, updated_at = NOW()
+         WHERE id = $1 AND assigned_driver_id = $2 AND status = ANY($5::text[])
+           AND scheduled_for::date = $4::date AND $3::timestamptz > NOW()
+           AND updated_at IS NOT DISTINCT FROM $6::timestamp
+         RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
+        [req.params.id, driverId, arrival.toISOString(), serviceDate, ETA_STATUSES, order.eta_revision]
       );
-      res.json({ success: true, message: 'Work started' });
-    } catch (err: any) {
-      console.error('Start work error:', err);
-      res.status(500).json({ error: 'Failed to start work' });
+      if (!result.rows.length) return res.status(409).json({ error: 'Order changed; refresh before setting arrival', code: 'order_changed' });
+      res.json({ success: true, order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId })) });
+    } catch (error) {
+      console.error('[DriverAuth] ETA update error:', error);
+      res.status(500).json({ error: 'Failed to save arrival time' });
     }
   });
 
@@ -1601,6 +1673,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const photoData: string = body.photo_data || body.photo_base64 || '';
       const rawType: string = String(body.type || 'completion').toLowerCase();
       if (!photoData) return res.status(400).json({ error: 'photo_data required' });
+      if (!['before', 'after', 'completion'].includes(rawType)) return res.status(400).json({ error: 'Invalid photo type' });
 
       // Ensure columns exist (idempotent safety for older DB snapshots)
       try {
@@ -1615,21 +1688,24 @@ export function registerDriverAuthRoutes(app: Express) {
       // Route photo to the correct column based on type.
       // "after" photos are also mirrored into completion_photos so the existing
       // admin media viewer keeps working without changes.
+      let updatedOrder: OrderRow | undefined;
       if (rawType === 'before') {
-        await pool.query(
+        const result = await pool.query(
           `UPDATE jobs SET
             before_photos = CASE
               WHEN before_photos IS NULL OR before_photos = '' THEN $3
               ELSE before_photos || '|||' || $3
             END,
             updated_at = NOW()
-          WHERE id = $1 AND assigned_driver_id = $2`,
-          [req.params.id, decoded.driverId, photoData]
+          WHERE id = $1 AND assigned_driver_id = $2 AND status = ANY($4::text[]) AND ${SERVICE_DAY_SQL}
+          RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
+          [req.params.id, decoded.driverId, photoData, ACTIVE_STATUSES]
         );
+        updatedOrder = result.rows[0];
       } else if (rawType === 'after') {
-        await pool.query(
+        const result = await pool.query(
           `UPDATE jobs SET
-            status = 'photo_taken',
+            status = CASE WHEN status = 'signed' THEN 'signed' ELSE 'photo_taken' END,
             after_photos = CASE
               WHEN after_photos IS NULL OR after_photos = '' THEN $3
               ELSE after_photos || '|||' || $3
@@ -1639,23 +1715,28 @@ export function registerDriverAuthRoutes(app: Express) {
               ELSE completion_photos || '|||' || $3
             END,
             updated_at = NOW()
-          WHERE id = $1 AND assigned_driver_id = $2`,
+          WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('in_progress', 'started', 'photo_taken', 'signed') AND ${SERVICE_DAY_SQL}
+          RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
           [req.params.id, decoded.driverId, photoData]
         );
+        updatedOrder = result.rows[0];
       } else {
-        await pool.query(
+        const result = await pool.query(
           `UPDATE jobs SET
-            status = 'photo_taken',
+            status = CASE WHEN status = 'signed' THEN 'signed' ELSE 'photo_taken' END,
             completion_photos = CASE
               WHEN completion_photos IS NULL OR completion_photos = '' THEN $3
               ELSE completion_photos || '|||' || $3
             END,
             updated_at = NOW()
-          WHERE id = $1 AND assigned_driver_id = $2`,
+          WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('in_progress', 'started', 'photo_taken', 'signed') AND ${SERVICE_DAY_SQL}
+          RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
           [req.params.id, decoded.driverId, photoData]
         );
+        updatedOrder = result.rows[0];
       }
-      res.json({ success: true, message: 'Photo uploaded', type: rawType });
+      if (!updatedOrder) return res.status(409).json({ error: 'Photo requires your active assigned order on its service day and the correct work stage', code: 'invalid_state' });
+      res.json({ success: true, message: 'Photo uploaded', type: rawType, order: applyDriverCommission(serializeOrder(updatedOrder, { kind: 'driver', driverId: String(decoded.driverId) })) });
     } catch (err: any) {
       console.error('Upload photo error:', err);
       res.status(500).json({ error: 'Failed to upload photo' });
@@ -1673,11 +1754,15 @@ export function registerDriverAuthRoutes(app: Express) {
       // Accept multiple field names for backward compatibility
       const signature: string = body.signature_data || body.signature_base64 || '';
       if (!signature) return res.status(400).json({ error: 'signature_data required' });
-      await pool.query(
-        "UPDATE jobs SET status = 'signed', signature_data = $3, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+      const result = await pool.query(
+        `UPDATE jobs SET status = 'signed', signature_data = $3, updated_at = NOW()
+         WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('photo_taken', 'signed')
+           AND NULLIF(completion_photos, '') IS NOT NULL
+         RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
         [req.params.id, decoded.driverId, signature]
       );
-      res.json({ success: true, message: 'Signature captured' });
+      if (!result.rows.length) return res.status(409).json({ error: 'Signature requires completion photos on your assigned order', code: 'invalid_state' });
+      res.json({ success: true, message: 'Signature captured', order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId: String(decoded.driverId) })) });
     } catch (err: any) {
       console.error('Signature error:', err);
       res.status(500).json({ error: 'Failed to capture signature' });
@@ -1695,10 +1780,8 @@ export function registerDriverAuthRoutes(app: Express) {
 
       // Get orders assigned to this driver (not completed/cancelled)
       const jobsResult = await pool.query(
-        `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
-                pickup_address, pickup_lat::double precision as pickup_lat, pickup_lng::double precision as pickup_lng,
-                description, estimated_price,
-                items_json, scheduled_for, pickup_time_window, photo_urls, created_at
+        `SELECT *, ${SERVICE_DATE_SQL} AS service_date,
+                pickup_lat::double precision as pickup_lat, pickup_lng::double precision as pickup_lng
          FROM jobs
          WHERE assigned_driver_id = $1
            AND status NOT IN ('completed', 'cancelled')
@@ -1715,10 +1798,12 @@ export function registerDriverAuthRoutes(app: Express) {
                   lat::double precision as pickup_lat, lng::double precision as pickup_lng,
                   '' as description,
                   COALESCE((pricing_json::jsonb->>'total')::numeric, 0) as estimated_price,
-                  items_json::text, pickup_date as scheduled_for, created_at
+                  items_json::text, pickup_date as scheduled_for, pickup_date::date::text AS service_date,
+                  assigned_driver_id, created_at, false AS eta_supported
            FROM orders
            WHERE assigned_driver_id = $1
              AND status NOT IN ('completed', 'cancelled')
+             AND NOT EXISTS (SELECT 1 FROM jobs WHERE jobs.id::text = orders.id::text)
            ORDER BY pickup_date ASC NULLS LAST, created_at DESC`,
           [decoded.driverId]
         );
@@ -1727,10 +1812,11 @@ export function registerDriverAuthRoutes(app: Express) {
         console.warn('[DriverAuth] Could not query orders table for my-orders:', (e as any)?.message);
       }
 
-      const allOrders = [...(jobsResult.rows || []), ...ordersRows];
+      const jobIds = new Set((jobsResult.rows as OrderRow[]).map(order => String(order.id)));
+      const allOrders = [...(jobsResult.rows || []), ...ordersRows.filter(order => !jobIds.has(String(order.id)))];
       console.log('[DriverAuth] GET /driver/orders/my-orders - jobs:' + jobsResult.rows.length + ' orders:' + ordersRows.length);
 
-      res.json({ orders: applyDriverCommissionToList(allOrders) });
+      res.json({ orders: applyDriverCommissionToList(allOrders, decoded.driverId) });
     } catch (err: any) {
       console.error('[DriverAuth] GET /driver/orders/my-orders CRITICAL ERROR:', err?.message, err?.stack);
       return res.status(500).json({ error: 'Failed to fetch my orders', orders: [] });
@@ -1744,9 +1830,21 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
+      let result = await pool.query(
+        `SELECT *, ${SERVICE_DATE_SQL} AS service_date FROM jobs
+         WHERE id = $1 AND (assigned_driver_id = $2 OR (assigned_driver_id IS NULL AND status = ANY($3::text[])))`,
+        [req.params.id, decoded.driverId, AVAILABLE_STATUSES]
+      );
+      if (!result.rows.length) {
+        result = await pool.query(
+          `SELECT *, pickup_date::date::text AS service_date, false AS eta_supported FROM orders
+           WHERE id::text = $1 AND (assigned_driver_id::text = $2 OR (assigned_driver_id IS NULL AND status = ANY($3::text[])))
+             AND NOT EXISTS (SELECT 1 FROM jobs WHERE jobs.id::text = $1)`,
+          [req.params.id, String(decoded.driverId), AVAILABLE_STATUSES]
+        );
+      }
       if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
-      res.json({ order: applyDriverCommission(result.rows[0]) });
+      res.json({ order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId: String(decoded.driverId) })) });
     } catch (err: any) {
       console.error('Get order error:', err);
       res.status(500).json({ error: 'Failed to get order' });
@@ -1754,7 +1852,7 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // POST /api/setup/admin - Create admin user (one-time setup)
-  app.post('/api/setup/admin', async (req, res) => {
+  app.post('/api/setup/admin', requireAdmin, async (req, res) => {
     try {
       const { email, password, name } = req.body;
       if (!email || !password) {
@@ -1805,12 +1903,15 @@ export function registerDriverAuthRoutes(app: Express) {
       const orderId = req.params.id;
       
       // Update job status to cancelled
-      await pool.query(
-        "UPDATE jobs SET status = 'pending', assigned_driver_id = NULL, updated_at = NOW() WHERE id = $1",
-        [orderId]
+      const result = await pool.query(
+        `UPDATE jobs SET status = 'pending', assigned_driver_id = NULL, updated_at = NOW()
+         WHERE id = $1 AND assigned_driver_id = $2 AND status = ANY($3::text[])
+         RETURNING *, ${SERVICE_DATE_SQL} AS service_date`,
+        [orderId, decoded.driverId, ACTIVE_STATUSES]
       );
+      if (!result.rows.length) return res.status(409).json({ error: 'Only your active assigned order can be returned', code: 'invalid_state' });
       
-      res.json({ success: true, message: 'Order cancelled and returned to available orders' });
+      res.json({ success: true, message: 'Order cancelled and returned to available orders', order: applyDriverCommission(serializeOrder(result.rows[0], { kind: 'driver', driverId: String(decoded.driverId) })) });
     } catch (err: any) {
       console.error('Cancel order error:', err);
       res.status(500).json({ error: 'Failed to cancel order' });
