@@ -16,6 +16,7 @@ import {
   NotificationsScreen,
 } from './src/new_screens';
 import { OnboardingScreen } from './src/screens/new_OnboardingScreen';
+import driverLogo from './src/assets/haulkind-logo.png';
 
 const COLORS = {
   primary: '#1a3a4a',
@@ -226,7 +227,7 @@ function SideMenu({ visible, onClose, navigation }) {
 function LoadingScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' }}>
-      <Text style={{ fontSize: 28, fontWeight: '800', color: COLORS.primary, marginBottom: 16 }}>Haulkind</Text>
+      <Image source={driverLogo} accessibilityLabel="Haulkind Driver" style={{ width: 80, height: 80, borderRadius: 16, marginBottom: 16 }} />
       <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
   );

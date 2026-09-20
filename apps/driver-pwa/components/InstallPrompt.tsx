@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import DriverLogo from '@/components/DriverLogo'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -78,9 +79,7 @@ export default function InstallPrompt() {
         </button>
 
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 bg-primary-900 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <span className="text-xl font-black text-white">HK</span>
-          </div>
+          <DriverLogo size={56} />
           <div>
             <h3 className="text-lg font-bold text-gray-900">Install HaulKind Drive</h3>
             <p className="text-sm text-gray-500">Get the full app experience</p>

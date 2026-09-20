@@ -15,6 +15,7 @@ import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
 import { launchCamera } from "react-native-image-picker";
 import Sound from "react-native-sound";
+import driverLogo from "./assets/haulkind-logo.png";
 
 // Configure Sound to play even in silent mode
 Sound.setCategory("Playback");
@@ -499,7 +500,7 @@ export function LoginScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.logoContainerSmall}>
-          <View style={styles.logoCircle}><Text style={styles.logoText}>H</Text></View>
+          <Image source={driverLogo} style={styles.logo} accessibilityLabel="Haulkind Driver" />
           <Text style={styles.appName}>Haulkind Driver</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
@@ -571,7 +572,7 @@ export function SignupScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.logoContainerSmall}>
-          <View style={styles.logoCircle}><Text style={styles.logoText}>H</Text></View>
+          <Image source={driverLogo} style={styles.logo} accessibilityLabel="Haulkind Driver" />
           <Text style={styles.appName}>Haulkind Driver</Text>
           <Text style={styles.subtitle}>Create your driver account</Text>
         </View>
@@ -1179,7 +1180,7 @@ export function HomeScreen({ navigation, route }) {
             <View style={styles.hamburgerLine} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.topBarTitle}>Haulkind</Text>
+            <Image source={driverLogo} style={styles.logoSmall} accessibilityLabel="Haulkind Driver" />
             <Text style={styles.topBarSub}>{isOnline ? `${filteredOrders.length} orders nearby` : "You're offline"}</Text>
           </View>
         </View>
@@ -1271,8 +1272,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: C.bg },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 },
   logoContainerSmall: { alignItems: "center", marginBottom: 20 },
-  logoCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.primary, alignItems: "center", justifyContent: "center", marginBottom: 8 },
-  logoText: { fontSize: 28, fontWeight: "bold", color: C.white },
+  logo: { width: 80, height: 80, borderRadius: 16, marginBottom: 8 },
   appName: { fontSize: 22, fontWeight: "bold", color: C.text },
   subtitle: { fontSize: 14, color: C.textSecondary, marginTop: 4 },
   formCard: { backgroundColor: C.white, borderRadius: 12, padding: 24, elevation: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
@@ -1294,9 +1294,7 @@ const styles = StyleSheet.create({
   homeContainer: { flex: 1, backgroundColor: C.dark },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: C.primaryDark, paddingTop: SBH + 10, paddingBottom: 12, paddingHorizontal: 16 },
   topBarLeft: { flexDirection: "row", alignItems: "center" },
-  logoSmall: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.white, alignItems: "center", justifyContent: "center", marginRight: 10 },
-  logoSmallText: { fontSize: 18, fontWeight: "bold", color: C.primary },
-  topBarTitle: { fontSize: 18, fontWeight: "bold", color: C.white },
+  logoSmall: { width: 40, height: 40, borderRadius: 8, marginBottom: 2 },
   topBarSub: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
   topBarRight: { flexDirection: "row", alignItems: "center" },
   onlineLabel: { fontSize: 11, fontWeight: "bold", marginRight: 4, letterSpacing: 0.5 },

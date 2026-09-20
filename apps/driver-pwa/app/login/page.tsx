@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { login as apiLogin, signup as apiSignup } from '@/lib/api'
+import DriverLogo from '@/components/DriverLogo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -45,9 +46,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-primary-900 flex flex-col justify-center px-6">
       <div className="mb-10 text-center">
-        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <span className="text-3xl">🚛</span>
-        </div>
+        <DriverLogo className="mx-auto mb-4 shadow-lg" priority />
         <h1 className="text-3xl font-bold text-white">HaulKind Drive</h1>
         <p className="text-primary-200 mt-2">
           {mode === 'login' ? 'Sign in to start earning' : 'Create your driver account'}
