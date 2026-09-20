@@ -373,12 +373,15 @@ function buildDetailMapHtml(lat, lng) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>* { margin: 0; padding: 0; } #map { width: 100%; height: 100vh; } .leaflet-control-attribution { display: none !important; }</style>
+<style>* { margin: 0; padding: 0; } #map { width: 100%; height: 100vh; } .leaflet-control-attribution { font-size: 9px; }</style>
 </head><body>
 <div id="map"></div>
 <script>
   var map = L.map('map', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([${lat}, ${lng}], 15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+  }).addTo(map);
   L.marker([${lat}, ${lng}]).addTo(map);
 </script>
 </body></html>`;
@@ -983,6 +986,7 @@ export function HomeScreen({ navigation, route }) {
               <View style={styles.detailMapWrap}>
                 <WebView
                   source={{ html: buildDetailMapHtml(o.coords.latitude, o.coords.longitude) }}
+                  applicationNameForUserAgent="HaulkindDriver/1.0.3 (+https://haulkind.com)"
                   style={{ flex: 1 }}
                   scrollEnabled={false}
                 />

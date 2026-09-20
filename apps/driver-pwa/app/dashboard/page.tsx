@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic'
 import Sidebar from '@/components/Sidebar'
 import DriverLogo from '@/components/DriverLogo'
 import { trackDriverLocation, type LocationStatus } from '@/lib/driverLocation'
+import { formatPayout } from '@/lib/driverPayout'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
@@ -83,7 +84,8 @@ function showBrowserNotification(count: number, firstOrder: Order | undefined) {
     const address = firstOrder?.pickup_address || 'Nearby'
     const title = count === 1 ? '\uD83D\uDE9B New Order Available!' : `\uD83D\uDE9B ${count} New Orders!`
     const body = count === 1 ? `$${price} \u2014 ${address}` : `$${price} and ${count - 1} more`
-    new Notification(title, { body, icon: '/icon-192x192.png', tag: 'new-order', renotify: true })
+    const options = { body, icon: '/icon-192x192.png', tag: 'new-order', renotify: true }
+    new Notification(title, options)
     // Vibrate if supported
     if (settings.vibration !== false && navigator.vibrate) {
       navigator.vibrate([200, 100, 200, 100, 200])
@@ -565,30 +567,6 @@ function statusColor(status: string): string {
     case 'pending': return 'bg-yellow-100 text-yellow-700'
     default: return 'bg-gray-100 text-gray-600'
   }
-}
-
-function formatPayout(order: Order): string {
-  // Backend applyDriverCommission already applies 70% to estimated_price
-  // So we show estimated_price DIRECTLY — do NOT multiply by 0.7 again
-  const ep = (order as any).estimated_price
-  if (ep && Number(ep) > 0) {
-    return Number(ep).toFixed(2)
-  }
-  // Check driver_earnings (pre-calculated by backend)
-  if (order.driver_earnings && Number(order.driver_earnings) > 0) {
-    return Number(order.driver_earnings).toFixed(2)
-  }
-  // Check payout field
-  if (order.payout && Number(order.payout) > 0) {
-    return Number(order.payout).toFixed(2)
-  }
-  // Check driver_earnings_cents (cents format)
-  const cents = order.driver_earnings_cents
-  if (cents && cents > 0) return (cents / 100).toFixed(2)
-  // Fallback: price/total are already 70% from backend
-  const price = order.price || order.total || 0
-  if (Number(price) > 0) return Number(price).toFixed(2)
-  return '0.00'
 }
 
 function formatServiceTypeShort(type: string): string {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { getOrderHistory, type Order } from '@/lib/api'
 import PageHeader from '@/components/PageHeader'
+import { formatPayout } from '@/lib/driverPayout'
 
 export default function OrderHistoryPage() {
   const router = useRouter()
@@ -106,15 +107,6 @@ function statusColor(status: string): string {
     case 'cancelled': return 'bg-red-100 text-red-700'
     default: return 'bg-gray-100 text-gray-600'
   }
-}
-
-function formatPayout(order: Order): string {
-  const cents = order.driver_earnings_cents || order.driver_earnings
-  if (cents && cents > 100) return (cents / 100).toFixed(2)
-  if (order.payout) return order.payout.toFixed(2)
-  if (order.driver_earnings) return order.driver_earnings.toFixed(2)
-  const price = order.price || order.total || 0
-  return (price * 0.7).toFixed(2)
 }
 
 function formatDate(order: Order): string {

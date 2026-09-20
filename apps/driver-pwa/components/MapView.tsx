@@ -5,20 +5,13 @@ import { useRouter } from 'next/navigation'
 import type { Circle, CircleMarker, Map as LeafletMap, Marker } from 'leaflet'
 import type { Order } from '@/lib/api'
 import MenuIcon from './MenuIcon'
+import { formatPayout } from '@/lib/driverPayout'
 
 interface MapViewProps {
   lat: number | null
   lng: number | null
   accuracy?: number | null
   orders?: Order[]
-}
-
-function getOrderPrice(order: Order): string {
-  if (Number(order.estimated_price) > 0) return Number(order.estimated_price).toFixed(0)
-  if (Number(order.driver_earnings) > 0) return Number(order.driver_earnings).toFixed(0)
-  if (Number(order.payout) > 0) return Number(order.payout).toFixed(0)
-  if (order.driver_earnings_cents && order.driver_earnings_cents > 0) return (order.driver_earnings_cents / 100).toFixed(0)
-  return (Number(order.price || order.total) || 0).toFixed(0)
 }
 
 export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProps) {
@@ -44,7 +37,7 @@ export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProp
       const L = await import('leaflet')
       if (cancelled || !container.current) return
       leaflet.current = L
-      const map = L.map(container.current, { zoomControl: false }).setView([39.9526, -75.1652], 10)
+      const map = L.map(container.current, { zoomControl: false, zoomAnimation: false }).setView([39.9526, -75.1652], 10)
       mapRef.current = map
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -106,7 +99,7 @@ export default function MapView({ lat, lng, accuracy, orders = [] }: MapViewProp
       const distance = lat !== null && lng !== null
         ? ` ${(map.distance([lat, lng], [latitude, longitude]) / 1609.34).toFixed(1)}mi`
         : ''
-      label.textContent = `$${getOrderPrice(order)}${distance}`
+      label.textContent = `$${formatPayout(order, 0)}${distance}`
       const marker = L.marker([latitude, longitude], {
         icon: L.divIcon({ className: 'order-pin', html: label, iconSize: [64, 30], iconAnchor: [32, 30] }),
       }).addTo(map).on('click', () => router.push(`/orders/${order.id}`))
