@@ -18,6 +18,7 @@ interface DriverTrackingMapProps {
   pickupLat: number
   pickupLng: number
   driverName?: string
+  hasDriverEta?: boolean
 }
 
 function formatEta(minutes: number): string {
@@ -37,6 +38,7 @@ export default function DriverTrackingMap({
   pickupLat,
   pickupLng,
   driverName,
+  hasDriverEta = false,
 }: DriverTrackingMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -208,7 +210,7 @@ export default function DriverTrackingMap({
       ? `${driverLocation.distance_km} km`
       : null
 
-  const etaText = driverLocation.eta_minutes != null
+  const etaText = !hasDriverEta && driverLocation.eta_minutes != null
     ? formatEta(driverLocation.eta_minutes)
     : null
 
@@ -246,20 +248,21 @@ export default function DriverTrackingMap({
           {etaText && (
             <div className="bg-blue-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-blue-700">{etaText}</div>
-              <div className="text-xs text-blue-600 mt-1">ETA</div>
+              <div className="text-xs text-blue-600 mt-1">GPS estimate</div>
             </div>
           )}
 
           {/* Arrival Time */}
-          {driverLocation.eta_minutes != null && (
+          {!hasDriverEta && driverLocation.eta_minutes != null && (
             <div className="bg-purple-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-purple-700">
                 {new Date(Date.now() + driverLocation.eta_minutes * 60000).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: 'America/New_York',
                 })}
               </div>
-              <div className="text-xs text-purple-600 mt-1">Arrives at</div>
+              <div className="text-xs text-purple-600 mt-1">Estimated arrival (ET)</div>
             </div>
           )}
         </div>

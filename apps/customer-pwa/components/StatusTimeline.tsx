@@ -15,7 +15,10 @@ const STATUSES = [
 ]
 
 export default function StatusTimeline({ currentStatus }: StatusTimelineProps) {
-  const currentIndex = STATUSES.findIndex(s => s.key === currentStatus)
+  const normalized = ['photo_taken', 'signed', 'started'].includes(currentStatus) ? 'in_progress'
+    : currentStatus === 'accepted' ? 'assigned'
+    : ['paid', 'scheduled'].includes(currentStatus) ? 'dispatching' : currentStatus
+  const currentIndex = STATUSES.findIndex(s => s.key === normalized)
   const isCancelled = currentStatus === 'cancelled'
 
   if (isCancelled) {

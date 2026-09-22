@@ -1,4 +1,4 @@
-const CACHE_NAME = 'haulkind-pwa-v2';
+const CACHE_NAME = 'haulkind-pwa-v3';
 const STATIC_ASSETS = [
   '/',
   '/auth',
@@ -42,7 +42,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   // API requests: network only (don't cache dynamic data)
-  if (url.pathname.startsWith('/customer/') || url.pathname.startsWith('/jobs/') || url.pathname.startsWith('/quotes')) {
+  if (url.origin !== self.location.origin || event.request.headers.has('Authorization') ||
+      url.searchParams.has('token') || url.pathname.startsWith('/customer/') ||
+      url.pathname.startsWith('/driver/') || url.pathname.startsWith('/api/') ||
+      url.pathname.startsWith('/jobs/') || url.pathname.startsWith('/quotes')) {
     return;
   }
 
@@ -50,7 +53,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetchPromise = fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
+        if (response && response.status === 200 && !/no-store|private/i.test(response.headers.get('Cache-Control') || '')) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);

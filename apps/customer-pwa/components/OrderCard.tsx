@@ -19,7 +19,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
   const statusColor = (s: string) => {
     if (s === 'completed') return 'bg-green-100 text-green-700'
     if (s === 'cancelled') return 'bg-red-100 text-red-700'
-    if (['assigned', 'in_progress', 'en_route', 'arrived'].includes(s)) return 'bg-blue-100 text-blue-700'
+    if (['accepted', 'assigned', 'in_progress', 'started', 'photo_taken', 'signed', 'en_route', 'arrived'].includes(s)) return 'bg-blue-100 text-blue-700'
     if (s === 'dispatching') return 'bg-yellow-100 text-yellow-700'
     return 'bg-gray-100 text-gray-700'
   }
@@ -70,7 +70,7 @@ export default function OrderCard({ order, onClick }: OrderCardProps) {
             </span>
           ) : (
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(order.status)}`}>
-              {order.status?.toUpperCase()}
+              {order.status?.replace(/_/g, ' ').toUpperCase()}
             </span>
           )}
           <span className="font-bold text-primary-600">

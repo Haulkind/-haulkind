@@ -6,11 +6,12 @@ import { useAuth } from '@/lib/auth'
 import {
   getOrderDetail, startTrip, markArrived, startWork, completeOrder,
   cancelOrder, acceptOrder, rejectOrder, uploadOrderPhoto, submitSignature,
-  streamLocation, type Order,
+  streamLocation, updateOrderEta, withoutCustomerContact, type Order,
 } from '@/lib/api'
 import SignaturePad from '@/components/SignaturePad'
-import type { Map as LeafletMap } from 'leaflet'
+import type { Map as LeafletMap, Marker } from 'leaflet'
 import { formatPayout } from '@/lib/driverPayout'
+import { formatDistance, getOrderCoordinates, getOrderDistance } from '@/lib/orderLocation'
 
 // Parse a photo field that may come back as string[] (JSON), |||-separated string, or array
 function parsePhotoField(field: unknown): string[] {
@@ -26,19 +27,7 @@ function parsePhotoField(field: unknown): string[] {
   return trimmed.split('|||').map(s => s.trim()).filter(Boolean)
 }
 
-// Haversine distance in miles
-function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3958.8
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-const STATUS_FLOW = ['accepted', 'assigned', 'en_route', 'arrived', 'started', 'completed']
+const STATUS_FLOW = ['assigned', 'en_route', 'arrived', 'in_progress', 'photo_taken', 'signed', 'completed']
 // Statuses that mean "driver is actively doing the work" (server uses 'in_progress', some flows use 'started')
 const IN_PROGRESS_STATUSES = ['started', 'in_progress', 'photo_taken', 'signed']
 
@@ -50,6 +39,9 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
+  const [arrivalTime, setArrivalTime] = useState('')
+  const requestRef = useRef(0)
+  const busyRef = useRef(false)
   const [beforePhotos, setBeforePhotos] = useState<string[]>([])
   const [afterPhotos, setAfterPhotos] = useState<string[]>([])
   const [signatureData, setSignatureData] = useState<string | null>(null)
@@ -63,6 +55,11 @@ export default function OrderDetailPage() {
   const [driverLng, setDriverLng] = useState<number | null>(null)
   const detailMapRef = useRef<HTMLDivElement>(null)
   const detailMapInstanceRef = useRef<LeafletMap | null>(null)
+  const driverMarkerRef = useRef<Marker | null>(null)
+  const [mapReady, setMapReady] = useState(false)
+  const [pickupLat, pickupLng] = order ? getOrderCoordinates(order) || [null, null] : [null, null]
+  const mapPayout = order ? formatPayout(order) : '0'
+  const mapOrderId = order?.id
 
   useEffect(() => {
     if (!isLoading && !token) router.replace('/login')
@@ -71,7 +68,7 @@ export default function OrderDetailPage() {
   // Get driver's current position for distance calculation
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition(
+    const watch = navigator.geolocation.watchPosition(
       (pos) => {
         setDriverLat(pos.coords.latitude)
         setDriverLng(pos.coords.longitude)
@@ -79,18 +76,19 @@ export default function OrderDetailPage() {
       () => {},
       { enableHighAccuracy: true, timeout: 10000 }
     )
+    return () => navigator.geolocation.clearWatch(watch)
   }, [])
 
   // Initialize mini-map on order detail page showing pickup location
   useEffect(() => {
-    if (!order || !detailMapRef.current || detailMapInstanceRef.current) return
+    if (!mapOrderId || !detailMapRef.current || detailMapInstanceRef.current) return
     let cancelled = false
     let observer: ResizeObserver | null = null
-    const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
-    const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
+    const oLat = pickupLat
+    const oLng = pickupLng
     // Use pickup coords, or driver coords, or default NJ
-    const centerLat = oLat || driverLat || 40.0583
-    const centerLng = oLng || driverLng || -74.4057
+    const centerLat = oLat ?? 40.0583
+    const centerLng = oLng ?? -74.4057
 
     const initDetailMap = async () => {
       const L = (await import('leaflet')).default
@@ -108,58 +106,70 @@ export default function OrderDetailPage() {
       }).addTo(map)
 
       // Pickup location marker (red pin with price)
-      if (oLat && oLng) {
-        const price = formatPayout(order)
+      if (oLat !== null && oLng !== null) {
         const icon = L.divIcon({
           className: 'order-detail-pin',
-          html: `<div style="background:#ef4444;color:#fff;padding:6px 12px;border-radius:10px;font-weight:bold;font-size:14px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:2px solid #fff;">$${price}</div>`,
+          html: `<div style="background:#ef4444;color:#fff;padding:6px 12px;border-radius:10px;font-weight:bold;font-size:14px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:2px solid #fff;">$${mapPayout}</div>`,
           iconSize: [80, 34],
           iconAnchor: [40, 34],
         })
         L.marker([oLat, oLng], { icon }).addTo(map)
       }
 
-      // Driver location marker (blue dot)
-      if (driverLat && driverLng) {
-        const driverIcon = L.divIcon({
-          className: 'driver-marker',
-          html: '<div style="width:14px;height:14px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7],
-        })
-        L.marker([driverLat, driverLng], { icon: driverIcon }).addTo(map)
-      }
-
-      // Fit bounds to show both driver and pickup
-      if (oLat && oLng && driverLat && driverLng) {
-        map.fitBounds([[oLat, oLng], [driverLat, driverLng]], { padding: [30, 30] })
-      }
-
       observer = new ResizeObserver(() => map.invalidateSize())
       observer.observe(detailMapRef.current)
+      setMapReady(true)
     }
 
     initDetailMap()
 
     return () => {
       cancelled = true
+      setMapReady(false)
+      driverMarkerRef.current = null
       observer?.disconnect()
       if (detailMapInstanceRef.current) {
         detailMapInstanceRef.current.remove()
         detailMapInstanceRef.current = null
       }
     }
-  }, [order, driverLat, driverLng])
+  }, [mapOrderId, pickupLat, pickupLng, mapPayout])
+
+  useEffect(() => {
+    if (!mapReady || driverLat === null || driverLng === null) return
+    let cancelled = false
+    void import('leaflet').then(({ default: L }) => {
+      const map = detailMapInstanceRef.current
+      if (cancelled || !map) return
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setLatLng([driverLat, driverLng])
+      } else {
+        const icon = L.divIcon({
+          className: 'driver-marker',
+          html: '<div style="width:14px;height:14px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>',
+          iconSize: [14, 14], iconAnchor: [7, 7],
+        })
+        driverMarkerRef.current = L.marker([driverLat, driverLng], { icon }).addTo(map)
+        if (pickupLat !== null && pickupLng !== null) {
+          map.fitBounds([[pickupLat, pickupLng], [driverLat, driverLng]], { padding: [30, 30], maxZoom: 15 })
+        } else map.setView([driverLat, driverLng], 13)
+      }
+    })
+    return () => { cancelled = true }
+  }, [mapReady, driverLat, driverLng, pickupLat, pickupLng])
 
   const fetchOrder = useCallback(async () => {
     if (!token || !id) return
+    const request = ++requestRef.current
     try {
       const data = await getOrderDetail(token, id)
+      if (request !== requestRef.current || document.hidden) return
       setOrder(data.order)
       setBeforePhotos(parsePhotoField(data.order.before_photos))
-      setAfterPhotos(parsePhotoField(data.order.after_photos))
-      if (data.order.signature_data) setSignatureData(data.order.signature_data)
+      setAfterPhotos(parsePhotoField(data.order.after_photos || data.order.completion_photos))
+      setSignatureData(data.order.signature_data || null)
     } catch (err) {
+      if (request === requestRef.current) setOrder(null)
       console.error('Failed to load order:', err)
     } finally {
       setLoading(false)
@@ -167,8 +177,37 @@ export default function OrderDetailPage() {
   }, [token, id])
 
   useEffect(() => {
+    setOrder(null)
+    setLoading(true)
     fetchOrder()
+    const refresh = () => {
+      if (!document.hidden && !busyRef.current) void fetchOrder()
+    }
+    const visibility = () => {
+      ++requestRef.current
+      setOrder(current => current ? withoutCustomerContact(current) : null)
+      refresh()
+    }
+    const interval = window.setInterval(refresh, 10000)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('offline', visibility)
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      ++requestRef.current
+      clearInterval(interval)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('offline', visibility)
+      document.removeEventListener('visibilitychange', visibility)
+    }
   }, [fetchOrder])
+
+  useEffect(() => {
+    if (!order?.customer_phone) return
+    const timer = window.setTimeout(() => {
+      setOrder(current => current ? withoutCustomerContact(current) : null)
+    }, Math.max(0, (order.contactExpiresAt || 0) - Date.now()))
+    return () => clearTimeout(timer)
+  }, [order])
 
   // GPS location streaming when en_route/arrived/started
   useEffect(() => {
@@ -195,6 +234,9 @@ export default function OrderDetailPage() {
   const handleAction = async (action: string) => {
     if (!token || !order) return
     setActing(true)
+    busyRef.current = true
+    ++requestRef.current
+    setOrder(withoutCustomerContact(order))
     try {
       switch (action) {
         case 'accept':
@@ -207,12 +249,10 @@ export default function OrderDetailPage() {
           await markArrived(token, String(order.id))
           break
         case 'start-work':
-          if (beforePhotos.length === 0) {
-            alert('Please take at least one BEFORE photo first')
-            setActing(false)
-            return
-          }
           await startWork(token, String(order.id))
+          break
+        case 'eta':
+          await updateOrderEta(token, String(order.id), arrivalTime)
           break
         case 'complete':
           if (afterPhotos.length === 0) {
@@ -243,6 +283,7 @@ export default function OrderDetailPage() {
     } catch (err: any) {
       alert(err.message || 'Action failed')
     } finally {
+      busyRef.current = false
       setActing(false)
     }
   }
@@ -276,8 +317,7 @@ export default function OrderDetailPage() {
         reader.readAsDataURL(file)
       })
       await uploadOrderPhoto(token, String(order.id), photoType, base64)
-      if (photoType === 'before') setBeforePhotos(prev => [...prev, base64])
-      else setAfterPhotos(prev => [...prev, base64])
+      await fetchOrder()
     } catch (err) {
       alert('Failed to upload photo')
     }
@@ -289,18 +329,8 @@ export default function OrderDetailPage() {
     if (!token || !order) return
     try {
       await submitSignature(token, String(order.id), dataUrl)
-      setSignatureData(dataUrl)
       setShowSignaturePad(false)
-      // Now complete the order automatically
-      setActing(true)
-      try {
-        await completeOrder(token, String(order.id), dataUrl)
-        await fetchOrder()
-      } catch (err: any) {
-        alert(err.message || 'Failed to complete order')
-      } finally {
-        setActing(false)
-      }
+      await fetchOrder()
     } catch (err: any) {
       alert(err.message || 'Failed to save signature')
     }
@@ -308,18 +338,17 @@ export default function OrderDetailPage() {
 
   const openNavigation = () => {
     if (!order) return
-    const lat = order.pickup_lat
-    const lng = order.pickup_lng
+    const coordinates = getOrderCoordinates(order)
     const address = order.pickup_address || order.pickupAddress
-    if (lat && lng) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank')
+    if (coordinates) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${coordinates.join(',')}`, '_blank', 'noopener,noreferrer')
     } else if (address) {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, '_blank')
     }
   }
 
   const callCustomer = () => {
-    const phone = order?.customer_phone
+    const phone = order?.can_contact_customer && (order.contactExpiresAt || 0) > Date.now() ? order.customer_phone : null
     if (phone) window.open(`tel:${phone}`, '_self')
   }
 
@@ -342,9 +371,14 @@ export default function OrderDetailPage() {
 
   const status = order.status?.toLowerCase() || ''
   const isCompleted = status === 'completed'
-  const isCancelled = status === 'cancelled'
-  const isPending = status === 'pending' || status === 'available' || status === 'open'
+  const isCancelled = ['cancelled', 'canceled', 'refunded'].includes(status)
+  const isPending = !order.assigned_driver_id && ['pending', 'dispatching', 'paid', 'scheduled', 'available', 'open'].includes(status)
   const isFinished = isCompleted || isCancelled
+  const isAssigned = Boolean(order.assigned_driver_id) && ['accepted', 'assigned', 'en_route', 'arrived', ...IN_PROGRESS_STATUSES].includes(status)
+  const canBeforePhoto = isAssigned && ['accepted', 'assigned', 'en_route', 'arrived'].includes(status)
+  const canAfterPhoto = isAssigned && ['started', 'in_progress', 'photo_taken'].includes(status)
+  const canContact = order.can_contact_customer && (order.contactExpiresAt || 0) > Date.now()
+  const distance = getOrderDistance(order, driverLat, driverLng)
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -392,7 +426,7 @@ export default function OrderDetailPage() {
               🗺️ Navigate
             </button>
           )}
-          {order.customer_phone && (
+          {canContact && order.customer_phone && (
             <button onClick={callCustomer} className="flex-1 py-3 text-center text-sm font-semibold text-primary-600">
               📞 Call Customer
             </button>
@@ -402,11 +436,6 @@ export default function OrderDetailPage() {
 
       {/* Mini Map showing pickup location */}
       {(() => {
-        const oLat = order.pickup_lat ? Number(order.pickup_lat) : null
-        const oLng = order.pickup_lng ? Number(order.pickup_lng) : null
-        const dist = (driverLat && driverLng && oLat && oLng)
-          ? getDistanceMiles(driverLat, driverLng, oLat, oLng).toFixed(1)
-          : null
         return (
           <div className="relative">
             <div
@@ -414,9 +443,9 @@ export default function OrderDetailPage() {
               className="w-full bg-gray-200"
               style={{ height: 200 }}
             />
-            {dist && (
+            {distance !== null && (
               <div className="absolute bottom-3 left-3 bg-primary-900/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg z-[1000]">
-                {dist} mi away
+                {formatDistance(distance)} away
               </div>
             )}
           </div>
@@ -425,11 +454,30 @@ export default function OrderDetailPage() {
 
       {/* Order Info */}
       <div className="px-5 py-4 space-y-4">
+        <div className="bg-primary-50 rounded-xl p-5 border border-primary-100">
+          <p className="text-sm font-semibold text-primary-700">YOUR EARNINGS (70%)</p>
+          <p className="text-4xl font-bold text-primary-900 mt-1">${formatPayout(order)}</p>
+          <p className="text-sm font-semibold text-primary-700 mt-2">
+            {distance === null ? 'Enable location to see distance to pickup' : `${formatDistance(distance)} to pickup`}
+          </p>
+        </div>
+        {isAssigned && ['accepted', 'assigned', 'en_route'].includes(status) && (
+          <form onSubmit={event => { event.preventDefault(); void handleAction('eta') }} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-900">ETA — Arrival time</h3>
+            <p className="text-xs text-gray-500 mt-1">{order.service_date || formatDate(order)} · Eastern Time (New York)</p>
+            {order.driver_eta_at && <p className="text-primary-700 font-semibold mt-2">Shared with customer: {new Date(order.driver_eta_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })}</p>}
+            <div className="flex gap-2 mt-3">
+              <input aria-label="Arrival time in Eastern Time" type="time" required value={arrivalTime} onChange={event => setArrivalTime(event.target.value)} className="min-w-0 flex-1 border rounded-lg px-3 py-2" />
+              <button type="submit" disabled={acting} className="bg-primary-600 text-white rounded-lg px-4 py-2 font-semibold disabled:opacity-50">Save ETA</button>
+            </div>
+          </form>
+        )}
         {/* Details Card */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Order Details</h3>
           <InfoRow label="Type" value={formatServiceType(order.service_type || order.serviceType || 'HAUL_AWAY')} />
           <InfoRow label="Address" value={order.pickup_address || order.pickupAddress || 'N/A'} />
+          <button onClick={openNavigation} className="w-full mt-2 mb-3 py-3 bg-primary-50 text-primary-700 rounded-lg font-semibold">Open in Maps</button>
           <InfoRow label="Scheduled" value={formatDate(order)} />
           {(order.time_window || order.pickup_time_window) && <InfoRow label="Window" value={formatTimeWindow(order.time_window || order.pickup_time_window || '')} />}
           {order.volume_tier && <InfoRow label="Volume" value={order.volume_tier} />}
@@ -536,19 +584,16 @@ export default function OrderDetailPage() {
         })()}
 
         {/* Photos Section */}
-        {!isFinished && (
+        {isAssigned && (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-5">
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Job Photos</h3>
 
-            {/* BEFORE photos — required to start work */}
+            {/* Before photos */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-800">
                   Before Photos <span className="text-gray-500">({beforePhotos.length})</span>
                 </span>
-                {beforePhotos.length === 0 && (
-                  <span className="text-xs font-semibold text-red-600">Required</span>
-                )}
               </div>
               {beforePhotos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-2">
@@ -568,7 +613,7 @@ export default function OrderDetailPage() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
+              {canBeforePhoto && <div className="flex gap-2">
                 <button
                   onClick={() => handlePhotoCapture('before', 'camera')}
                   className="flex-1 px-3 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-semibold active:bg-primary-700"
@@ -581,7 +626,7 @@ export default function OrderDetailPage() {
                 >
                   🖼️ From Gallery
                 </button>
-              </div>
+              </div>}
             </div>
 
             {/* AFTER photos — required to complete (shown once work has started) */}
@@ -613,7 +658,7 @@ export default function OrderDetailPage() {
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2">
+                {canAfterPhoto && <div className="flex gap-2">
                   <button
                     onClick={() => handlePhotoCapture('after', 'camera')}
                     className="flex-1 px-3 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-semibold active:bg-primary-700"
@@ -626,7 +671,7 @@ export default function OrderDetailPage() {
                   >
                     🖼️ From Gallery
                   </button>
-                </div>
+                </div>}
               </div>
             )}
 
@@ -646,12 +691,6 @@ export default function OrderDetailPage() {
                       alt="Customer signature"
                       className="h-20 bg-white border border-gray-200 rounded-lg p-1 flex-1 object-contain"
                     />
-                    <button
-                      onClick={() => setShowSignaturePad(true)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 active:bg-gray-100"
-                    >
-                      Redo
-                    </button>
                   </div>
                 ) : (
                   <button
@@ -671,8 +710,7 @@ export default function OrderDetailPage() {
           <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Progress</h3>
           <div className="space-y-2">
             {STATUS_FLOW.map((s, i) => {
-              // Normalize in-progress aliases to 'started' for the progress indicator
-              const normalizedStatus = IN_PROGRESS_STATUSES.includes(status) ? 'started' : status
+              const normalizedStatus = status === 'started' ? 'in_progress' : status === 'accepted' ? 'assigned' : status
               const currentIdx = STATUS_FLOW.indexOf(normalizedStatus)
               const isDone = i <= currentIdx
               const isCurrent = s === normalizedStatus

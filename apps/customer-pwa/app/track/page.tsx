@@ -1,11 +1,13 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { trackOrder } from '@/lib/api'
 import StatusTimeline from '@/components/StatusTimeline'
 import DriverTrackingMap from '@/components/DriverTrackingMap'
 import { subscribeToPush } from '@/lib/push'
+import ArrivalEstimate from '@/components/ArrivalEstimate'
+import { hasDriverContact, useContactExpiry } from '@/lib/orderContact'
 
 function TrackContent() {
   const searchParams = useSearchParams()
@@ -17,6 +19,10 @@ function TrackContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [pushEnabled, setPushEnabled] = useState(false)
+  const requestRef = useRef(0)
+  useContactExpiry(order, setOrder)
+  const trackedId = order?.id
+  const trackedToken = order?.tracking_token
 
   useEffect(() => {
     if (tokenParam || orderIdParam) {
@@ -26,12 +32,24 @@ function TrackContent() {
 
   // Auto-refresh when tracking an order
   useEffect(() => {
-    if (!order) return
-    const interval = setInterval(() => {
-      doTrack(order.tracking_token || undefined, order.id || undefined)
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [order])
+    if (!trackedId) return
+    const refresh = () => {
+      if (!document.hidden) void doTrack(trackedToken || undefined, trackedId)
+    }
+    const visibility = () => {
+      ++requestRef.current
+      refresh()
+    }
+    const interval = setInterval(refresh, 10000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      ++requestRef.current
+      clearInterval(interval)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', visibility)
+    }
+  }, [trackedId, trackedToken])
 
   const doTrack = async (token?: string, orderId?: string) => {
     setLoading(true)
@@ -39,8 +57,10 @@ function TrackContent() {
     // Strip leading # from both token and orderId (users copy "#uuid" from the site)
     const cleanToken = token?.replace(/^#/, '')
     const cleanOrderId = orderId?.replace(/^#/, '')
+    const request = ++requestRef.current
     try {
       const data = await trackOrder({ token: cleanToken, orderId: cleanOrderId })
+      if (request !== requestRef.current || document.hidden) return
       if (data.error) {
         setError(data.error)
         setOrder(null)
@@ -48,6 +68,8 @@ function TrackContent() {
         setOrder(data.order)
       }
     } catch {
+      if (request !== requestRef.current) return
+      setOrder(null)
       setError('Connection error. Please try again.')
     } finally {
       setLoading(false)
@@ -181,7 +203,7 @@ function TrackContent() {
                 </div>
                 <div>
                   <p className="font-medium">{order.driver.name || 'Driver'}</p>
-                  {order.driver.phone && (
+                  {hasDriverContact(order) && order.driver.phone && (
                     <a href={`tel:${order.driver.phone}`} className="text-primary-600 text-sm">
                       {order.driver.phone}
                     </a>
@@ -191,13 +213,16 @@ function TrackContent() {
             </div>
           )}
 
+          <ArrivalEstimate arrivalTime={order.driver_eta_at} status={order.status} />
+
           {/* Driver Location Map */}
-          {order.driver_location && order.pickup_lat && order.pickup_lng && (
+          {order.driver_location && order.pickup_lat != null && order.pickup_lng != null && (
             <DriverTrackingMap
               driverLocation={order.driver_location}
               pickupLat={parseFloat(order.pickup_lat)}
               pickupLng={parseFloat(order.pickup_lng)}
               driverName={order.driver?.name}
+              hasDriverEta={Boolean(order.driver_eta_at)}
             />
           )}
 

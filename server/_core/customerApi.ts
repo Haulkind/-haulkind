@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { orderForAudience } from "./orderPrivacy";
 
 // Use raw pg connection since DATABASE_URL is PostgreSQL
 let pgPool: any = null;
@@ -61,6 +62,10 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 }
 
 export function registerCustomerApiRoutes(app: Express) {
+  app.use(['/customer/orders', '/internal/generate-tracking-token'], (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   // ================================================================
   // ENSURE TABLES EXIST
   // ================================================================
@@ -95,6 +100,9 @@ export function registerCustomerApiRoutes(app: Express) {
         )
       `);
       console.log("[CustomerApi] order_tracking_tokens table ensured");
+      await pool.query(`
+        UPDATE order_tracking_tokens SET customer_phone = NULL WHERE customer_phone IS NOT NULL
+      `);
 
       // Ensure push_subscriptions table
       await pool.query(`
@@ -364,7 +372,8 @@ export function registerCustomerApiRoutes(app: Express) {
         SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                pickup_address, pickup_lat, pickup_lng, description, estimated_price,
                items_json, scheduled_for, pickup_time_window, assigned_driver_id,
-               tracking_token, created_at, updated_at, paid_at
+               tracking_token, created_at, updated_at, paid_at,
+               to_jsonb(jobs)->>'driver_eta_at' AS driver_eta_at, to_jsonb(jobs)->>'eta_driver_id' AS eta_driver_id
         FROM jobs
         WHERE (customer_account_id = $1 OR LOWER(customer_email) = LOWER($2))
       `;
@@ -397,7 +406,7 @@ export function registerCustomerApiRoutes(app: Express) {
               // ignore
             }
           }
-          return order;
+          return orderForAudience(order, "customer");
         })
       );
 
@@ -452,7 +461,7 @@ export function registerCustomerApiRoutes(app: Express) {
       // Get driver location if assigned and in_progress
       if (
         order.assigned_driver_id &&
-        ["assigned", "in_progress", "en_route", "arrived"].includes(order.status)
+        ["in_progress", "started", "en_route", "arrived", "photo_taken", "signed"].includes(order.status)
       ) {
         try {
           const locResult = await pool.query(
@@ -484,7 +493,7 @@ export function registerCustomerApiRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, order });
+      res.json({ success: true, order: orderForAudience(order, "customer") });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to get order", details: msg });
@@ -514,6 +523,7 @@ export function registerCustomerApiRoutes(app: Express) {
       }
 
       let order = null;
+      let verifiedTrackingToken = false;
 
       // Look up by tracking token first
       if (token) {
@@ -540,6 +550,8 @@ export function registerCustomerApiRoutes(app: Express) {
           }
         }
       }
+
+      verifiedTrackingToken = Boolean(order && token);
 
       // Look up by order ID
       if (!order && orderId) {
@@ -601,7 +613,7 @@ export function registerCustomerApiRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, order });
+      res.json({ success: true, order: orderForAudience(order, verifiedTrackingToken ? "customer" : "public") });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to track order", details: msg });
@@ -686,6 +698,8 @@ export function registerCustomerApiRoutes(app: Express) {
     "/internal/generate-tracking-token",
     async (req: Request, res: Response) => {
       try {
+        const decoded = verifyCustomerToken(req);
+        if (!decoded) return res.status(401).json({ error: "Unauthorized" });
         const { jobId } = req.body;
         if (!jobId) {
           return res.status(400).json({ error: "jobId is required" });
@@ -700,10 +714,11 @@ export function registerCustomerApiRoutes(app: Express) {
         const trackingToken = crypto.randomBytes(32).toString("hex");
 
         // Store on the job itself
-        await pool.query(
-          "UPDATE jobs SET tracking_token = $1 WHERE id = $2",
-          [trackingToken, jobId]
+        const owned = await pool.query(
+          "UPDATE jobs SET tracking_token = $1 WHERE id = $2 AND (customer_account_id = $3 OR LOWER(customer_email) = LOWER($4)) RETURNING id",
+          [trackingToken, jobId, decoded.customerId, decoded.email]
         );
+        if (!owned.rowCount) return res.status(404).json({ error: "Order not found" });
 
         // Also store in tracking tokens table
         const jobResult = await pool.query(
@@ -719,7 +734,7 @@ export function registerCustomerApiRoutes(app: Express) {
             jobId,
             trackingToken,
             job?.customer_email || null,
-            job?.customer_phone || null,
+            null,
           ]
         );
 
