@@ -14,8 +14,10 @@ export default function PageHeader({ title, backHref = '/dashboard' }: PageHeade
     <div className="bg-primary-900 text-white px-5 pt-12 pb-4">
       <div className="flex items-center gap-3">
         <button
+          type="button"
+          aria-label="Go back"
           onClick={() => router.push(backHref)}
-          className="text-white/80 hover:text-white transition"
+          className="flex h-11 w-11 shrink-0 items-center justify-center text-white/80 hover:text-white transition"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />

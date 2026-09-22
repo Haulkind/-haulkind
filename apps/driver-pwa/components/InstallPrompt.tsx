@@ -65,12 +65,12 @@ export default function InstallPrompt() {
   if (!deferredPrompt && !showIOSPrompt) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-slide-up">
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 max-w-md mx-auto">
+    <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 p-4 animate-slide-up" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+      <div className="pointer-events-auto relative bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 max-w-md mx-auto">
         {/* Close button */}
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-1"
+          className="absolute top-1 right-1 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-gray-600"
           aria-label="Dismiss"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -78,7 +78,7 @@ export default function InstallPrompt() {
           </svg>
         </button>
 
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4 mb-4 pr-6">
           <DriverLogo size={56} />
           <div>
             <h3 className="text-lg font-bold text-gray-900">Install HaulKind Drive</h3>

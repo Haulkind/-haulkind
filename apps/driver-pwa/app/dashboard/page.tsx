@@ -223,7 +223,7 @@ export default function DashboardPage() {
     .slice().sort((a, b) => (getOrderDistance(a, lat, lng) ?? Infinity) - (getOrderDistance(b, lat, lng) ?? Infinity))
 
   return (
-    <div className="fixed inset-0 overflow-hidden flex flex-col bg-white">
+    <div className="driver-dashboard fixed inset-0 overflow-hidden flex flex-col bg-white">
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -233,7 +233,7 @@ export default function DashboardPage() {
           <button
             aria-label="Open navigation menu"
             onClick={() => setSidebarOpen(true)}
-            className="text-white p-1"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-white"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -241,7 +241,7 @@ export default function DashboardPage() {
           </button>
 
           {/* Title + order count */}
-          <div className="text-white flex-1 ml-3">
+          <div className="text-white flex-1 min-w-0 ml-3">
             <h1><DriverLogo size={40} /></h1>
             <p className="text-xs text-primary-200">{isOnline ? `${currentOrders.length} orders nearby` : "You're offline"}</p>
           </div>
@@ -257,21 +257,24 @@ export default function DashboardPage() {
               aria-label="Available for orders"
               onClick={toggleOnline}
               disabled={toggling}
-              className={`relative w-12 h-7 shrink-0 rounded-full transition-colors duration-200 ${
-                isOnline ? 'bg-green-500' : 'bg-gray-500'
-              } disabled:opacity-50`}
+              className="flex h-11 w-12 shrink-0 items-center rounded-full disabled:opacity-50"
             >
               <span
-                className={`absolute left-0.5 top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
-                  isOnline ? 'translate-x-5' : 'translate-x-0'
+                aria-hidden="true"
+                className={`relative block h-7 w-12 rounded-full transition-colors duration-200 ${
+                  isOnline ? 'bg-green-500' : 'bg-gray-500'
                 }`}
-              />
+              >
+                <span className={`absolute left-0.5 top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
+                  isOnline ? 'translate-x-5' : 'translate-x-0'
+                }`} />
+              </span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-0">
+      <div className="relative isolate z-0 flex-1 min-h-0">
         <MapView
           lat={lat}
           lng={lng}
@@ -295,7 +298,7 @@ export default function DashboardPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`relative px-5 py-2 rounded-full text-sm font-semibold transition ${
+              className={`relative min-h-11 px-3 py-2 rounded-full text-sm font-semibold transition ${
                 tab === t
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
