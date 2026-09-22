@@ -5,6 +5,7 @@ import './globals.css'
 import 'leaflet/dist/leaflet.css'
 import { AuthProvider } from '@/lib/auth'
 import InstallPrompt from '@/components/InstallPrompt'
+import OrderAlerts from '@/components/OrderAlerts'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KNBG3C48" height="0" width="0" style={{ display: 'none', visibility: 'hidden' }} />
         </noscript>
         <AuthProvider>
+          <OrderAlerts />
           <main className="min-h-screen">
             {children}
           </main>

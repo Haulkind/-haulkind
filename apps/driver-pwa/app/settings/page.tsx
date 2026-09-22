@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import PageHeader from '@/components/PageHeader'
+import { ALERT_SETTINGS_EVENT, enableOrderAlerts, unlockAlertAudio } from '@/lib/notifications'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -41,6 +42,7 @@ export default function SettingsPage() {
       const settings = saved ? JSON.parse(saved) : {}
       settings[key] = value
       localStorage.setItem('driver_settings', JSON.stringify(settings))
+      window.dispatchEvent(new Event(ALERT_SETTINGS_EVENT))
     } catch (e) {
       // ignore
     }
@@ -73,13 +75,16 @@ export default function SettingsPage() {
             label="Push Notifications"
             description="Receive alerts for new orders"
             enabled={notificationsEnabled}
-            onChange={(v) => { setNotificationsEnabled(v); saveSettings('notifications', v) }}
+            onChange={(v) => {
+              setNotificationsEnabled(v); saveSettings('notifications', v)
+              if (v) void enableOrderAlerts().catch(() => {})
+            }}
           />
           <ToggleRow
             label="Sound"
             description="Play sound for new orders"
             enabled={soundEnabled}
-            onChange={(v) => { setSoundEnabled(v); saveSettings('sound', v) }}
+            onChange={(v) => { setSoundEnabled(v); saveSettings('sound', v); if (v) unlockAlertAudio() }}
           />
           <ToggleRow
             label="Vibration"

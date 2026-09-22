@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator, Alert,
-  Dimensions, FlatList, Modal, Vibration, Switch, PermissionsAndroid,
+  Dimensions, FlatList, Modal, Vibration, Switch,
   Linking, PanResponder, Image, AppState,
 } from "react-native";
-import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,168 +13,19 @@ import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
-import Sound from "react-native-sound";
 import driverLogo from "./assets/haulkind-logo.png";
 import DriverMap from "./DriverMap";
 import { startDriverLocationTracking } from "./driverLocation";
-
-// Configure Sound to play even in silent mode
-Sound.setCategory("Playback");
+import {
+  requestNotificationPermission, showNewOrderNotification, refreshOrderNotifications,
+  clearOrderNotifications, subscribeNotificationStatus, openNotificationSettings,
+  notificationPermissionGranted,
+} from "./orderNotifications";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const RADIUS_MILES = 80;
 const REFRESH_INTERVAL = 15000;
 const ACCEPT_TIMER_SECONDS = 60;
-
-// ============================================================================
-// NOTIFICATION HELPERS
-// ============================================================================
-let notifChannelId = null;
-
-async function ensureNotificationChannel() {
-  if (notifChannelId) return notifChannelId;
-  // Delete old cached channels (Android caches channel settings — old channels keep broken sound)
-  try {
-    await notifee.deleteChannel('haulkind_orders');
-    await notifee.deleteChannel('haulkind_orders_v2');
-    await notifee.deleteChannel('haulkind_orders_v3');
-  } catch (_) {}
-  // Create fresh channel with custom sound from res/raw/notification_sound.wav
-  // Android notification channels are immutable once created — must delete+recreate to change sound
-  notifChannelId = await notifee.createChannel({
-    id: 'haulkind_orders_v4',
-    name: 'New Orders',
-    description: 'Notifications for new available orders',
-    importance: AndroidImportance.HIGH,
-    visibility: AndroidVisibility.PUBLIC,
-    sound: 'notification_sound',
-    vibration: true,
-    vibrationPattern: [0, 500, 200, 500],
-    lights: true,
-    badge: true,
-  });
-  console.log('[NOTIF] Channel created:', notifChannelId);
-  return notifChannelId;
-}
-
-async function requestNotificationPermission() {
-  try {
-    if (Platform.OS === 'android' && Platform.Version >= 33) {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-        {
-          title: 'Notification Permission',
-          message: 'Haulkind needs notification permission to alert you about new orders.',
-          buttonPositive: 'Allow',
-        }
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    }
-    // For Android < 13, notifications are enabled by default
-    return true;
-  } catch (e) {
-    console.log('Notification permission error:', e);
-    return false;
-  }
-}
-
-// Play the custom notification sound in-app (works even when app is in foreground)
-function playNotificationSound() {
-  console.log('[SOUND] Attempting to play notification sound...');
-  try {
-    // Android res/raw files must be referenced WITHOUT extension
-    // Try with Sound.MAIN_BUNDLE first, then with null (both map to res/raw on Android)
-    const tryPlay = (basePath, label) => {
-      return new Promise((resolve) => {
-        try {
-          const s = new Sound('notification_sound', basePath, (error) => {
-            if (error) {
-              console.log(`[SOUND] ${label} failed:`, error?.message || error);
-              resolve(false);
-              return;
-            }
-            console.log(`[SOUND] ${label} loaded, duration:`, s.getDuration());
-            s.setVolume(1.0);
-            s.play((success) => {
-              console.log(`[SOUND] ${label} play result:`, success);
-              s.release();
-              resolve(success);
-            });
-          });
-        } catch (e) {
-          console.log(`[SOUND] ${label} constructor error:`, e);
-          resolve(false);
-        }
-      });
-    };
-    // Try MAIN_BUNDLE first, then null as fallback
-    tryPlay(Sound.MAIN_BUNDLE, 'MAIN_BUNDLE').then((ok) => {
-      if (!ok) {
-        console.log('[SOUND] Trying null basePath...');
-        tryPlay(null, 'null-basePath').then((ok2) => {
-          if (!ok2) {
-            console.log('[SOUND] All attempts failed, using Vibration as last resort');
-            Vibration.vibrate([0, 300, 150, 300, 150, 300]);
-          }
-        });
-      }
-    });
-  } catch (e) {
-    console.log('[SOUND] Sound play error:', e);
-    Vibration.vibrate([0, 300, 150, 300, 150, 300]);
-  }
-}
-
-async function showNewOrderNotification(orderCount, firstOrder) {
-  try {
-    // Check user preferences
-    const notifEnabled = await AsyncStorage.getItem('notif_enabled');
-    if (notifEnabled === 'false') return;
-
-    const channelId = await ensureNotificationChannel();
-    const price = parseFloat(firstOrder?.estimated_price || firstOrder?.final_price || 0).toFixed(0);
-    const address = firstOrder?.pickup_address || 'Nearby';
-    const title = orderCount === 1 ? '🚛 New Order Available!' : `🚛 ${orderCount} New Orders Available!`;
-    const body = orderCount === 1
-      ? `$${price} — ${address}`
-      : `$${price} and ${orderCount - 1} more order${orderCount > 2 ? 's' : ''}`;
-
-    // Play in-app sound explicitly (notification channel sound may not play when app is in foreground)
-    const soundEnabled = await AsyncStorage.getItem('notif_sound');
-    console.log('[NOTIF] Sound enabled:', soundEnabled, '(null=default=true)');
-    if (soundEnabled !== 'false') {
-      playNotificationSound();
-    }
-
-    // Check vibration preference and vibrate explicitly
-    const vibrationEnabled = await AsyncStorage.getItem('notif_vibration');
-    console.log('[NOTIF] Vibration enabled:', vibrationEnabled, '(null=default=true)');
-    if (vibrationEnabled !== 'false') {
-      Vibration.vibrate([0, 500, 200, 500, 200, 500]);
-    }
-
-    await notifee.displayNotification({
-      title,
-      body,
-      android: {
-        channelId,
-        importance: AndroidImportance.HIGH,
-        visibility: AndroidVisibility.PUBLIC,
-        sound: 'notification_sound',
-        pressAction: { id: 'default' },
-        smallIcon: 'ic_launcher',
-        vibrationPattern: [0, 500, 200, 500],
-        lights: ["#1a56db", 300, 600],
-        timestamp: Date.now(),
-        showTimestamp: true,
-        fullScreenAction: { id: 'default' },
-      },
-    });
-    console.log('[NOTIF] Notification displayed successfully:', title);
-  } catch (e) {
-    console.log('[NOTIF] Notification display error:', e);
-  }
-}
 
 // ============================================================================
 // COLORS
@@ -451,6 +301,7 @@ export function LoginScreen({ navigation }) {
     setErr(""); setLoading(true);
     try {
       // Clear ALL old auth data before logging in as new driver
+      await clearOrderNotifications();
       await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data", "driver_isOnline"]);
       const data = await apiPost("/driver/auth/login", { email, password });
       const token = data?.token || data?.accessToken;
@@ -589,8 +440,6 @@ export function HomeScreen({ navigation, route }) {
   const [showDetail, setShowDetail] = useState(false);
   const [acceptTimer, setAcceptTimer] = useState(ACCEPT_TIMER_SECONDS);
   const [accepting, setAccepting] = useState(false);
-  const previousOrderIdsRef = useRef(new Set());
-  const hasCompletedFirstFetchRef = useRef(false);
   const [fullScreenPhoto, setFullScreenPhoto] = useState(null);
 
   const timerRef = useRef(null);
@@ -620,7 +469,7 @@ export function HomeScreen({ navigation, route }) {
       } catch (e) { console.log("Profile error:", e); }
       // Request notification permission and create channel
       await requestNotificationPermission();
-      await ensureNotificationChannel();
+      await refreshOrderNotifications();
     })();
   }, []);
 
@@ -665,30 +514,6 @@ export function HomeScreen({ navigation, route }) {
       withinRadius.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
       console.log('[FETCH] After radius filter:', withinRadius.length, 'of', enriched.length);
 
-      // Vibrate and show notification for new orders
-      // Coerce IDs to string to avoid Set type mismatch (API may return number or string)
-      const currentIds = new Set(withinRadius.map((o) => String(o.id)));
-      const brandNew = withinRadius.filter((o) => !previousOrderIdsRef.current.has(String(o.id)));
-      if (brandNew.length > 0 && hasCompletedFirstFetchRef.current) {
-        console.log('[NOTIF] New orders detected:', brandNew.length, 'IDs:', brandNew.map(o => o.id));
-        // Vibrate explicitly (backup — notifee channel also vibrates)
-        const vibEnabled = await AsyncStorage.getItem('notif_vibration');
-        if (vibEnabled !== 'false') {
-          Vibration.vibrate([0, 500, 200, 500]);
-        }
-        // Show system notification with sound — await to catch errors
-        try {
-          await showNewOrderNotification(brandNew.length, brandNew[0]);
-        } catch (notifErr) {
-          console.log('[NOTIF] Notification error:', notifErr);
-        }
-      } else if (!hasCompletedFirstFetchRef.current) {
-        console.log('[NOTIF] First fetch, populating', currentIds.size, 'order IDs');
-      } else {
-        console.log('[NOTIF] No new orders this poll. Current:', currentIds.size, 'Previous:', previousOrderIdsRef.current.size);
-      }
-      hasCompletedFirstFetchRef.current = true;
-      previousOrderIdsRef.current = currentIds;
       setOrders(enriched);
 
       // Fetch driver's own accepted/assigned orders for TODAY tab
@@ -797,6 +622,7 @@ export function HomeScreen({ navigation, route }) {
       await apiPostAuth("/driver/online", { online: newStatus });
       setIsOnline(newStatus);
       await AsyncStorage.setItem("driver_isOnline", newStatus ? "true" : "false");
+      await refreshOrderNotifications();
     } catch (e) {
       const msg = e.message || "";
       if (msg.includes("not yet approved") || msg.includes("pending")) {
@@ -861,6 +687,7 @@ export function HomeScreen({ navigation, route }) {
   }
 
   async function logout() {
+    await clearOrderNotifications();
     await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data", "driver_isOnline"]);
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   }
@@ -1334,6 +1161,7 @@ export function PendingScreen({ navigation }) {
     }
   };
   const handleLogout = async () => {
+    await clearOrderNotifications();
     await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data"]);
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   };
@@ -2672,6 +2500,7 @@ export function SettingsScreen({ navigation }) {
     Alert.alert("Sign Out", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: async () => {
+        await clearOrderNotifications();
         await AsyncStorage.multiRemove(["driver_token", "driver_data", "user_data"]);
         navigation.reset({ index: 0, routes: [{ name: "Login" }] });
       }},
@@ -2854,11 +2683,21 @@ export function DocumentsScreen({ navigation }) {
 // NOTIFICATIONS SCREEN
 // ============================================================================
 export function NotificationsScreen({ navigation }) {
+  const [deliveryStatus, setDeliveryStatus] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   const [permissionGranted, setPermissionGranted] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => subscribeNotificationStatus(setDeliveryStatus), []);
+
+  useEffect(() => {
+    const check = () => notificationPermissionGranted().then(setPermissionGranted).catch(() => {});
+    const subscription = AppState.addEventListener('change', state => { if (state === 'active') check(); });
+    check();
+    return () => subscription.remove();
+  }, []);
 
   // Load persisted settings on mount
   useEffect(() => {
@@ -2871,10 +2710,7 @@ export function NotificationsScreen({ navigation }) {
         if (soundVal !== null) setSoundEnabled(soundVal !== 'false');
         if (vibVal !== null) setVibrationEnabled(vibVal !== 'false');
         // Check if permission is granted
-        if (Platform.OS === 'android' && Platform.Version >= 33) {
-          const result = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-          setPermissionGranted(result);
-        }
+        setPermissionGranted(await notificationPermissionGranted());
       } catch (e) { console.log('Load notif settings error:', e); }
       setLoading(false);
     })();
@@ -2898,16 +2734,19 @@ export function NotificationsScreen({ navigation }) {
         );
       }
     }
+    await refreshOrderNotifications();
   };
 
   const toggleSound = async (val) => {
     setSoundEnabled(val);
     await AsyncStorage.setItem('notif_sound', val ? 'true' : 'false');
+    await refreshOrderNotifications();
   };
 
   const toggleVibration = async (val) => {
     setVibrationEnabled(val);
     await AsyncStorage.setItem('notif_vibration', val ? 'true' : 'false');
+    await refreshOrderNotifications();
   };
 
   if (loading) {
@@ -2928,6 +2767,14 @@ export function NotificationsScreen({ navigation }) {
         <Text style={{ fontSize: 18, fontWeight: "bold", color: C.dark, marginLeft: 16 }}>Notifications</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <TouchableOpacity
+          onPress={openNotificationSettings}
+          style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 16 }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '700', color: C.dark }}>Order alert status</Text>
+          <Text style={{ fontSize: 13, color: C.textSecondary, marginTop: 8 }}>{deliveryStatus}</Text>
+          <Text style={{ fontSize: 13, color: C.primary, marginTop: 8 }}>Open Android notification and sound settings</Text>
+        </TouchableOpacity>
         {!permissionGranted && (
           <TouchableOpacity
             onPress={() => Linking.openSettings()}
@@ -2974,8 +2821,7 @@ export function NotificationsScreen({ navigation }) {
           <TouchableOpacity
             onPress={async () => {
               try {
-                Vibration.vibrate([0, 500, 200, 500]);
-                await showNewOrderNotification(1, { estimated_price: '199', pickup_address: '123 Test Street, Philadelphia' });
+                await showNewOrderNotification();
                 Alert.alert('Test Sent!', 'Check your notification bar for the test notification. You should have heard a sound and felt vibration.');
               } catch (e) {
                 Alert.alert('Error', 'Failed to send test notification: ' + e.message);

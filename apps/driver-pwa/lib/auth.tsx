@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { Driver } from './api'
+import { stopOrderAlerts } from './notifications'
 
 interface AuthContextType {
   token: string | null
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const logout = useCallback(() => {
+    void stopOrderAlerts(localStorage.getItem('driver_token')).catch(() => {})
     localStorage.removeItem('driver_token')
     localStorage.removeItem('driver_data')
     setToken(null)

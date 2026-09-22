@@ -19,6 +19,7 @@ import { OnboardingScreen } from './src/screens/new_OnboardingScreen';
 import driverLogo from './src/assets/haulkind-logo.png';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import MenuIcon from './src/MenuIcon';
+import { clearOrderNotifications, startOrderNotifications, refreshOrderNotifications } from './src/orderNotifications';
 
 const COLORS = {
   primary: '#1a3a4a',
@@ -114,6 +115,7 @@ function SideMenu({ visible, onClose, navigation }) {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out', style: 'destructive', onPress: async () => {
+            await clearOrderNotifications();
             await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data', 'driver_isOnline']);
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           }
@@ -251,6 +253,10 @@ function MainApp({ initialRoute }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const navigationRef = React.useRef(null);
 
+  useEffect(() => startOrderNotifications(order => {
+    if (navigationRef.current?.isReady()) navigationRef.current.navigate('OrderDetail', { order });
+  }), []);
+
   useEffect(() => {
     const unsub = menuEmitter.subscribe(() => setMenuVisible(true));
     return unsub;
@@ -258,7 +264,11 @@ function MainApp({ initialRoute }) {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={refreshOrderNotifications}
+        onStateChange={refreshOrderNotifications}
+      >
         <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Signup" component={SignupScreen} />
@@ -320,6 +330,7 @@ export default function App() {
           }
         } else {
           // Token is invalid/expired — clear everything and go to login
+          await clearOrderNotifications();
           await AsyncStorage.multiRemove(['driver_token', 'driver_data', 'user_data', 'driver_isOnline']);
           setInitialRoute('Login');
         }

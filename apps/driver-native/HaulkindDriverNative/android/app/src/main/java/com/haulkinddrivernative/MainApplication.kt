@@ -14,6 +14,7 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
+          add(DriverNotificationsPackage())
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // add(MyReactNativePackage())
         },
@@ -22,6 +23,11 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    try {
+      DriverAlertStore.initializeFirebase(this)
+    } catch (_: Exception) {
+      android.util.Log.w("DriverAlerts", "Background notification setup unavailable")
+    }
     loadReactNative(this)
   }
 }

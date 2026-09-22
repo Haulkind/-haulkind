@@ -10,91 +10,13 @@ import DriverLogo from '@/components/DriverLogo'
 import { trackDriverLocation, type LocationStatus } from '@/lib/driverLocation'
 import { formatPayout } from '@/lib/driverPayout'
 import { formatDistance, getOrderDistance } from '@/lib/orderLocation'
+import { enableOrderAlerts } from '@/lib/notifications'
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false })
 
 const POLL_INTERVAL = 5000
 
 type OrderTab = 'today' | 'all' | 'new'
-
-// Shared AudioContext — created on first user interaction to comply with browser autoplay policy
-let _audioCtx: AudioContext | null = null
-function getAudioContext(): AudioContext | null {
-  try {
-    if (!_audioCtx) {
-      _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    }
-    // Resume if suspended (browser suspends until user gesture)
-    if (_audioCtx.state === 'suspended') {
-      _audioCtx.resume()
-    }
-    return _audioCtx
-  } catch (e) {
-    console.log('[PWA Sound] AudioContext error:', e)
-    return null
-  }
-}
-
-// Warm up AudioContext on first user interaction (click/touch)
-if (typeof window !== 'undefined') {
-  const warmUp = () => {
-    getAudioContext()
-    window.removeEventListener('click', warmUp)
-    window.removeEventListener('touchstart', warmUp)
-  }
-  window.addEventListener('click', warmUp, { once: true })
-  window.addEventListener('touchstart', warmUp, { once: true })
-}
-
-// Play a notification beep using Web Audio API (works on all browsers, no sound file needed)
-function playNotificationBeep() {
-  try {
-    const settings = JSON.parse(localStorage.getItem('driver_settings') || '{}')
-    if (settings.sound === false) return
-    const ctx = getAudioContext()
-    if (!ctx) return
-    // Play three quick ascending beeps
-    const playTone = (startTime: number, freq: number, duration: number) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = freq
-      osc.type = 'sine'
-      gain.gain.setValueAtTime(0.6, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration)
-      osc.start(startTime)
-      osc.stop(startTime + duration)
-    }
-    playTone(ctx.currentTime, 880, 0.15)
-    playTone(ctx.currentTime + 0.2, 1100, 0.15)
-    playTone(ctx.currentTime + 0.4, 1320, 0.2)
-    console.log('[PWA Sound] Beep played')
-  } catch (e) {
-    console.log('[PWA Sound] Error:', e)
-  }
-}
-
-// Show browser notification for new orders
-function showBrowserNotification(count: number, firstOrder: Order | undefined) {
-  try {
-    const settings = JSON.parse(localStorage.getItem('driver_settings') || '{}')
-    if (settings.notifications === false) return
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-    const price = parseFloat(String(firstOrder?.estimated_price || firstOrder?.final_price || 0)).toFixed(0)
-    const address = firstOrder?.pickup_address || 'Nearby'
-    const title = count === 1 ? '\uD83D\uDE9B New Order Available!' : `\uD83D\uDE9B ${count} New Orders!`
-    const body = count === 1 ? `$${price} \u2014 ${address}` : `$${price} and ${count - 1} more`
-    const options = { body, icon: '/icon-192x192.png', tag: 'new-order', renotify: true }
-    new Notification(title, options)
-    // Vibrate if supported
-    if (settings.vibration !== false && navigator.vibrate) {
-      navigator.vibrate([200, 100, 200, 100, 200])
-    }
-  } catch (e) {
-    console.log('[PWA Notification] Error:', e)
-  }
-}
 
 // Check if a date string is today
 function isToday(dateStr: string | undefined | null): boolean {
@@ -119,8 +41,6 @@ export default function DashboardPage() {
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('locating')
   const [locationAttempt, setLocationAttempt] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const previousOrderIdsRef = useRef<Set<string>>(new Set())
-  const hasCompletedFirstFetchRef = useRef(false)
   const fetchAllDataRef = useRef<(() => Promise<void>) | null>(null)
 
   useEffect(() => {
@@ -183,13 +103,6 @@ export default function DashboardPage() {
     })
   }, [token])
 
-  // Request browser notification permission when going online
-  useEffect(() => {
-    if (isOnline && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-  }, [isOnline])
-
   // Poll for orders when online
   useEffect(() => {
     if (isOnline && token) {
@@ -227,17 +140,6 @@ export default function DashboardPage() {
       ])
       const newAvailable = available.orders || []
       const myOrdersList = myOrders.orders || []
-      // Detect brand-new orders and notify
-      const currentIds = new Set(newAvailable.map((o: Order) => String(o.id)))
-      if (hasCompletedFirstFetchRef.current) {
-        const brandNew = newAvailable.filter((o: Order) => !previousOrderIdsRef.current.has(String(o.id)))
-        if (brandNew.length > 0) {
-          playNotificationBeep()
-          showBrowserNotification(brandNew.length, brandNew[0])
-        }
-      }
-      hasCompletedFirstFetchRef.current = true
-      previousOrderIdsRef.current = currentIds
       setAvailableOrders(newAvailable)
       setTodayOrders(myOrdersList)
     } catch (err) {
@@ -250,10 +152,12 @@ export default function DashboardPage() {
 
   const toggleOnline = async () => {
     if (!token) return
+    if (!isOnline) void enableOrderAlerts().catch(() => {})
     setToggling(true)
     try {
       await setOnlineStatus(token, !isOnline, lat ?? undefined, lng ?? undefined)
       setIsOnline(!isOnline)
+      if (driver) updateDriver({ ...driver, is_online: !isOnline })
       if (isOnline) {
         setAvailableOrders([])
         setTodayOrders([])
