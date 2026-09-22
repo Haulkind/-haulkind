@@ -77,33 +77,65 @@ export async function setOnlineStatus(token: string, online: boolean, lat?: numb
 export async function getAvailableOrders(token: string) {
   const res = await fetch(`${API_BASE}/driver/orders/available`, {
     headers: authHeaders(token),
+    cache: 'no-store',
   })
   if (!res.ok) throw new Error('Failed to get orders')
-  return res.json() as Promise<{ orders: Order[] }>
+  const data: { orders: Order[] } = await res.json()
+  return { orders: data.orders.map(withoutCustomerContact) }
 }
 
 export async function getMyOrders(token: string, filter: string = 'today') {
   const res = await fetch(`${API_BASE}/driver/orders/my-orders?filter=${filter}`, {
     headers: authHeaders(token),
+    cache: 'no-store',
   })
   if (!res.ok) throw new Error('Failed to get my orders')
-  return res.json() as Promise<{ orders: Order[] }>
+  const data: { orders: Order[] } = await res.json()
+  return { orders: data.orders.map(withoutCustomerContact) }
 }
 
 export async function getOrderDetail(token: string, id: string) {
+  const requestedAt = Date.now()
   const res = await fetch(`${API_BASE}/driver/orders/${id}`, {
     headers: authHeaders(token),
+    cache: 'no-store',
   })
   if (!res.ok) throw new Error('Failed to get order')
-  return res.json() as Promise<{ order: Order }>
+  const data: { order: Order } = await res.json()
+  const ttl = Date.parse(data.order.contact_expires_at || '') - Date.parse(data.order.server_time || '')
+  data.order.contactExpiresAt = requestedAt + Math.max(0, Math.min(30000, ttl || 0))
+  if (!data.order.can_contact_customer || !['en_route', 'arrived', 'started', 'in_progress', 'photo_taken', 'signed'].includes(data.order.status) ||
+      data.order.contactExpiresAt <= Date.now()) data.order = withoutCustomerContact(data.order)
+  return data
+}
+
+export function withoutCustomerContact(order: Order): Order {
+  const copy = { ...order, can_contact_customer: false, contactExpiresAt: 0 }
+  delete copy.customer_phone
+  delete copy.customerPhone
+  delete copy.phone
+  return copy
+}
+
+export async function updateOrderEta(token: string, id: string, arrivalTime: string) {
+  const res = await fetch(`${API_BASE}/driver/orders/${id}/eta`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ arrival_time: arrivalTime }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to save arrival time')
+  return data
 }
 
 export async function getOrderHistory(token: string) {
   const res = await fetch(`${API_BASE}/driver/orders/history`, {
     headers: authHeaders(token),
+    cache: 'no-store',
   })
   if (!res.ok) throw new Error('Failed to get history')
-  return res.json() as Promise<{ orders: Order[] }>
+  const data: { orders: Order[] } = await res.json()
+  return { orders: data.orders.map(withoutCustomerContact) }
 }
 
 // ── Order Actions ─────────────────────────────────────
@@ -133,7 +165,10 @@ export async function startTrip(token: string, id: string) {
     method: 'POST',
     headers: authHeaders(token),
   })
-  if (!res.ok) throw new Error('Failed to start trip')
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error || 'Failed to start trip')
+  }
   return res.json()
 }
 
@@ -276,6 +311,16 @@ export interface Order {
   customer_notes?: string
   customer_name?: string
   customer_phone?: string
+  customerPhone?: string
+  phone?: string
+  can_contact_customer?: boolean
+  contact_expires_at?: string | null
+  contactExpiresAt?: number
+  server_time?: string
+  assigned_driver_id?: string | number | null
+  driver_eta_at?: string | null
+  service_date?: string | null
+  service_timezone?: string
   photo_urls?: string[] | string
   photos?: string[] | string
   before_photos?: string[] | string

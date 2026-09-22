@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getOrderDetail } from '@/lib/api'
 import { getToken, isLoggedIn } from '@/lib/auth'
 import StatusTimeline from '@/components/StatusTimeline'
 import DriverTrackingMap from '@/components/DriverTrackingMap'
+import ArrivalEstimate from '@/components/ArrivalEstimate'
+import { hasDriverContact, useContactExpiry } from '@/lib/orderContact'
 
 const SERVICE_LABELS: Record<string, string> = {
   HAUL_AWAY: 'Hauling',
@@ -22,22 +24,41 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const requestRef = useRef(0)
+  useContactExpiry(order, setOrder)
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace('/auth'); return }
     loadOrder()
-    const interval = setInterval(loadOrder, 10000)
-    return () => clearInterval(interval)
+    const refresh = () => { if (!document.hidden) void loadOrder() }
+    const visibility = () => {
+      ++requestRef.current
+      refresh()
+    }
+    const interval = setInterval(refresh, 10000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      ++requestRef.current
+      clearInterval(interval)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', visibility)
+    }
   }, [orderId])
 
   const loadOrder = async () => {
     const token = getToken()
-    if (!token) return
+    if (!token) { setOrder(null); return }
+    const request = ++requestRef.current
     try {
       const data = await getOrderDetail(token, orderId)
-      if (data.error) { setError(data.error); return }
+      if (request !== requestRef.current || document.hidden) return
+      if (data.error) { setOrder(null); setError(data.error); return }
+      setError('')
       setOrder(data.order)
     } catch {
+      if (request !== requestRef.current) return
+      setOrder(null)
       setError('Failed to load order')
     } finally {
       setLoading(false)
@@ -175,7 +196,7 @@ export default function OrderDetailPage() {
               )}
               <div>
                 <p className="font-medium">{order.driver.name || 'Driver'}</p>
-                {order.driver.phone && (
+                {hasDriverContact(order) && order.driver.phone && (
                   <a href={`tel:${order.driver.phone}`} className="text-primary-600 text-sm">
                     {order.driver.phone}
                   </a>
@@ -185,13 +206,16 @@ export default function OrderDetailPage() {
           </div>
         )}
 
+        <ArrivalEstimate arrivalTime={order.driver_eta_at} status={order.status} />
+
         {/* Driver Location Map */}
-        {order.driver_location && order.pickup_lat && order.pickup_lng && (
+        {order.driver_location && order.pickup_lat != null && order.pickup_lng != null && (
           <DriverTrackingMap
             driverLocation={order.driver_location}
             pickupLat={parseFloat(order.pickup_lat)}
             pickupLng={parseFloat(order.pickup_lng)}
             driverName={order.driver?.name}
+            hasDriverEta={Boolean(order.driver_eta_at)}
           />
         )}
 

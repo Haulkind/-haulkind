@@ -1,3 +1,5 @@
+import { prepareOrderContact, withoutDriverContact } from './orderContact';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://haulkind-production-285b.up.railway.app';
 
 // ============================================================
@@ -44,27 +46,37 @@ export async function getMyOrders(token: string, status?: 'active' | 'completed'
   const qs = status ? `?status=${status}` : '';
   const res = await fetch(`${API_URL}/customer/orders${qs}`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
   });
-  return res.json();
+  const data = await res.json();
+  if (data.orders) data.orders = data.orders.map(withoutDriverContact);
+  return data;
 }
 
 export async function getOrderDetail(token: string, orderId: string) {
+  const requestedAt = Date.now();
   const res = await fetch(`${API_URL}/customer/orders/${orderId}`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
   });
-  return res.json();
+  const data = await res.json();
+  if (data.order) data.order = prepareOrderContact(data.order, requestedAt);
+  return data;
 }
 
 // ============================================================
 // Anonymous order tracking
 // ============================================================
 export async function trackOrder(data: { token?: string; orderId?: string }) {
+  const requestedAt = Date.now();
   const res = await fetch(`${API_URL}/customer/orders/track`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return res.json();
+  const result = await res.json();
+  if (result.order) result.order = prepareOrderContact(result.order, requestedAt);
+  return result;
 }
 
 // ============================================================

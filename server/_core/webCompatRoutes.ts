@@ -16,6 +16,7 @@
 import { Express, Request, Response } from "express";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { orderForAudience } from "./orderPrivacy";
 
 // Approved states for service area coverage
 const APPROVED_STATES = ["NJ", "MA", "PA", "NY", "CT"];
@@ -298,7 +299,7 @@ export function registerWebCompatRoutes(app: Express) {
         status: job.status,
         total: totalAmount,
         trackingToken,
-        order: job,
+        order: orderForAudience(job, "public"),
       });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";
@@ -311,6 +312,7 @@ export function registerWebCompatRoutes(app: Express) {
   // GET /jobs/:id - Get order/job status
   // ================================================================
   app.get("/jobs/:id", async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
     try {
       const { id } = req.params;
       const pool = await getPgPool();
@@ -346,7 +348,7 @@ export function registerWebCompatRoutes(app: Express) {
         id: order.id,
         status: order.status,
         total,
-        order,
+        order: orderForAudience(order, "public"),
       });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Unknown error";

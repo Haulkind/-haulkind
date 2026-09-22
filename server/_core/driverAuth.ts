@@ -2,12 +2,14 @@ import type { Express } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import { requireAdmin } from "./adminAuth";
+import { isServiceDay, orderForAudience, serviceDate, type OrderRecord } from "./orderPrivacy";
 
 // Driver commission rate: drivers receive 70% of the order value
 const DRIVER_COMMISSION_RATE = 0.70;
 
 // Apply driver commission to order price fields (driver sees 70%, Haulkind keeps 30%)
-function applyDriverCommission(order: any): any {
+function applyDriverCommission(order: any, driverId?: string | number): any {
   if (!order) return order;
   const copy = { ...order };
   if (copy.estimated_price != null) {
@@ -27,11 +29,11 @@ function applyDriverCommission(order: any): any {
       // ignore parse errors
     }
   }
-  return copy;
+  return orderForAudience(copy, "driver", driverId);
 }
 
 function applyDriverCommissionToList(orders: any[]): any[] {
-  return orders.map(applyDriverCommission);
+  return orders.map(order => applyDriverCommission(order));
 }
 
 // Use raw pg connection since DATABASE_URL is PostgreSQL
@@ -76,7 +78,8 @@ function verifyToken(req: any): any {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
-    return jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET || 'secret');
+    return typeof decoded !== 'string' && decoded.driverId != null ? decoded : null;
   } catch (e) {
     return null;
   }
@@ -140,6 +143,10 @@ function startOverdueCron() {
 }
 
 export function registerDriverAuthRoutes(app: Express) {
+  app.use(['/driver/orders', '/api/orders'], (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
 
   // Start the overdue cron job
   startOverdueCron();
@@ -261,6 +268,38 @@ export function registerDriverAuthRoutes(app: Express) {
             ADD COLUMN IF NOT EXISTS payout_status TEXT
           `);
           console.log('[DriverAuth] Jobs table columns ensured (pickup_time_window, media, payment)');
+          await pool.query(`ALTER TABLE jobs
+            ADD COLUMN IF NOT EXISTS driver_eta_at TIMESTAMPTZ,
+            ADD COLUMN IF NOT EXISTS eta_driver_id TEXT`);
+          await pool.query(`
+            CREATE OR REPLACE FUNCTION enforce_job_contact_privacy() RETURNS trigger AS $$
+            BEGIN
+              IF NEW.status IN ('completed', 'cancelled', 'canceled', 'refunded') THEN
+                NEW.customer_phone := NULL;
+                IF to_regclass('public.order_tracking_tokens') IS NOT NULL THEN
+                  UPDATE order_tracking_tokens SET customer_phone = NULL WHERE job_id = NEW.id::text;
+                END IF;
+              END IF;
+              IF NEW.status NOT IN ('accepted', 'assigned', 'en_route') OR NEW.assigned_driver_id IS NULL THEN
+                NEW.driver_eta_at := NULL;
+                NEW.eta_driver_id := NULL;
+              ELSIF TG_OP = 'UPDATE' THEN
+                IF NEW.assigned_driver_id IS DISTINCT FROM OLD.assigned_driver_id
+                  OR NEW.scheduled_for IS DISTINCT FROM OLD.scheduled_for THEN
+                  NEW.driver_eta_at := NULL;
+                  NEW.eta_driver_id := NULL;
+                END IF;
+              END IF;
+              RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            CREATE OR REPLACE TRIGGER job_contact_privacy
+              BEFORE INSERT OR UPDATE ON jobs
+              FOR EACH ROW EXECUTE FUNCTION enforce_job_contact_privacy();
+            UPDATE jobs SET customer_phone = NULL, driver_eta_at = NULL, eta_driver_id = NULL
+              WHERE status IN ('completed', 'cancelled', 'canceled', 'refunded')
+              AND (customer_phone IS NOT NULL OR driver_eta_at IS NOT NULL OR eta_driver_id IS NOT NULL);
+          `);
         } catch (e) {
           console.warn('[DriverAuth] Could not add jobs columns:', (e as any)?.message);
         }
@@ -387,7 +426,7 @@ export function registerDriverAuthRoutes(app: Express) {
 
       const job = result.rows[0];
       console.log(`[Orders] New job created: ${job.id} - ${customerName}`);
-      res.json({ success: true, order: job });
+      res.json({ success: true, order: orderForAudience(job, "public") });
     } catch (err: any) {
       console.error('Create order error:', err);
       res.status(500).json({ error: 'Failed to create order', details: err.message });
@@ -413,7 +452,7 @@ export function registerDriverAuthRoutes(app: Express) {
       params.push(limit);
 
       const result = await pool.query(query, params);
-      res.json({ orders: result.rows, total: result.rows.length });
+      res.json({ orders: result.rows.map((order: OrderRecord) => orderForAudience(order, "public")), total: result.rows.length });
     } catch (err: any) {
       console.error('List orders error:', err);
       res.status(500).json({ error: 'Failed to list orders' });
@@ -421,7 +460,7 @@ export function registerDriverAuthRoutes(app: Express) {
   });
 
   // PUT /api/orders/:id/assign - Assign order to driver (admin)
-  app.put('/api/orders/:id/assign', async (req, res) => {
+  app.put('/api/orders/:id/assign', requireAdmin, async (req, res) => {
     try {
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
@@ -430,7 +469,7 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!driver_id) return res.status(400).json({ error: 'driver_id required' });
 
       await pool.query(
-        `UPDATE jobs SET assigned_driver_id = $1, status = 'assigned', updated_at = NOW() WHERE id = $2`,
+        `UPDATE jobs SET assigned_driver_id = $1, status = 'assigned', driver_eta_at = NULL, eta_driver_id = NULL, updated_at = NOW() WHERE id = $2`,
         [driver_id, req.params.id]
       );
 
@@ -441,7 +480,7 @@ export function registerDriverAuthRoutes(app: Express) {
       );
 
       const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
-      res.json({ success: true, order: result.rows[0] });
+      res.json({ success: true, order: orderForAudience(result.rows[0], "public") });
     } catch (err: any) {
       console.error('Assign order error:', err);
       res.status(500).json({ error: 'Failed to assign order' });
@@ -1298,10 +1337,11 @@ export function registerDriverAuthRoutes(app: Express) {
       const orderId = req.params.id;
       
       // Update job status
-      await pool.query(
-        "UPDATE jobs SET status = 'assigned', assigned_driver_id = $1, updated_at = NOW() WHERE id = $2",
+      const accepted = await pool.query(
+        "UPDATE jobs SET status = 'assigned', assigned_driver_id = $1, driver_eta_at = NULL, eta_driver_id = NULL, updated_at = NOW() WHERE id = $2 AND assigned_driver_id IS NULL AND status IN ('pending', 'dispatching', 'paid', 'scheduled') RETURNING id",
         [decoded.driverId, orderId]
       );
+      if (!accepted.rowCount) return res.status(409).json({ error: 'Order is no longer available' });
 
       // Create assignment record (prevent duplicates for same job+driver)
       try {
@@ -1358,14 +1398,18 @@ export function registerDriverAuthRoutes(app: Express) {
       
       // Fetch order to calculate earnings
       const orderResult = await pool.query(
-        "SELECT estimated_price, price_total_cents, status FROM jobs WHERE id = $1",
-        [orderId]
+        "SELECT estimated_price, price_total_cents, status, completion_photos, signature_data FROM jobs WHERE id = $1 AND assigned_driver_id = $2",
+        [orderId, decoded.driverId]
       );
+      if (!orderResult.rows.length) return res.status(404).json({ error: 'Assigned order not found' });
 
       // Guard: prevent completing an already-completed order (no duplicate earnings)
       if (orderResult.rows.length > 0 && orderResult.rows[0].status === 'completed') {
         console.log(`[DriverAuth] Order ${orderId} already completed — blocking duplicate completion`);
         return res.json({ success: true, message: 'Order already completed', duplicate: true });
+      }
+      if (orderResult.rows[0].status !== 'signed' || !orderResult.rows[0].completion_photos || !orderResult.rows[0].signature_data) {
+        return res.status(409).json({ error: 'Completion photo and customer signature are required' });
       }
       
       let priceTotalCents = 0;
@@ -1383,18 +1427,24 @@ export function registerDriverAuthRoutes(app: Express) {
       const platformFeeCents = Math.round(priceTotalCents * 0.30);
       const driverEarningsCents = priceTotalCents - platformFeeCents;
       
-      await pool.query(
+      const completed = await pool.query(
         `UPDATE jobs SET 
           status = 'completed', 
+          customer_phone = NULL,
+          driver_eta_at = NULL,
+          eta_driver_id = NULL,
           completed_at = NOW(), 
           updated_at = NOW(),
           price_total_cents = COALESCE(NULLIF(price_total_cents, 0), $2),
           platform_fee_cents = COALESCE(NULLIF(platform_fee_cents, 0), $3),
           driver_earnings_cents = COALESCE(NULLIF(driver_earnings_cents, 0), $4),
           payout_status = COALESCE(NULLIF(payout_status, ''), 'eligible')
-        WHERE id = $1`,
-        [orderId, priceTotalCents, platformFeeCents, driverEarningsCents]
+        WHERE id = $1 AND assigned_driver_id = $5 AND status = 'signed' RETURNING id`,
+        [orderId, priceTotalCents, platformFeeCents, driverEarningsCents, decoded.driverId]
       );
+      if (!completed.rowCount) return res.status(409).json({ error: 'Order state changed; refresh the order' });
+      await pool.query("UPDATE order_tracking_tokens SET customer_phone = NULL WHERE job_id = $1", [orderId])
+        .catch((error: unknown) => console.error('Tracking contact cleanup failed:', error));
 
       console.log(`[DriverAuth] Order ${orderId} completed: total=${priceTotalCents}c, platform=${platformFeeCents}c, driver=${driverEarningsCents}c`);
 
@@ -1542,14 +1592,51 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      await pool.query(
-        "UPDATE jobs SET status = 'en_route', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
-        [req.params.id, decoded.driverId]
+      const current = await pool.query('SELECT * FROM jobs WHERE id = $1 AND assigned_driver_id = $2', [req.params.id, decoded.driverId]);
+      if (!current.rows.length) return res.status(404).json({ error: 'Assigned order not found' });
+      if (!isServiceDay(current.rows[0])) return res.status(409).json({ error: 'Start the trip on the scheduled service day (Eastern Time)' });
+      const result = await pool.query(
+        "UPDATE jobs SET status = 'en_route', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('accepted', 'assigned') AND scheduled_for = $3 RETURNING *",
+        [req.params.id, decoded.driverId, current.rows[0].scheduled_for]
       );
-      res.json({ success: true, message: 'Trip started - en route to pickup' });
+      if (!result.rowCount) return res.status(409).json({ error: 'Order cannot start a trip in its current state' });
+      res.json({ success: true, message: 'Trip started - en route to pickup', order: applyDriverCommission(result.rows[0], decoded.driverId) });
     } catch (err: any) {
       console.error('Start trip error:', err);
       res.status(500).json({ error: 'Failed to start trip' });
+    }
+  });
+
+  app.post('/driver/orders/:id/eta', async (req, res) => {
+    try {
+      const decoded = verifyToken(req);
+      if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+      const arrivalTime: unknown = req.body?.arrival_time;
+      if (typeof arrivalTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(arrivalTime)) {
+        return res.status(400).json({ error: 'Enter arrival time as HH:MM (24-hour Eastern Time)' });
+      }
+      const pool = await getPgPool();
+      if (!pool) return res.status(500).json({ error: 'Database not available' });
+      const current = await pool.query('SELECT * FROM jobs WHERE id = $1 AND assigned_driver_id = $2', [req.params.id, decoded.driverId]);
+      if (!current.rows.length) return res.status(404).json({ error: 'Assigned order not found' });
+      const day = serviceDate(current.rows[0].scheduled_for);
+      if (!day) return res.status(409).json({ error: 'The order needs a scheduled service date' });
+      const result = await pool.query(
+        `UPDATE jobs SET
+          driver_eta_at = ($3::date + $4::text::time) AT TIME ZONE 'America/New_York',
+          eta_driver_id = $2::text, updated_at = NOW()
+        WHERE id = $1 AND assigned_driver_id = $2
+          AND status IN ('accepted', 'assigned', 'en_route') AND scheduled_for = $5
+          AND (($3::date + $4::text::time) AT TIME ZONE 'America/New_York') > NOW()
+          AND to_char((($3::date + $4::text::time) AT TIME ZONE 'America/New_York') AT TIME ZONE 'America/New_York', 'HH24:MI') = $4::text
+        RETURNING *`,
+        [req.params.id, String(decoded.driverId), day, arrivalTime, current.rows[0].scheduled_for]
+      );
+      if (!result.rowCount) return res.status(409).json({ error: 'Choose a future arrival time on the service day, before arrival at pickup' });
+      res.json({ success: true, order: applyDriverCommission(result.rows[0], decoded.driverId) });
+    } catch (error: unknown) {
+      console.error('Update ETA error:', error);
+      res.status(500).json({ error: 'Failed to update arrival time' });
     }
   });
 
@@ -1560,10 +1647,11 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      await pool.query(
-        "UPDATE jobs SET status = 'arrived', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+      const result = await pool.query(
+        "UPDATE jobs SET status = 'arrived', driver_eta_at = NULL, eta_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2 AND status = 'en_route'",
         [req.params.id, decoded.driverId]
       );
+      if (!result.rowCount) return res.status(409).json({ error: 'Only an assigned order en route can mark arrival' });
       res.json({ success: true, message: 'Arrived at pickup location' });
     } catch (err: any) {
       console.error('Arrived error:', err);
@@ -1578,10 +1666,11 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      await pool.query(
-        "UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+      const result = await pool.query(
+        "UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2 AND status = 'arrived'",
         [req.params.id, decoded.driverId]
       );
+      if (!result.rowCount) return res.status(409).json({ error: 'Mark arrival before starting work on your order' });
       res.json({ success: true, message: 'Work started' });
     } catch (err: any) {
       console.error('Start work error:', err);
@@ -1601,6 +1690,7 @@ export function registerDriverAuthRoutes(app: Express) {
       const photoData: string = body.photo_data || body.photo_base64 || '';
       const rawType: string = String(body.type || 'completion').toLowerCase();
       if (!photoData) return res.status(400).json({ error: 'photo_data required' });
+      if (!['before', 'after', 'completion'].includes(rawType)) return res.status(400).json({ error: 'Invalid photo type' });
 
       // Ensure columns exist (idempotent safety for older DB snapshots)
       try {
@@ -1615,19 +1705,21 @@ export function registerDriverAuthRoutes(app: Express) {
       // Route photo to the correct column based on type.
       // "after" photos are also mirrored into completion_photos so the existing
       // admin media viewer keeps working without changes.
+      let savedRows = 0;
       if (rawType === 'before') {
-        await pool.query(
+        const result = await pool.query(
           `UPDATE jobs SET
             before_photos = CASE
               WHEN before_photos IS NULL OR before_photos = '' THEN $3
               ELSE before_photos || '|||' || $3
             END,
             updated_at = NOW()
-          WHERE id = $1 AND assigned_driver_id = $2`,
+          WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('accepted', 'assigned', 'en_route', 'arrived')`,
           [req.params.id, decoded.driverId, photoData]
         );
+        savedRows = result.rowCount || 0;
       } else if (rawType === 'after') {
-        await pool.query(
+        const result = await pool.query(
           `UPDATE jobs SET
             status = 'photo_taken',
             after_photos = CASE
@@ -1639,11 +1731,12 @@ export function registerDriverAuthRoutes(app: Express) {
               ELSE completion_photos || '|||' || $3
             END,
             updated_at = NOW()
-          WHERE id = $1 AND assigned_driver_id = $2`,
+          WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('started', 'in_progress', 'photo_taken')`,
           [req.params.id, decoded.driverId, photoData]
         );
+        savedRows = result.rowCount || 0;
       } else {
-        await pool.query(
+        const result = await pool.query(
           `UPDATE jobs SET
             status = 'photo_taken',
             completion_photos = CASE
@@ -1651,10 +1744,12 @@ export function registerDriverAuthRoutes(app: Express) {
               ELSE completion_photos || '|||' || $3
             END,
             updated_at = NOW()
-          WHERE id = $1 AND assigned_driver_id = $2`,
+          WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('started', 'in_progress', 'photo_taken')`,
           [req.params.id, decoded.driverId, photoData]
         );
+        savedRows = result.rowCount || 0;
       }
+      if (!savedRows) return res.status(409).json({ error: 'Photo upload is not allowed in the current order state' });
       res.json({ success: true, message: 'Photo uploaded', type: rawType });
     } catch (err: any) {
       console.error('Upload photo error:', err);
@@ -1673,10 +1768,11 @@ export function registerDriverAuthRoutes(app: Express) {
       // Accept multiple field names for backward compatibility
       const signature: string = body.signature_data || body.signature_base64 || '';
       if (!signature) return res.status(400).json({ error: 'signature_data required' });
-      await pool.query(
-        "UPDATE jobs SET status = 'signed', signature_data = $3, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2",
+      const result = await pool.query(
+        "UPDATE jobs SET status = 'signed', signature_data = $3, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2 AND status = 'photo_taken' AND completion_photos IS NOT NULL AND completion_photos <> ''",
         [req.params.id, decoded.driverId, signature]
       );
+      if (!result.rowCount) return res.status(409).json({ error: 'Upload a completion photo before signing your order' });
       res.json({ success: true, message: 'Signature captured' });
     } catch (err: any) {
       console.error('Signature error:', err);
@@ -1698,7 +1794,8 @@ export function registerDriverAuthRoutes(app: Express) {
         `SELECT id, customer_name, customer_phone, customer_email, service_type, status,
                 pickup_address, pickup_lat::double precision as pickup_lat, pickup_lng::double precision as pickup_lng,
                 description, estimated_price,
-                items_json, scheduled_for, pickup_time_window, photo_urls, created_at
+                items_json, scheduled_for, pickup_time_window, photo_urls, created_at,
+                assigned_driver_id, driver_eta_at, eta_driver_id
          FROM jobs
          WHERE assigned_driver_id = $1
            AND status NOT IN ('completed', 'cancelled')
@@ -1715,7 +1812,7 @@ export function registerDriverAuthRoutes(app: Express) {
                   lat::double precision as pickup_lat, lng::double precision as pickup_lng,
                   '' as description,
                   COALESCE((pricing_json::jsonb->>'total')::numeric, 0) as estimated_price,
-                  items_json::text, pickup_date as scheduled_for, created_at
+                  items_json::text, pickup_date as scheduled_for, created_at, assigned_driver_id
            FROM orders
            WHERE assigned_driver_id = $1
              AND status NOT IN ('completed', 'cancelled')
@@ -1744,9 +1841,13 @@ export function registerDriverAuthRoutes(app: Express) {
       if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
       const pool = await getPgPool();
       if (!pool) return res.status(500).json({ error: 'Database not available' });
-      const result = await pool.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
+      const result = await pool.query(
+        `SELECT * FROM jobs WHERE id = $1 AND (assigned_driver_id = $2 OR
+          (assigned_driver_id IS NULL AND status IN ('pending', 'dispatching', 'paid', 'scheduled')))`,
+        [req.params.id, decoded.driverId]
+      );
       if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
-      res.json({ order: applyDriverCommission(result.rows[0]) });
+      res.json({ order: applyDriverCommission(result.rows[0], decoded.driverId) });
     } catch (err: any) {
       console.error('Get order error:', err);
       res.status(500).json({ error: 'Failed to get order' });
@@ -1805,10 +1906,11 @@ export function registerDriverAuthRoutes(app: Express) {
       const orderId = req.params.id;
       
       // Update job status to cancelled
-      await pool.query(
-        "UPDATE jobs SET status = 'pending', assigned_driver_id = NULL, updated_at = NOW() WHERE id = $1",
-        [orderId]
+      const result = await pool.query(
+        "UPDATE jobs SET status = 'pending', assigned_driver_id = NULL, driver_eta_at = NULL, eta_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND assigned_driver_id = $2 AND status IN ('accepted', 'assigned', 'en_route', 'arrived', 'started', 'in_progress', 'photo_taken', 'signed')",
+        [orderId, decoded.driverId]
       );
+      if (!result.rowCount) return res.status(409).json({ error: 'Only your active order can be cancelled' });
       
       res.json({ success: true, message: 'Order cancelled and returned to available orders' });
     } catch (err: any) {

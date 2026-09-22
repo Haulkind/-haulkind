@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator, Alert,
   Dimensions, FlatList, Modal, Vibration, Switch, PermissionsAndroid,
-  Linking, PanResponder, Image,
+  Linking, PanResponder, Image, AppState,
 } from "react-native";
 import notifee, { AndroidImportance, AndroidVisibility } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,7 +13,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { apiPost } from "./api";
 import { API_URL } from "./config";
 import { menuEmitter } from "./menuEmitter";
-import { launchCamera } from "react-native-image-picker";
+import { launchCamera, launchImageLibrary } from "react-native-image-picker";
 import Sound from "react-native-sound";
 import driverLogo from "./assets/haulkind-logo.png";
 import DriverMap from "./DriverMap";
@@ -202,16 +202,39 @@ const C = {
 // ============================================================================
 // API HELPERS
 // ============================================================================
+function withoutCustomerContact(order) {
+  if (!order) return order;
+  const copy = { ...order, can_contact_customer: false, contactExpiresAt: 0 };
+  delete copy.customer_phone;
+  delete copy.customerPhone;
+  delete copy.phone;
+  return copy;
+}
+
+function canContactCustomer(order) {
+  return order?.can_contact_customer === true && order.contactExpiresAt > Date.now() &&
+    ["en_route", "arrived", "started", "in_progress", "photo_taken", "signed"].includes(order.status);
+}
+
 async function apiGet(path) {
+  const requestedAt = Date.now();
   const token = await AsyncStorage.getItem("driver_token");
   const res = await fetch(`${API_URL}${path}`, {
     method: "GET",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
   const text = await res.text();
   let data;
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+  if (path.startsWith("/driver/orders")) {
+    if (Array.isArray(data.orders)) data.orders = data.orders.map(withoutCustomerContact);
+    if (data.order) {
+      const ttl = Date.parse(data.order.contact_expires_at || "") - Date.parse(data.order.server_time || "");
+      data.order.contactExpiresAt = requestedAt + Math.max(0, Math.min(30000, ttl || 0));
+      if (!canContactCustomer(data.order)) data.order = withoutCustomerContact(data.order);
+    }
+  }
   return data;
 }
 
@@ -801,7 +824,7 @@ export function HomeScreen({ navigation, route }) {
       await apiPostAuth(`/driver/orders/${order.id}/accept`);
       Vibration.vibrate(200);
       setShowDetail(false);
-      navigation.navigate("ActiveOrder", { order });
+      navigation.navigate("ActiveOrder", { orderId: order.id });
     } catch (e) { Alert.alert("Error", e.message || "Could not accept order."); } finally { setAccepting(false); }
   }
 
@@ -834,7 +857,7 @@ export function HomeScreen({ navigation, route }) {
   // Continue working on an already-accepted order
   function continueOrder(order) {
     setShowDetail(false);
-    navigation.navigate("ActiveOrder", { order });
+    navigation.navigate("ActiveOrder", { orderId: order.id });
   }
 
   async function logout() {
@@ -1350,7 +1373,7 @@ export function PendingScreen({ navigation }) {
 // ORDER DETAIL SCREEN (navigated from carousel tap)
 // ============================================================================
 export function OrderDetailScreen({ route, navigation }) {
-  const order = route.params?.order;
+  const order = withoutCustomerContact(route.params?.order);
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const [timer, setTimer] = useState(ACCEPT_TIMER_SECONDS);
@@ -1367,7 +1390,7 @@ export function OrderDetailScreen({ route, navigation }) {
     try {
       await apiPostAuth(`/driver/orders/${order.id}/accept`);
       Alert.alert("Order Accepted!", "Navigate to the pickup location.", [
-        { text: "OK", onPress: () => navigation.navigate("ActiveOrder", { order }) },
+        { text: "OK", onPress: () => navigation.navigate("ActiveOrder", { orderId: order.id }) },
       ]);
     } catch (e) {
       Alert.alert("Error", e.message || "Could not accept order.");
@@ -1387,7 +1410,6 @@ export function OrderDetailScreen({ route, navigation }) {
   const price = order?.pricing?.total || order?.pricing?.estimatedTotal || order?.estimated_price || order?.final_price || "0";
   const address = order?.pickup_address || order?.address?.street || "N/A";
   const customerName = order?.customer_name || order?.customerName || "Customer";
-  const customerPhone = order?.customer_phone || order?.phone || "";
   const serviceType = order?.service_type || order?.serviceType || "Service";
   const scheduledDate = order?.scheduled_date || order?.scheduledDate || "";
 
@@ -1446,7 +1468,6 @@ export function OrderDetailScreen({ route, navigation }) {
         <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.grayLight }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, letterSpacing: 0.5, marginBottom: 4 }}>CUSTOMER</Text>
           <Text style={{ fontSize: 16, color: C.dark, fontWeight: "500" }}>{customerName}</Text>
-          {customerPhone ? <Text style={{ fontSize: 14, color: C.primary, marginTop: 4, fontWeight: "600" }}>{customerPhone}</Text> : null}
         </View>
 
         {/* Customer Photos */}
@@ -1517,8 +1538,15 @@ const STEPS = [
 ];
 
 export function ActiveOrderScreen({ route, navigation }) {
-  const order = route.params?.order;
-  const [currentStep, setCurrentStep] = useState(0);
+  const orderId = route.params?.orderId || route.params?.order?.id;
+  const [order, setOrder] = useState(null);
+  const [orderError, setOrderError] = useState("");
+  const [arrivalTime, setArrivalTime] = useState("");
+  const [savingEta, setSavingEta] = useState(false);
+  const [driverPosition, setDriverPosition] = useState(null);
+  const requestRef = useRef(0);
+  const focusedRef = useRef(false);
+  const busyRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState(null);
   const [showSignature, setShowSignature] = useState(false);
@@ -1526,14 +1554,93 @@ export function ActiveOrderScreen({ route, navigation }) {
   const [signaturePaths, setSignaturePaths] = useState([]);
   const [currentPath, setCurrentPath] = useState([]);
   const currentPathRef = useRef([]);
+  const status = order?.status === "assigned" ? "accepted" : order?.status === "started" ? "in_progress" : order?.status;
+  const currentStep = STEPS.findIndex(step => step.key === status);
+
+  useFocusEffect(useCallback(() => startDriverLocationTracking(position => {
+    setDriverPosition(position);
+    apiPostAuth("/driver/location", {
+      lat: position.latitude, lng: position.longitude, heading: position.heading, speed: position.speed,
+    }).catch(() => {});
+  }, locationStatus => {
+    if (["denied", "stale", "unavailable"].includes(locationStatus)) setDriverPosition(null);
+  }), []));
+
+  const reloadOrder = useCallback(async () => {
+    const request = ++requestRef.current;
+    try {
+      const data = await apiGet(`/driver/orders/${orderId}`);
+      if (request !== requestRef.current || !focusedRef.current || AppState.currentState !== "active") return false;
+      setOrder(data.order);
+      setOrderError("");
+      return true;
+    } catch (error) {
+      if (request === requestRef.current) {
+        setOrder(null);
+        setOrderError(error.message || "Could not refresh order. Please reconnect.");
+      }
+      return false;
+    }
+  }, [orderId]);
+
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    navigation.setParams({ orderId, order: undefined });
+    void reloadOrder();
+    const refresh = () => {
+      if (AppState.currentState === "active" && !busyRef.current) void reloadOrder();
+    };
+    const interval = setInterval(refresh, 10000);
+    const subscription = AppState.addEventListener("change", state => {
+      ++requestRef.current;
+      setOrder(current => withoutCustomerContact(current));
+      if (state === "active") refresh();
+    });
+    return () => {
+      focusedRef.current = false;
+      ++requestRef.current;
+      clearInterval(interval);
+      subscription.remove();
+      setOrder(null);
+    };
+  }, [navigation, orderId, reloadOrder]));
+
+  useEffect(() => {
+    if (!order?.customer_phone) return;
+    const timer = setTimeout(() => setOrder(current => withoutCustomerContact(current)),
+      Math.max(0, (order.contactExpiresAt || 0) - Date.now()));
+    return () => clearTimeout(timer);
+  }, [order]);
+
+  const saveEta = async () => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(arrivalTime)) {
+      Alert.alert("Arrival Time", "Enter HH:MM in 24-hour Eastern Time, for example 14:30.");
+      return;
+    }
+    setSavingEta(true);
+    busyRef.current = true;
+    ++requestRef.current;
+    try {
+      await apiPostAuth(`/driver/orders/${orderId}/eta`, { arrival_time: arrivalTime });
+      await reloadOrder();
+    } catch (error) {
+      Alert.alert("ETA", error.message || "Could not save arrival time.");
+    } finally {
+      busyRef.current = false;
+      setSavingEta(false);
+    }
+  };
 
   const price = order?.pricing?.total || order?.pricing?.estimatedTotal || order?.estimated_price || order?.final_price || "0";
   const address = order?.pickup_address || order?.address?.street || "N/A";
   const customerName = order?.customer_name || order?.customerName || "Customer";
-  const customerPhone = order?.customer_phone || order?.phone || "";
+  const customerPhone = canContactCustomer(order) ? order.customer_phone || "" : "";
   const serviceType = order?.service_type || order?.serviceType || "Service";
   const description = order?.description || "";
-  const orderId = order?.id;
+  const pickupLat = parseFloat(order?.pickup_lat);
+  const pickupLng = parseFloat(order?.pickup_lng);
+  const distance = driverPosition && Number.isFinite(pickupLat) && Number.isFinite(pickupLng)
+    ? getDistanceMiles(driverPosition.latitude, driverPosition.longitude, pickupLat, pickupLng) : null;
 
   const handleCancelOrder = () => {
     Alert.alert(
@@ -1543,12 +1650,18 @@ export function ActiveOrderScreen({ route, navigation }) {
         { text: "Keep Order", style: "cancel" },
         { text: "Cancel Order", style: "destructive", onPress: async () => {
           try {
+            busyRef.current = true;
+            ++requestRef.current;
+            setOrder(current => withoutCustomerContact(current));
             await apiPostAuth(`/driver/orders/${orderId}/cancel`);
+            setOrder(null);
             Alert.alert("Cancelled", "Order has been cancelled.", [
               { text: "OK", onPress: () => navigation.navigate("Home", { refreshTs: Date.now() }) }
             ]);
           } catch (e) {
             Alert.alert("Error", e.message || "Could not cancel order.");
+          } finally {
+            busyRef.current = false;
           }
         }},
       ]
@@ -1556,7 +1669,7 @@ export function ActiveOrderScreen({ route, navigation }) {
   };
 
   const callCustomer = () => {
-    if (customerPhone) Linking.openURL(`tel:${customerPhone}`);
+    if (canContactCustomer(order) && customerPhone) Linking.openURL(`tel:${customerPhone}`);
   };
 
   const openMaps = () => {
@@ -1568,6 +1681,9 @@ export function ActiveOrderScreen({ route, navigation }) {
 
   const apiCallStep = async (endpoint, bodyData = {}) => {
     setLoading(true);
+    busyRef.current = true;
+    ++requestRef.current;
+    setOrder(current => withoutCustomerContact(current));
     try {
       const token = await AsyncStorage.getItem("driver_token");
       const resp = await fetch(`${API_URL}${endpoint}`, {
@@ -1577,47 +1693,54 @@ export function ActiveOrderScreen({ route, navigation }) {
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Failed");
-      return true;
+      return await reloadOrder();
     } catch (e) {
       Alert.alert("Error", e.message);
       return false;
     } finally {
+      busyRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  const captureJobPhoto = async (type, source) => {
+    setLoading(true);
+    busyRef.current = true;
+    try {
+      const options = { mediaType: "photo", quality: 0.7, maxWidth: 1024, maxHeight: 1024, includeBase64: true };
+      const result = source === "camera" ? await launchCamera(options) : await launchImageLibrary(options);
+      if (result.errorCode) throw new Error(result.errorMessage || "Could not open photos.");
+      const photo = result.assets?.[0];
+      if (photo?.base64) {
+        const ok = await apiCallStep(`/driver/orders/${orderId}/upload-photo`, {
+          type, photo_base64: `data:${photo.type || "image/jpeg"};base64,${photo.base64}`,
+        });
+        if (ok && type !== "before") setPhotoUri(photo.uri);
+      }
+    } catch (error) {
+      Alert.alert("Photo", error.message || "Could not upload photo.");
+    } finally {
+      busyRef.current = false;
       setLoading(false);
     }
   };
 
   const handleNextStep = async () => {
     const step = STEPS[currentStep];
+    if (!step || loading || savingEta) return;
     if (step.key === "accepted") {
-      const ok = await apiCallStep(`/driver/orders/${orderId}/start-trip`);
-      if (ok) setCurrentStep(1);
+      await apiCallStep(`/driver/orders/${orderId}/start-trip`);
     } else if (step.key === "en_route") {
-      const ok = await apiCallStep(`/driver/orders/${orderId}/arrived`);
-      if (ok) setCurrentStep(2);
+      await apiCallStep(`/driver/orders/${orderId}/arrived`);
     } else if (step.key === "arrived") {
-      const ok = await apiCallStep(`/driver/orders/${orderId}/start-work`);
-      if (ok) setCurrentStep(3);
+      await apiCallStep(`/driver/orders/${orderId}/start-work`);
     } else if (step.key === "in_progress") {
-      // Take photo and send base64 to backend
-      try {
-        const result = await launchCamera({ mediaType: "photo", quality: 0.7, maxWidth: 1024, maxHeight: 1024, includeBase64: true });
-        if (result.assets && result.assets[0]) {
-          setPhotoUri(result.assets[0].uri);
-          const photoBase64 = result.assets[0].base64 || "";
-          const ok = await apiCallStep(`/driver/orders/${orderId}/upload-photo`, {
-            photo_base64: photoBase64 ? `data:image/jpeg;base64,${photoBase64}` : ""
-          });
-          if (ok) setCurrentStep(4);
-        }
-      } catch (e) {
-        Alert.alert("Camera Error", "Could not open camera. Please try again.");
-      }
+      await captureJobPhoto("after", "camera");
     } else if (step.key === "photo_taken") {
       setShowSignature(true);
     } else if (step.key === "signed") {
       const ok = await apiCallStep(`/driver/orders/${orderId}/complete`);
       if (ok) {
-        setCurrentStep(6);
         Alert.alert("Order Completed!", "Great job! The order has been completed successfully.", [
           { text: "OK", onPress: () => navigation.navigate("Home") },
         ]);
@@ -1626,6 +1749,10 @@ export function ActiveOrderScreen({ route, navigation }) {
   };
 
   const handleSignatureDone = async () => {
+    if (!signaturePaths.some(path => path.length > 1)) {
+      Alert.alert("Signature Required", "Ask the customer to sign before saving.");
+      return;
+    }
     setShowSignature(false);
     // Build SVG from signature paths and send as data URI
     const allPaths = [...signaturePaths];
@@ -1640,10 +1767,9 @@ export function ActiveOrderScreen({ route, navigation }) {
     });
     const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect width="400" height="200" fill="white"/>${svgPaths}</svg>`;
     const signatureBase64 = `data:image/svg+xml;base64,${btoa(svgData)}`;
-    const ok = await apiCallStep(`/driver/orders/${orderId}/signature`, {
+    await apiCallStep(`/driver/orders/${orderId}/signature`, {
       signature_base64: signatureBase64
     });
-    if (ok) setCurrentStep(5);
   };
 
   // Signature PanResponder
@@ -1702,8 +1828,18 @@ export function ActiveOrderScreen({ route, navigation }) {
     });
   };
 
-  const stepInfo = STEPS[currentStep];
-  const progress = ((currentStep) / (STEPS.length - 1)) * 100;
+  const stepInfo = STEPS[currentStep] || { label: order?.status || "Loading", color: C.gray, icon: "", action: null };
+  const progress = (Math.max(0, currentStep) / (STEPS.length - 1)) * 100;
+
+  if (!order) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: C.bg }}>
+        {orderError ? <Text style={{ color: C.danger, textAlign: "center", marginBottom: 16 }}>{orderError}</Text> : <ActivityIndicator color={C.primary} />}
+        <TouchableOpacity onPress={reloadOrder} style={{ padding: 16 }}><Text style={{ color: C.primary }}>Refresh Order</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 16 }}><Text style={{ color: C.primary }}>Back</Text></TouchableOpacity>
+      </View>
+    );
+  }
 
   // Signature Modal
   if (showSignature) {
@@ -1756,6 +1892,33 @@ export function ActiveOrderScreen({ route, navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        <View style={{ backgroundColor: C.primary, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+          <Text style={{ color: C.white, fontWeight: "600" }}>YOUR EARNINGS (70%)</Text>
+          <Text style={{ color: C.white, fontSize: 32, fontWeight: "bold", marginTop: 4 }}>${parseFloat(price).toFixed(2)}</Text>
+          <Text style={{ color: C.white, marginTop: 8 }}>{distance === null ? "Enable location to see distance to pickup" : `${distance.toFixed(1)} mi to pickup`}</Text>
+        </View>
+        {["accepted", "en_route"].includes(status) && (
+          <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: C.dark }}>ETA — Arrival time</Text>
+            <Text style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>{order.service_date} · Eastern Time (New York)</Text>
+            {order.driver_eta_at ? <Text style={{ color: C.primary, fontWeight: "600", marginTop: 8 }}>
+              Shared with customer: {new Date(order.driver_eta_at).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" })}
+            </Text> : null}
+            <TextInput
+              value={arrivalTime}
+              onChangeText={setArrivalTime}
+              placeholder="HH:MM (24-hour), e.g. 14:30"
+              placeholderTextColor={C.gray}
+              accessibilityLabel="Arrival time in Eastern Time"
+              maxLength={5}
+              autoCorrect={false}
+              style={{ borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: 12, marginTop: 12, color: C.dark }}
+            />
+            <TouchableOpacity disabled={loading || savingEta} onPress={saveEta} style={{ backgroundColor: C.primary, borderRadius: 8, padding: 12, marginTop: 8, alignItems: "center", opacity: loading || savingEta ? 0.5 : 1 }}>
+              <Text style={{ color: C.white, fontWeight: "600" }}>{savingEta ? "Saving..." : "Save ETA"}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {/* Step indicators */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16, paddingHorizontal: 4 }}>
           {STEPS.map((s, i) => (
@@ -1820,11 +1983,28 @@ export function ActiveOrderScreen({ route, navigation }) {
           );
         })()}
 
+        {["accepted", "en_route", "arrived", "in_progress", "photo_taken"].includes(status) && (
+          <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <Text style={{ color: C.dark, fontWeight: "600", marginBottom: 10 }}>
+              {currentStep < 3 ? "Before Photos (optional)" : "After Photos"}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity disabled={loading || savingEta} onPress={() => captureJobPhoto(currentStep < 3 ? "before" : "after", "camera")} style={{ flex: 1, backgroundColor: C.primary, padding: 12, borderRadius: 8, alignItems: "center" }}>
+                <Text style={{ color: C.white }}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity disabled={loading || savingEta} onPress={() => captureJobPhoto(currentStep < 3 ? "before" : "after", "gallery")} style={{ flex: 1, backgroundColor: C.grayLight, padding: 12, borderRadius: 8, alignItems: "center" }}>
+                <Text style={{ color: C.dark }}>From Gallery</Text>
+              </TouchableOpacity>
+            </View>
+            {currentStep < 3 && <Text style={{ color: C.gray, marginTop: 8 }}>{parsePhotoUrls(order.before_photos).length} before photos saved</Text>}
+          </View>
+        )}
+
         {/* Photo preview */}
-        {photoUri ? (
+        {(photoUri || parsePhotoUrls(order.completion_photos)[0]) ? (
           <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, marginBottom: 12 }}>
             <Text style={{ fontSize: 12, fontWeight: "600", color: C.gray, marginBottom: 8 }}>COMPLETION PHOTO</Text>
-            <Image source={{ uri: photoUri }} style={{ width: "100%", height: 200, borderRadius: 8 }} resizeMode="cover" />
+            <Image source={{ uri: photoUri || parsePhotoUrls(order.completion_photos)[0] }} style={{ width: "100%", height: 200, borderRadius: 8 }} resizeMode="cover" />
           </View>
         ) : null}
 
@@ -1862,7 +2042,7 @@ export function ActiveOrderScreen({ route, navigation }) {
           <TouchableOpacity
             style={{ backgroundColor: loading ? C.gray : stepInfo.color, borderRadius: 12, paddingVertical: 16, alignItems: "center", marginBottom: 8 }}
             onPress={handleNextStep}
-            disabled={loading}
+            disabled={loading || savingEta}
           >
             {loading ? (
               <ActivityIndicator color={C.white} />
@@ -1874,6 +2054,7 @@ export function ActiveOrderScreen({ route, navigation }) {
             <TouchableOpacity
               style={{ borderRadius: 12, paddingVertical: 12, alignItems: "center", borderWidth: 1, borderColor: C.danger }}
               onPress={handleCancelOrder}
+              disabled={loading || savingEta}
             >
               <Text style={{ color: C.danger, fontSize: 14, fontWeight: "bold" }}>Cancel Order</Text>
             </TouchableOpacity>
@@ -1916,7 +2097,7 @@ export function MyOrdersScreen({ navigation }) {
       const allOrders = data?.orders || [];
       // Filter to only show accepted/in-progress orders
       const myOrders = allOrders.filter(o => 
-        ["accepted", "assigned", "en_route", "arrived", "in_progress", "scheduled"].includes(o.status)
+        ["accepted", "assigned", "en_route", "arrived", "started", "in_progress", "photo_taken", "signed", "scheduled"].includes(o.status)
       );
       setOrders(myOrders);
     } catch (e) {
@@ -2037,7 +2218,7 @@ export function MyOrdersScreen({ navigation }) {
               <View style={{ flexDirection: "row", marginTop: 12, gap: 8 }}>
                 <TouchableOpacity
                   style={{ flex: 2, backgroundColor: C.primary, borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
-                  onPress={() => navigation.navigate("ActiveOrder", { order: o })}>
+                  onPress={() => navigation.navigate("ActiveOrder", { orderId: o.id })}>
                   <Text style={{ color: C.white, fontSize: 13, fontWeight: "bold" }}>Continue Order</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
