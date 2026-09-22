@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import { requireAdmin } from "./adminAuth";
 import { isServiceDay, orderForAudience, serviceDate, type OrderRecord } from "./orderPrivacy";
+import { registerDriverPushRoutes } from "./driverPush";
 
 // Driver commission rate: drivers receive 70% of the order value
 const DRIVER_COMMISSION_RATE = 0.70;
@@ -340,6 +341,8 @@ export function registerDriverAuthRoutes(app: Express) {
   // ============================================================================
   // DIAGNOSTIC ENDPOINTS
   // ============================================================================
+
+  registerDriverPushRoutes(app, getPgPool, verifyToken);
 
   // GET /api/db/tables - List all tables in the database
   app.get('/api/db/tables', async (req, res) => {
