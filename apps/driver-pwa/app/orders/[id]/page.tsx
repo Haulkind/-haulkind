@@ -95,7 +95,9 @@ export default function OrderDetailPage() {
       if (cancelled || !detailMapRef.current || detailMapInstanceRef.current) return
 
       const map = L.map(detailMapRef.current, {
-        zoomControl: false,
+        zoomControl: true,
+        touchZoom: true,
+        dragging: true,
         zoomAnimation: false,
       }).setView([centerLat, centerLng], 13)
       detailMapInstanceRef.current = map
@@ -116,7 +118,7 @@ export default function OrderDetailPage() {
         L.marker([oLat, oLng], { icon }).addTo(map)
       }
 
-      observer = new ResizeObserver(() => map.invalidateSize())
+      observer = new ResizeObserver(() => map.invalidateSize({ pan: false }))
       observer.observe(detailMapRef.current)
       setMapReady(true)
     }
@@ -437,14 +439,14 @@ export default function OrderDetailPage() {
       {/* Mini Map showing pickup location */}
       {(() => {
         return (
-          <div className="relative">
+          <div className="relative isolate z-0">
             <div
               ref={detailMapRef}
-              className="w-full bg-gray-200"
+              className="driver-map relative z-0 w-full bg-gray-200"
               style={{ height: 200 }}
             />
             {distance !== null && (
-              <div className="absolute bottom-3 left-3 bg-primary-900/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg z-[1000]">
+              <div className="pointer-events-none absolute bottom-3 left-3 bg-primary-900/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg z-10">
                 {formatDistance(distance)} away
               </div>
             )}

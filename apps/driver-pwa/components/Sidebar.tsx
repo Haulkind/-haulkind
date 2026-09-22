@@ -60,7 +60,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         aria-hidden={!open}
         ref={panel}
         className={`fixed top-0 left-0 bottom-0 w-[min(85vw,340px)] flex flex-col bg-white z-50 transform transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : '-translate-x-full'
+          open ? 'translate-x-0 visible pointer-events-auto' : '-translate-x-full invisible pointer-events-none'
         }`}
       >
         {/* Driver header */}
