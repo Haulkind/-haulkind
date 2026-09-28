@@ -6,16 +6,12 @@ import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
 import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protection'
+import { isNJZip } from '@/lib/service-availability'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
-// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
-function isNJZip(zipCode: string): boolean {
-  const z = zipCode.replace(/\D/g, '').slice(0, 5)
-  if (z.length !== 5) return false
-  const num = parseInt(z, 10)
-  return num >= 7001 && num <= 8999
-}
+const NJ_HAULING_BLOCKED_MESSAGE =
+  'Hauling and junk removal are available in eligible Pennsylvania, Delaware and New York service areas only. For New Jersey addresses, please go back and select Moving Labor, Furniture Assembly, Mattress Swap or Donation Pickup.'
 
 export default function HaulAwayLocationPage() {
   const router = useRouter()
@@ -219,7 +215,7 @@ export default function HaulAwayLocationPage() {
 
     // NJ compliance: block Hauling (HAUL_AWAY) for NJ ZIP codes — Donation Pickup is allowed
     if (isJunkRemovalFlow && isNJZip(zip)) {
-      setError('Hauling service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.')
+      setError(NJ_HAULING_BLOCKED_MESSAGE)
       return
     }
     
@@ -473,7 +469,7 @@ export default function HaulAwayLocationPage() {
                 {njBlocked && (
                   <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                     <p className="text-sm text-amber-800 font-medium">
-                      ⚠️ Hauling service is currently exclusive to Pennsylvania. For New Jersey addresses, please go back and select Donation Pickup, Moving Labor, or Furniture Assembly.
+                      ⚠️ {NJ_HAULING_BLOCKED_MESSAGE}
                     </p>
                   </div>
                 )}

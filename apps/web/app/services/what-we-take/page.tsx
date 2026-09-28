@@ -120,7 +120,7 @@ export default function WhatWeTakePage() {
             What We Take — Items We Pick Up
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8">
-            From a single mattress to a full estate clearing, HaulKind picks up almost anything. Here is a complete list of what we take — and the few things we cannot. Item pickup and hauling services are available in Pennsylvania and New York.
+            From a single mattress to a full estate clearing, HaulKind picks up almost anything. Here is a complete list of what we take — and the few things we cannot. Item pickup and hauling services are available in eligible Pennsylvania, Delaware and New York service areas. In New Jersey we offer moving labor, furniture assembly and heavy lifting only.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

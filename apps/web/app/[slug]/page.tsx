@@ -10,6 +10,7 @@ import {
   generateCityDescription,
   getNearbyCities,
 } from '@/lib/seo-data-national'
+import { isMarketState } from '@/lib/service-availability'
 
 interface PageProps {
   params: { slug: string }
@@ -61,6 +62,7 @@ export default function LocalSEOPage({ params }: PageProps) {
   // Same service in other cities from same state
   const allCities = getAllCities()
   const sameCityState = allCities.filter((c) => c.stateAbbr === city.stateAbbr && c.slug !== city.slug)
+  const inMarket = isMarketState(city.stateAbbr)
 
   // Schema markup
   const faqSchema = {
@@ -82,16 +84,10 @@ export default function LocalSEOPage({ params }: PageProps) {
     name: `${service.name} in ${city.name}, ${city.stateAbbr}`,
     description: page.metaDescription,
     provider: {
-      '@type': 'LocalBusiness',
+      '@type': 'Organization',
       name: 'HaulKind',
       url: 'https://haulkind.com',
-      telephone: '+1-267-434-7689',
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: city.name,
-        addressRegion: city.stateAbbr,
-        addressCountry: 'US',
-      },
+      telephone: '+1-609-456-8188',
       areaServed: {
         '@type': 'City',
         name: city.name,
@@ -99,11 +95,6 @@ export default function LocalSEOPage({ params }: PageProps) {
           '@type': 'State',
           name: city.state,
         },
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: city.lat,
-        longitude: city.lng,
       },
     },
     areaServed: {
@@ -227,8 +218,12 @@ export default function LocalSEOPage({ params }: PageProps) {
               <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">
                 <span className="text-2xl" aria-hidden="true">&#x1F69B;</span>
                 <div>
-                  <p className="font-semibold text-gray-900">Drivers Available</p>
-                  <p className="text-sm text-gray-600">We have drivers available near {city.name} today</p>
+                  <p className="font-semibold text-gray-900">{inMarket ? 'Drivers Available' : 'Check Availability'}</p>
+                  <p className="text-sm text-gray-600">
+                    {inMarket
+                      ? `Local pros available near ${city.name}`
+                      : `Enter your ${city.name} address in the quote tool to confirm coverage`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">

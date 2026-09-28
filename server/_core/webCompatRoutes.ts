@@ -19,7 +19,7 @@ import jwt from "jsonwebtoken";
 import { orderForAudience } from "./orderPrivacy";
 
 // Approved states for service area coverage
-const APPROVED_STATES = ["NJ", "MA", "PA", "NY", "CT"];
+const APPROVED_STATES = ["NJ", "MA", "PA", "NY", "CT", "DE"];
 
 // Hardcoded pricing tiers (matches what packages/api used)
 const VOLUME_PRICES: Record<string, { price: number; label: string }> = {
@@ -458,6 +458,7 @@ export function registerWebCompatRoutes(app: Express) {
             "Pennsylvania": "PA",
             "New York": "NY",
             "Connecticut": "CT",
+            "Delaware": "DE",
           };
 
           const stateAbbr = stateMap[addressState] || addressState;

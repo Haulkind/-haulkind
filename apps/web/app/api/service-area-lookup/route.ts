@@ -9,7 +9,7 @@ const TIMEOUT_MS = 8000;
 // New Jersey for hauling/junk-removal. Drivers in NJ may still pass through NJ
 // addresses for Donation Pickup pickup-in-PA-deliver-in-NY style flows, but
 // this API is for service-area approval and must not auto-approve NJ.
-const APPROVED_STATES = ['MA', 'PA', 'NY', 'CT'];
+const APPROVED_STATES = ['MA', 'PA', 'NY', 'CT', 'DE'];
 
 export async function GET(request: NextRequest) {
   // Rate limit: 30 lookups per minute per IP
@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
           'Massachusetts': 'MA',
           'Pennsylvania': 'PA',
           'New York': 'NY',
-          'Connecticut': 'CT'
+          'Connecticut': 'CT',
+          'Delaware': 'DE'
         };
         
         const stateAbbr = stateMap[addressState] || addressState;

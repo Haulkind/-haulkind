@@ -60,16 +60,10 @@ export default function CityPage({ params }: PageProps) {
 
   const localBusinessSchema = {
     '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
+    '@type': 'Organization',
     name: 'HaulKind',
     url: 'https://haulkind.com',
-    telephone: '+1-267-434-7689',
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: city.name,
-      addressRegion: city.stateAbbr,
-      addressCountry: 'US',
-    },
+    telephone: '+1-609-456-8188',
     areaServed: {
       '@type': 'City',
       name: city.name,
@@ -77,11 +71,6 @@ export default function CityPage({ params }: PageProps) {
         '@type': 'State',
         name: city.state,
       },
-    },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: city.lat,
-      longitude: city.lng,
     },
   }
 

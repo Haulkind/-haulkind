@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SERVICES } from '@/lib/seo-data'
 import { getStateBySlug } from '@/lib/geo'
+import { HAULING_ELIGIBILITY_NOTICE, isMarketState } from '@/lib/service-availability'
 
 interface PageProps {
   params: { state: string }
@@ -18,9 +19,12 @@ export function generateMetadata({ params }: PageProps): Metadata {
   const state = getStateBySlug(params.state)
   if (!state) return {}
 
+  const inMarket = isMarketState(state.abbr)
   return {
     title: `Hauling & Moving Help in ${state.name} | HaulKind`,
-    description: `Professional hauling, furniture pickup, moving help, and more across ${state.name}. Serving ${state.cities.length} cities with transparent pricing and same-day service. Book online in 60 seconds.`,
+    description: inMarket
+      ? `Moving help, furniture assembly, loading & unloading, hauling and junk removal in eligible ${state.name} service areas. ${state.cities.length} cities with upfront pricing and live GPS tracking. Book online in 60 seconds.`
+      : `Hauling, furniture pickup and moving help in ${state.name}. Limited availability — check coverage for your address and get an upfront quote online.`,
     alternates: { canonical: `/service-areas/${state.slug}` },
     openGraph: {
       title: `Hauling & Moving Help in ${state.name} | HaulKind`,
@@ -37,6 +41,8 @@ export default function StatePage({ params }: PageProps) {
 
   const state = getStateBySlug(params.state)
   if (!state) notFound()
+
+  const inMarket = isMarketState(state.abbr)
 
   const featuredServices = SERVICES.filter((s) =>
     ['junk-removal', 'furniture-removal', 'mattress-removal', 'appliance-removal', 'garage-cleanout', 'moving-help'].includes(s.slug)
@@ -75,8 +81,11 @@ export default function StatePage({ params }: PageProps) {
               Hauling &amp; Moving Help in {state.name}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional hauling, furniture pickup, moving labor, and more across {state.cities.length} cities in {state.name}. Find your city below and book online in 60 seconds.
+              {inMarket
+                ? `Moving help, furniture assembly, loading & unloading, hauling and junk removal in eligible ${state.name} service areas. Find your city below and book online in 60 seconds.`
+                : `HaulKind offers hauling, furniture pickup and moving labor in ${state.name} with limited availability. Find your city below and check coverage for your address before booking.`}
             </p>
+            <p className="text-sm text-primary-200 max-w-2xl mx-auto mb-8">{HAULING_ELIGIBILITY_NOTICE}</p>
             <Link
               href="/quote"
               className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"

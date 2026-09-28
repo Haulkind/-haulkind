@@ -172,7 +172,7 @@ export default function CleanoutPage() {
               </ul>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-6">Property clearing services are currently available in Pennsylvania and New York only.</p>
+          <p className="text-sm text-gray-500 mt-6">Property clearing services are available in eligible Pennsylvania, Delaware and New York service areas only. Not offered in New Jersey.</p>
         </div>
       </section>
 

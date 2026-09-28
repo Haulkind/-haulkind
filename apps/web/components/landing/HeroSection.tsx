@@ -21,11 +21,11 @@ export default function HeroSection() {
       <div className="relative z-10 container mx-auto px-4">
         <div className="max-w-2xl">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            {"Fast, Fair Hauling & Moving Help — PA & NY"}
+            {"Moving Help in New Jersey. Hauling in PA, DE & NY."}
           </h1>
           
           <p className="text-lg md:text-xl text-white/90 mb-8">
-            Same-day pickup. Upfront pricing. Real-time tracking. We show up on time — guaranteed.
+            Book trusted local pros for moving labor, loading and unloading, furniture assembly, heavy lifting, mattress swaps and hauling services. Upfront pricing, easy booking and live GPS tracking.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-8">

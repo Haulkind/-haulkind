@@ -3,14 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import LeadCaptureModal from './LeadCaptureModal'
-
-// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
-function isNJZip(zip: string): boolean {
-  const z = zip.replace(/\D/g, '').slice(0, 5)
-  if (z.length !== 5) return false
-  const num = parseInt(z, 10)
-  return num >= 7001 && num <= 8999
-}
+import { isNJZip, NJ_LABOR_NOTICE } from '@/lib/service-availability'
 
 // Pricing table for Hauling (Haul Away) & Donation Pickup
 const PRICED_ITEMS = [
@@ -242,7 +235,7 @@ export default function PriceCalculator() {
             {isNJ && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  In New Jersey, HaulKind offers Moving Labor, Furniture Assembly, Mattress Swap, and Donation Pickup. Other services are not available at this address.
+                  {NJ_LABOR_NOTICE}
                 </p>
               </div>
             )}
@@ -266,8 +259,8 @@ export default function PriceCalculator() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA Only</span>
-                  <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA Only)</span></div>
+                  <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA · DE · NY</span>
+                  <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA, DE &amp; NY)</span></div>
                   <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
                 </button>
               )}

@@ -32,7 +32,7 @@ export default function Header() {
             onMouseLeave={() => setJunkOpen(false)}
           >
             <button aria-label="Hauling Services menu" aria-expanded={junkOpen} className="text-gray-700 hover:text-primary-600 transition flex items-center gap-1">
-              Hauling Services
+              Hauling (PA, DE &amp; NY)
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
             {junkOpen && (
@@ -46,6 +46,9 @@ export default function Header() {
               </div>
             )}
           </div>
+          <Link href="/services/moving-labor" className="text-gray-700 hover:text-primary-600 transition">
+            Moving Labor
+          </Link>
           <Link href="/donation-pickup" className="text-gray-700 hover:text-primary-600 transition">
             Donation Pickup
           </Link>
@@ -92,11 +95,11 @@ export default function Header() {
         <div className="md:hidden bg-white border-t px-4 pb-4">
           <div className="space-y-1 py-2">
             <p className="text-xs font-semibold text-gray-400 uppercase px-2 pt-2">Our Services</p>
-            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Hauling (PA Only)</Link>
+            <Link href="/quote?service=labor-only" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Moving Labor (NJ, PA, DE &amp; NY)</Link>
+            <Link href="/quote?service=haul-away" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Hauling (PA, DE &amp; NY)</Link>
             <Link href="/donation-pickup" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Donation Pickup</Link>
             <Link href="/assembly" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Furniture Assembly</Link>
             <Link href="/mattress-swap" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Mattress Swap</Link>
-            <Link href="/quote?service=labor-only" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600 font-medium">Moving Labor</Link>
             <div className="border-t my-2" />
             <Link href="/pricing" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Pricing</Link>
             <Link href="/service-areas" onClick={() => setMobileOpen(false)} className="block px-2 py-2 text-gray-700 hover:text-primary-600">Service Areas</Link>

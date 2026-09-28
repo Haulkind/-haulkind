@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Contact HaulKind - Get in Touch | PA & NY',
-  description: 'Contact HaulKind for hauling and moving help in Pennsylvania and New York. Email, phone, or get a free quote online. We respond fast.',
+  title: 'Contact HaulKind - Get in Touch | NJ, PA, DE & NY',
+  description: 'Contact HaulKind for moving help in New Jersey and hauling in Pennsylvania, Delaware and New York. Email, phone, or get a free quote online. We respond fast.',
   alternates: { canonical: '/contact' },
   openGraph: {
-    title: 'Contact HaulKind | PA & NY',
-    description: 'Questions about hauling or moving help? Contact HaulKind. Fast response, transparent pricing. Serving PA & NY.',
+    title: 'Contact HaulKind | NJ, PA, DE & NY',
+    description: 'Questions about hauling or moving help? Contact HaulKind. Fast response, transparent pricing. Serving NJ, PA, DE & NY.',
     url: 'https://haulkind.com/contact',
   },
 }
@@ -125,7 +125,7 @@ export default function ContactPage() {
               <div className="bg-gray-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold mb-2">What areas do you serve?</h3>
                 <p className="text-gray-700">
-                  HaulKind serves Pennsylvania and New York. Major cities include Philadelphia, Pittsburgh, Allentown, New York City, Buffalo, Rochester, and more. <Link href="/service-areas" className="text-primary-600 font-semibold hover:underline">See all service areas</Link>.
+                  HaulKind serves New Jersey (moving labor, furniture assembly and heavy lifting), plus Pennsylvania, Delaware and New York (moving help, hauling and junk removal in eligible areas). Major cities include Newark, Jersey City, Trenton, Philadelphia, Pittsburgh, Wilmington, New York City and Buffalo. <Link href="/service-areas" className="text-primary-600 font-semibold hover:underline">See all service areas</Link>.
                 </p>
               </div>
 
