@@ -1,16 +1,8 @@
 import Link from 'next/link'
-import { HAULING_ELIGIBILITY_NOTICE } from '@/lib/service-availability'
+import { HAULING_ABBR_LABEL, HAULING_BULLET_LABEL, HAULING_ELIGIBILITY_NOTICE, isHaulingState } from '@/lib/service-availability'
+import { NJ_LABOR_SERVICES } from '@/lib/nj-labor-pages'
 
-const NJ_LINKS = [
-  { label: 'Moving Labor', href: '/services/moving-labor' },
-  { label: 'Loading & Unloading', href: '/services/moving-labor#loading-unloading' },
-  { label: 'Furniture Assembly', href: '/assembly' },
-  { label: 'Heavy Lifting', href: '/services/moving-labor#heavy-lifting' },
-  { label: 'Mattress Swaps', href: '/mattress-swap' },
-  { label: 'Hourly Help', href: '/quote/labor-only/hours' },
-]
-
-const HAULING_STATES = [
+const OTHER_STATES = [
   {
     abbr: 'PA',
     name: 'Pennsylvania',
@@ -53,27 +45,35 @@ export default function MarketSplit() {
               Moving Labor &bull; Loading &amp; Unloading &bull; Furniture Assembly &bull; Heavy Lifting &bull; Mattress Swaps &bull; Hourly Help
             </p>
             <ul className="flex flex-wrap gap-2">
-              {NJ_LINKS.map((l) => (
-                <li key={l.href}>
+              {NJ_LABOR_SERVICES.map((s) => (
+                <li key={s.slug}>
                   <Link
-                    href={l.href}
+                    href={`/${s.slug}-new-jersey`}
                     className="inline-block bg-white border border-blue-200 text-blue-800 text-sm font-semibold px-3 py-1.5 rounded-full hover:bg-blue-100 transition"
                   >
-                    {l.label} in NJ
+                    {s.shortName} in NJ
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/mattress-swap"
+                  className="inline-block bg-white border border-blue-200 text-blue-800 text-sm font-semibold px-3 py-1.5 rounded-full hover:bg-blue-100 transition"
+                >
+                  Mattress Swaps in NJ
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div className="rounded-2xl border-2 border-teal-200 bg-teal-50 p-6 md:p-8">
-            <p className="text-xs font-bold tracking-widest text-teal-700 mb-2">PA &bull; DE &bull; NY</p>
+            <p className="text-xs font-bold tracking-widest text-teal-700 mb-2">{HAULING_BULLET_LABEL}</p>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">Moving Help &amp; Hauling</h3>
             <p className="text-gray-700 mb-5">
-              Moving Help &bull; Furniture Assembly &bull; Loading &amp; Unloading &bull; Hauling &bull; Junk Removal in eligible service areas
+              Moving Help &bull; Furniture Assembly &bull; Loading &amp; Unloading &bull; Hauling &amp; Junk Removal in eligible {HAULING_ABBR_LABEL} service areas
             </p>
             <ul className="space-y-2">
-              {HAULING_STATES.map((s) => (
+              {OTHER_STATES.map((s) => (
                 <li key={s.abbr} className="flex flex-wrap items-center gap-2 text-sm">
                   <Link href={s.hub} className="font-bold text-teal-800 hover:underline">
                     {s.name}
@@ -82,14 +82,18 @@ export default function MarketSplit() {
                   <Link href="/services/moving-labor" className="text-teal-700 hover:underline">
                     Moving Help
                   </Link>
-                  <span className="text-gray-400">&middot;</span>
-                  <Link href={s.junk} className="text-teal-700 hover:underline">
-                    {s.junkLabel}
-                  </Link>
-                  <span className="text-gray-400">&middot;</span>
-                  <Link href={s.hub} className="text-teal-700 hover:underline">
-                    Hauling {s.abbr}
-                  </Link>
+                  {isHaulingState(s.abbr) && (
+                    <>
+                      <span className="text-gray-400">&middot;</span>
+                      <Link href={s.junk} className="text-teal-700 hover:underline">
+                        {s.junkLabel}
+                      </Link>
+                      <span className="text-gray-400">&middot;</span>
+                      <Link href={s.hub} className="text-teal-700 hover:underline">
+                        Hauling {s.abbr}
+                      </Link>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

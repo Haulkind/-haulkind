@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HAULING_NAMES_LABEL } from '@/lib/service-availability'
 
 export const metadata: Metadata = {
   title: 'Moving Labor & Loading Help in NJ, PA, DE & NY',
@@ -215,7 +216,7 @@ export default function MovingLaborPage() {
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-6">
-            Looking for hauling or junk removal? Those services are available in eligible <Link href="/service-areas/pennsylvania" className="underline">Pennsylvania</Link>, <Link href="/service-areas/delaware" className="underline">Delaware</Link> and <Link href="/service-areas/new-york" className="underline">New York</Link> service areas only.
+            Looking for hauling or junk removal? Those services are available in eligible {HAULING_NAMES_LABEL} service areas only. See <Link href="/service-areas" className="underline">all service areas</Link>.
           </p>
         </div>
       </section>

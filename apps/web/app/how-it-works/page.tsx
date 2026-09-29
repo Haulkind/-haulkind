@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HAULING_ABBR_LABEL } from '@/lib/service-availability'
 
 export const metadata: Metadata = {
   title: 'How It Works - Book Hauling & Moving Help in 3 Easy Steps',
-  description: 'Get a quote, book online, and track your driver in real time. Simple, transparent moving help in NJ and hauling in PA, DE & NY. No hidden fees.',
+  description: `Get a quote, book online, and track your driver in real time. Simple, transparent moving help in NJ and hauling in ${HAULING_ABBR_LABEL}. No hidden fees.`,
   alternates: { canonical: '/how-it-works' },
   openGraph: {
     title: 'How HaulKind Works - 3 Easy Steps',

@@ -10,7 +10,9 @@ import {
   generateCityDescription,
   getNearbyCities,
 } from '@/lib/seo-data-national'
-import { isMarketState } from '@/lib/service-availability'
+import { isMarketState, isDisposalPendingState } from '@/lib/service-availability'
+import { parseNJLaborSlug, njCityTitle, njCityMeta } from '@/lib/nj-labor-pages'
+import NJLaborPage from '@/components/seo/NJLaborPage'
 
 interface PageProps {
   params: { slug: string }
@@ -22,6 +24,20 @@ export const revalidate = 86400
 export const dynamicParams = true
 
 export function generateMetadata({ params }: PageProps): Metadata {
+  const nj = parseNJLaborSlug(params.slug)
+  if (nj) {
+    const title = nj.city ? njCityTitle(nj.city) : nj.service.title
+    const description = nj.city ? njCityMeta(nj.city) : nj.service.metaDescription
+    return {
+      title,
+      description,
+      alternates: { canonical: nj.url },
+      robots: { index: true, follow: true },
+      openGraph: { title, description, url: `https://haulkind.com${nj.url}`, type: 'website' },
+      twitter: { card: 'summary_large_image', title, description },
+    }
+  }
+
   const data = parseSlugNational(params.slug)
   if (!data) return {}
 
@@ -32,6 +48,11 @@ export function generateMetadata({ params }: PageProps): Metadata {
     title: page.title,
     description: page.metaDescription,
     alternates: { canonical: page.url },
+    // Disposal pages in a market state whose hauling is still off (DE behind
+    // feature flag) stay reachable but out of the index until confirmed.
+    ...(isDisposalPendingState(service.category, city.stateAbbr)
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       title: page.title,
       description: page.metaDescription,
@@ -47,6 +68,9 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default function LocalSEOPage({ params }: PageProps) {
+  const nj = parseNJLaborSlug(params.slug)
+  if (nj) return <NJLaborPage data={nj} />
+
   const data = parseSlugNational(params.slug)
   if (!data) notFound()
 
@@ -62,7 +86,7 @@ export default function LocalSEOPage({ params }: PageProps) {
   // Same service in other cities from same state
   const allCities = getAllCities()
   const sameCityState = allCities.filter((c) => c.stateAbbr === city.stateAbbr && c.slug !== city.slug)
-  const inMarket = isMarketState(city.stateAbbr)
+  const inMarket = isMarketState(city.stateAbbr) && !isDisposalPendingState(service.category, city.stateAbbr)
 
   // Schema markup
   const faqSchema = {

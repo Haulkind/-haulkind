@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HAULING_NAMES_LABEL } from '@/lib/service-availability'
 
 export const metadata: Metadata = {
   title: 'Commercial Hauling & Office Clearing in PA | HaulKind',
@@ -194,7 +195,7 @@ export default function CommercialPage() {
               </ul>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-6">Commercial hauling services are available in eligible Pennsylvania, Delaware and New York service areas only. Not offered in New Jersey.</p>
+          <p className="text-sm text-gray-500 mt-6">Commercial hauling services are available in eligible {HAULING_NAMES_LABEL} service areas only. Not offered in New Jersey.</p>
         </div>
       </section>
 

@@ -23,7 +23,6 @@ export default function robots(): MetadataRoute.Robots {
           '/basement-cleanout-*-nj',
           '/curbside-pickup-*-nj',
           '/donation-pickup-*-nj',
-          '/moving-help-*-nj',
           '/labor-only-moving-help-*-nj',
           '/ads/hauling-south-jersey',
           '/ads/hauling-trenton',

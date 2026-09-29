@@ -6,12 +6,12 @@ import { useQuote } from '@/lib/QuoteContext'
 import { checkServiceArea } from '@/lib/api'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
 import { validateBotProtection, getFormLoadTimestamp } from '@/lib/bot-protection'
-import { isNJZip } from '@/lib/service-availability'
+import { HAULING_NAMES_LABEL, isDisposalAllowedForZip, isDisposalAllowedForState } from '@/lib/service-availability'
 
 type TimeWindow = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'ALL_DAY'
 
 const NJ_HAULING_BLOCKED_MESSAGE =
-  'Hauling and junk removal are available in eligible Pennsylvania, Delaware and New York service areas only. For New Jersey addresses, please go back and select Moving Labor, Furniture Assembly, Mattress Swap or Donation Pickup.'
+  `Hauling and junk removal are available in eligible ${HAULING_NAMES_LABEL} service areas only. For addresses outside those areas, please go back and select Moving Labor, Furniture Assembly, Mattress Swap or Donation Pickup.`
 
 export default function HaulAwayLocationPage() {
   const router = useRouter()
@@ -144,7 +144,7 @@ export default function HaulAwayLocationPage() {
     setZip(cleaned)
     setError('')
     // NJ compliance: only block if this is Hauling (HAUL_AWAY), not Donation Pickup
-    if (isJunkRemovalFlow && cleaned.length === 5 && isNJZip(cleaned)) {
+    if (isJunkRemovalFlow && cleaned.length === 5 && !isDisposalAllowedForZip(cleaned)) {
       setNjBlocked(true)
     } else {
       setNjBlocked(false)
@@ -213,8 +213,8 @@ export default function HaulAwayLocationPage() {
       return
     }
 
-    // NJ compliance: block Hauling (HAUL_AWAY) for NJ ZIP codes — Donation Pickup is allowed
-    if (isJunkRemovalFlow && isNJZip(zip)) {
+    // Hauling (HAUL_AWAY) only in hauling states (NJ never; DE behind feature flag) — Donation Pickup is allowed
+    if (isJunkRemovalFlow && (!isDisposalAllowedForZip(zip) || !isDisposalAllowedForState(state))) {
       setError(NJ_HAULING_BLOCKED_MESSAGE)
       return
     }

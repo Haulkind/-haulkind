@@ -2,15 +2,17 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SERVICES } from '@/lib/seo-data'
 import { getStatesWithCounts } from '@/lib/seo-data-national'
-import { HAULING_ELIGIBILITY_NOTICE, MARKET_STATE_SLUGS, isHaulingState } from '@/lib/service-availability'
+import { HAULING_ABBR_LABEL, HAULING_ELIGIBILITY_NOTICE, HAULING_NAMES_LABEL, MARKET_STATE_SLUGS, isHaulingState } from '@/lib/service-availability'
+import { getNJLaborCities } from '@/lib/nj-labor-pages'
+import { NJ_CITY_PAGE_SERVICE } from '@/lib/nj-allowed-paths'
 
 export const metadata: Metadata = {
-  title: 'Service Areas - Moving Help in NJ, Hauling in PA, DE & NY',
-  description: 'HaulKind serves New Jersey, Pennsylvania, Delaware and New York. Moving labor and furniture assembly in NJ; hauling and junk removal in eligible PA, DE & NY areas. Get a free quote.',
+  title: `Service Areas - Moving Help in NJ, Hauling in ${HAULING_ABBR_LABEL}`,
+  description: `HaulKind serves New Jersey, Pennsylvania, Delaware and New York. Moving labor and furniture assembly in NJ; hauling and junk removal in eligible ${HAULING_ABBR_LABEL} areas. Get a free quote.`,
   alternates: { canonical: '/service-areas' },
   openGraph: {
     title: 'HaulKind Service Areas - NJ, PA, DE & NY',
-    description: 'Moving help in New Jersey. Hauling and junk removal in eligible Pennsylvania, Delaware and New York service areas. Book online in 60 seconds.',
+    description: `Moving help in New Jersey. Hauling and junk removal in eligible ${HAULING_NAMES_LABEL} service areas. Book online in 60 seconds.`,
     url: 'https://haulkind.com/service-areas',
   },
 }
@@ -56,7 +58,7 @@ export default function ServiceAreas() {
               Moving Help &amp; Hauling Service Areas
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind serves New Jersey, Pennsylvania, Delaware and New York. Moving labor, loading &amp; unloading, furniture assembly and heavy lifting in New Jersey. Hauling and junk removal in eligible Pennsylvania, Delaware and New York service areas.
+              HaulKind serves New Jersey, Pennsylvania, Delaware and New York. Moving labor, loading &amp; unloading, furniture assembly and heavy lifting in New Jersey. Hauling and junk removal in eligible {HAULING_NAMES_LABEL} service areas.
             </p>
             <Link
               href="/quote"
@@ -80,9 +82,17 @@ export default function ServiceAreas() {
                 <h3 className="text-lg font-bold text-gray-900">Moving Help &amp; Labor</h3>
                 <p className="text-sm text-gray-600 mt-1">Moving Labor &bull; Loading &amp; Unloading &bull; Furniture Assembly &bull; Heavy Lifting &bull; Mattress Swaps</p>
                 <div className="flex flex-wrap gap-2 mt-3 text-xs">
-                  <Link href="/services/moving-labor" className="text-blue-700 font-semibold hover:underline">Moving Labor</Link>
-                  <Link href="/assembly" className="text-blue-700 font-semibold hover:underline">Assembly</Link>
+                  <Link href="/moving-help-new-jersey" className="text-blue-700 font-semibold hover:underline">Moving Help NJ</Link>
+                  <Link href="/moving-labor-new-jersey" className="text-blue-700 font-semibold hover:underline">Moving Labor</Link>
+                  <Link href="/furniture-assembly-new-jersey" className="text-blue-700 font-semibold hover:underline">Assembly</Link>
+                  <Link href="/loading-unloading-new-jersey" className="text-blue-700 font-semibold hover:underline">Loading &amp; Unloading</Link>
+                  <Link href="/heavy-lifting-new-jersey" className="text-blue-700 font-semibold hover:underline">Heavy Lifting</Link>
                   <Link href="/mattress-swap" className="text-blue-700 font-semibold hover:underline">Mattress Swap</Link>
+                </div>
+                <div className="flex flex-wrap gap-x-2 gap-y-1 mt-3 text-xs text-gray-600">
+                  {getNJLaborCities().map((c) => (
+                    <Link key={c.slug} href={`/${NJ_CITY_PAGE_SERVICE}-${c.slug}-nj`} className="hover:text-blue-700 hover:underline">{c.city.name}</Link>
+                  ))}
                 </div>
               </div>
               {marketStates.map((state) => (

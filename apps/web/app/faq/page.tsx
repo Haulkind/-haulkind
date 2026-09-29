@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { HAULING_NAMES_LABEL } from '@/lib/service-availability'
 
 export const metadata: Metadata = {
   title: 'FAQ - Hauling & Moving Help Questions Answered',
@@ -22,7 +23,7 @@ export default function FAQ() {
         },
         {
           q: 'What areas do you serve?',
-          a: 'We serve New Jersey, Pennsylvania, Delaware and New York. In New Jersey we offer moving labor, loading & unloading, furniture assembly, heavy lifting and mattress swaps. Hauling and junk removal are available in eligible Pennsylvania, Delaware and New York service areas. Enter your address in the quote tool to verify coverage.',
+          a: `We serve New Jersey, Pennsylvania, Delaware and New York. In New Jersey we offer moving labor, loading & unloading, furniture assembly, heavy lifting and mattress swaps. Hauling and junk removal are available in eligible ${HAULING_NAMES_LABEL} service areas. Enter your address in the quote tool to verify coverage.`,
         },
         {
           q: 'Do I need to create an account?',

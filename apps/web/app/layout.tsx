@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import PhoneBar from '@/components/PhoneBar'
 import { QuoteProvider } from '@/lib/QuoteContext'
 import { TRPCProvider } from '@/lib/trpc-provider'
+import { HAULING_ABBR_LABEL, HAULING_NAMES_LABEL, HAULING_AREA_SERVED } from '@/lib/service-availability'
 
 // Lazy-load non-critical layout components to reduce initial JS bundle / TBT
 const StickyCTA = dynamic(() => import('@/components/StickyCTA'), { ssr: false })
@@ -18,14 +19,14 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'HaulKind | Moving Help NJ + Hauling PA, DE & NY',
+    default: `HaulKind | Moving Help NJ + Hauling ${HAULING_ABBR_LABEL}`,
     template: '%s | HaulKind',
   },
-  description: 'Book moving labor, furniture assembly and heavy lifting in NJ. Hauling and junk removal are available in eligible PA, DE & NY service areas. Upfront pricing and live GPS.',
+  description: `Book moving labor, furniture assembly and heavy lifting in NJ. Hauling and junk removal are available in eligible ${HAULING_ABBR_LABEL} service areas. Upfront pricing and live GPS.`,
   keywords: [
     'moving help New Jersey', 'moving labor NJ', 'furniture assembly NJ',
     'loading unloading help', 'heavy lifting help', 'mattress swap',
-    'hauling service PA', 'junk removal Pennsylvania', 'hauling Delaware', 'junk removal New York',
+    'hauling service PA', 'junk removal Pennsylvania', 'junk removal New York',
     'local moving help', 'furniture donation pickup', 'moving labor',
     'furniture assembly', 'donation pickup',
     'transparent pricing', 'track driver live',
@@ -40,21 +41,21 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haulkind.com',
     siteName: 'HaulKind',
-    title: 'HaulKind | Moving Help NJ + Hauling PA, DE & NY',
-    description: 'Moving labor, furniture assembly and heavy lifting in New Jersey. Hauling and junk removal in eligible PA, DE & NY service areas. Upfront pricing, live GPS tracking. Call (609) 456-8188',
+    title: `HaulKind | Moving Help NJ + Hauling ${HAULING_ABBR_LABEL}`,
+    description: `Moving labor, furniture assembly and heavy lifting in New Jersey. Hauling and junk removal in eligible ${HAULING_ABBR_LABEL} service areas. Upfront pricing, live GPS tracking. Call (609) 456-8188`,
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'HaulKind — Moving Help in New Jersey. Hauling in PA, DE & NY.',
+        alt: `HaulKind — Moving Help in New Jersey. Hauling in ${HAULING_ABBR_LABEL}.`,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HaulKind | Moving Help NJ + Hauling PA, DE & NY',
-    description: 'Moving labor & furniture assembly in NJ. Hauling & junk removal in eligible PA, DE & NY areas. Upfront pricing, live GPS.',
+    title: `HaulKind | Moving Help NJ + Hauling ${HAULING_ABBR_LABEL}`,
+    description: `Moving labor & furniture assembly in NJ. Hauling & junk removal in eligible ${HAULING_ABBR_LABEL} areas. Upfront pricing, live GPS.`,
     images: ['/og-image.png'],
   },
   robots: {
@@ -84,7 +85,7 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'HaulKind',
-    description: 'Moving labor, loading and unloading, furniture assembly, heavy lifting and mattress swaps in New Jersey, Pennsylvania, Delaware and New York. Hauling and junk removal in eligible Pennsylvania, Delaware and New York service areas. Upfront pricing and live GPS tracking.',
+    description: `Moving labor, loading and unloading, furniture assembly, heavy lifting and mattress swaps in New Jersey, Pennsylvania, Delaware and New York. Hauling and junk removal in eligible ${HAULING_NAMES_LABEL} service areas. Upfront pricing and live GPS tracking.`,
     url: 'https://haulkind.com',
     logo: 'https://haulkind.com/logo-full.svg',
     image: 'https://haulkind.com/og-image.png',
@@ -126,12 +127,8 @@ export default function RootLayout({
           itemOffered: {
             '@type': 'Service',
             name: 'Hauling & Junk Removal',
-            description: 'Professional hauling and junk removal in eligible Pennsylvania, Delaware and New York service areas. We load, transport, and handle your items with care.',
-            areaServed: [
-              { '@type': 'State', name: 'Pennsylvania' },
-              { '@type': 'State', name: 'Delaware' },
-              { '@type': 'State', name: 'New York' },
-            ],
+            description: `Professional hauling and junk removal in eligible ${HAULING_NAMES_LABEL} service areas. We load, transport, and handle your items with care.`,
+            areaServed: HAULING_AREA_SERVED,
           },
           priceSpecification: {
             '@type': 'PriceSpecification',

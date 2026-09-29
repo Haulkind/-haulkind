@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import LeadCaptureModal from './LeadCaptureModal'
-import { isNJZip, NJ_LABOR_NOTICE } from '@/lib/service-availability'
+import { HAULING_ABBR_LABEL, HAULING_STATES, NJ_LABOR_NOTICE, isNJZip } from '@/lib/service-availability'
 
 // Pricing table for Hauling (Haul Away) & Donation Pickup
 const PRICED_ITEMS = [
@@ -259,8 +259,8 @@ export default function PriceCalculator() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">PA · DE · NY</span>
-                  <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">(PA, DE &amp; NY)</span></div>
+                  <span className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{HAULING_STATES.join(' · ')}</span>
+                  <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">({HAULING_ABBR_LABEL})</span></div>
                   <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
                 </button>
               )}

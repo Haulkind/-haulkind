@@ -20,9 +20,27 @@ export const MARKET_STATE_SLUGS: Record<MarketState, string> = {
   NY: 'new-york',
 }
 
+// Delaware hauling stays off until operations confirm which services run
+// there. Set NEXT_PUBLIC_ENABLE_DE_HAULING=true at build time to advertise it.
+export const DE_HAULING_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DE_HAULING === 'true'
+
 // States where hauling / junk removal / cleanouts / any disposal service may
 // be advertised. New Jersey is labor-only (NJDEP).
-export const HAULING_STATES: readonly MarketState[] = ['PA', 'DE', 'NY']
+export const HAULING_STATES: readonly MarketState[] = DE_HAULING_ENABLED ? ['PA', 'DE', 'NY'] : ['PA', 'NY']
+
+function joinNames(items: readonly string[], sep: string, last: string): string {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(sep)} ${last} ${items[items.length - 1]}`
+}
+
+// "PA, DE & NY" / "PA & NY"
+export const HAULING_ABBR_LABEL = joinNames(HAULING_STATES, ', ', '&')
+// "PA • DE • NY" / "PA • NY"
+export const HAULING_BULLET_LABEL = HAULING_STATES.join(' • ')
+// "Pennsylvania, Delaware and New York" / "Pennsylvania and New York"
+export const HAULING_NAMES_LABEL = joinNames(HAULING_STATES.map(s => MARKET_STATE_NAMES[s]), ', ', 'and')
+// JSON-LD areaServed for hauling offers
+export const HAULING_AREA_SERVED = HAULING_STATES.map(s => ({ '@type': 'State', name: MARKET_STATE_NAMES[s] }))
 
 export type ServiceCategory = 'labor' | 'assembly' | 'mattress' | 'donation' | 'disposal'
 
@@ -74,8 +92,6 @@ export function getServicesForState(state: string | null | undefined): ServiceAv
 const ZIP_PREFIX_RANGES: Array<{ state: MarketState; from: number; to: number }> = [
   { state: 'NJ', from: 70, to: 89 }, // 07000-08999
   { state: 'NY', from: 100, to: 149 },
-  { state: 'NY', from: 5, to: 5 }, // 005xx Holtsville
-  { state: 'NY', from: 63, to: 63 }, // 063xx Fishers Island
   { state: 'PA', from: 150, to: 196 },
   { state: 'DE', from: 197, to: 199 },
 ]
@@ -92,6 +108,22 @@ export function isNJZip(zip: string | null | undefined): boolean {
   return getStateFromZip(zip) === 'NJ'
 }
 
+// pSEO service categories come from lib/seo-data.ts ('removal' | 'cleanout' |
+// 'moving' | 'pickup'). Anything but 'moving' is a disposal offer. A market
+// state whose hauling is still off (Delaware behind the feature flag) must not
+// advertise those pages until operations confirm.
+export function isDisposalPendingState(seoCategory: string, state: string | null | undefined): boolean {
+  return seoCategory !== 'moving' && isMarketState(state) && !isHaulingState(state)
+}
+
+// State typed by the customer (2-letter). Unknown/non-market states are left
+// to the address/service-area check; market states without hauling are blocked.
+export function isDisposalAllowedForState(state: string | null | undefined): boolean {
+  const s = (state || '').trim().toUpperCase()
+  if (!isMarketState(s)) return true
+  return isHaulingState(s)
+}
+
 export function isDisposalAllowedForZip(zip: string | null | undefined): boolean {
   const state = getStateFromZip(zip)
   // Unknown ZIP: leave the decision to the address/service-area check.
@@ -103,6 +135,6 @@ export const NJ_LABOR_NOTICE =
   'In New Jersey, HaulKind offers Moving Labor, Loading & Unloading, Furniture Assembly, Heavy Lifting, Mattress Swap and Donation Pickup. Hauling and junk removal are not offered in New Jersey.'
 
 export const HAULING_ELIGIBILITY_NOTICE =
-  'Hauling and junk removal are available in eligible Pennsylvania, Delaware and New York service areas only.'
+  `Hauling and junk removal are available in eligible ${HAULING_NAMES_LABEL} service areas only.`
 
 export const MARKET_LABEL = 'NJ • PA • DE • NY'

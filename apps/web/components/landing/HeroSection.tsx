@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { HAULING_ABBR_LABEL } from '@/lib/service-availability'
 
 export default function HeroSection() {
   return (
@@ -21,7 +22,7 @@ export default function HeroSection() {
       <div className="relative z-10 container mx-auto px-4">
         <div className="max-w-2xl">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            {"Moving Help in New Jersey. Hauling in PA, DE & NY."}
+            {`Moving Help in New Jersey. Hauling in ${HAULING_ABBR_LABEL}.`}
           </h1>
           
           <p className="text-lg md:text-xl text-white/90 mb-8">
