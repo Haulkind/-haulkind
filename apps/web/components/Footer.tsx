@@ -105,7 +105,7 @@ export default function Footer() {
             <Link href="/junk-removal-pittsburgh-pa" className="hover:text-white transition">Hauling Pittsburgh</Link>
             <Link href="/junk-removal-allentown-pa" className="hover:text-white transition">Hauling Allentown</Link>
             {isHaulingState('DE') && <Link href="/junk-removal-wilmington-de" className="hover:text-white transition">Hauling Wilmington</Link>}
-            <Link href="/junk-removal-dover-de" className="hover:text-white transition">Hauling Dover</Link>
+            {isHaulingState('DE') && <Link href="/junk-removal-dover-de" className="hover:text-white transition">Hauling Dover</Link>}
             <Link href="/junk-removal-new-york-city-ny" className="hover:text-white transition">Hauling New York City</Link>
             <Link href="/junk-removal-yonkers-ny" className="hover:text-white transition">Hauling Yonkers</Link>
             <Link href="/junk-removal-buffalo-ny" className="hover:text-white transition">Hauling Buffalo</Link>
