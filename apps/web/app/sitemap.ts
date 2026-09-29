@@ -3,6 +3,8 @@ import { SERVICES } from '@/lib/seo-data'
 import { STATES, getAllCities } from '@/lib/geo'
 import { getAllPosts } from '@/lib/blog'
 import { getStatesWithCounts } from '@/lib/seo-data-national'
+import { getAllNJLaborUrls } from '@/lib/nj-labor-pages'
+import { isDisposalPendingState } from '@/lib/service-availability'
 
 // Sitemap index: chunk pSEO URLs into multiple child sitemaps to stay under the 50k URL limit.
 // Chunk 0 = core + blog pages
@@ -46,8 +48,17 @@ export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
       { url: `${baseUrl}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     ]
 
+    // New Jersey labor-only pages (moving help, assembly, lifting). These are the
+    // only NJ URLs allowed through the middleware; every legacy NJ slug stays 410.
+    const njLaborPages: MetadataRoute.Sitemap = getAllNJLaborUrls().map(path => ({
+      url: `${baseUrl}${path}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: path.endsWith('-new-jersey') ? 0.9 : 0.8,
+    }))
+
     // Hierarchical service-areas pages: /service-areas/[state] and /service-areas/[state]/[city]
-    // NJDEP compliance: New Jersey state + cities are excluded entirely.
+    // NJDEP compliance: /service-areas/new-jersey* stays 410 and out of the sitemap.
     const statesWithCounts = getStatesWithCounts()
     const serviceAreaPages: MetadataRoute.Sitemap = []
     for (const state of statesWithCounts) {
@@ -81,7 +92,7 @@ export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
       })),
     ]
 
-    return [...corePages, ...serviceAreaPages, ...blogPages]
+    return [...corePages, ...njLaborPages, ...serviceAreaPages, ...blogPages]
   }
 
   // Chunks 1..N: pSEO pages for one service × all cities
@@ -91,8 +102,11 @@ export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
 
   const cities = getAllCities()
   // NJDEP compliance: exclude all New Jersey service+city slugs from the sitemap.
+  // Disposal pages in states whose hauling is behind a disabled feature flag
+  // (Delaware) are noindex and stay out of the sitemap too.
   return cities
     .filter(city => city.stateAbbr !== 'NJ')
+    .filter(city => !isDisposalPendingState(service.category, city.stateAbbr))
     .map(city => ({
       url: `${baseUrl}/${service.slug}-${city.slug}`,
       lastModified: now,

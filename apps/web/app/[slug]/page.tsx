@@ -10,6 +10,9 @@ import {
   generateCityDescription,
   getNearbyCities,
 } from '@/lib/seo-data-national'
+import { isMarketState, isDisposalPendingState } from '@/lib/service-availability'
+import { parseNJLaborSlug, njCityTitle, njCityMeta } from '@/lib/nj-labor-pages'
+import NJLaborPage from '@/components/seo/NJLaborPage'
 
 interface PageProps {
   params: { slug: string }
@@ -21,6 +24,20 @@ export const revalidate = 86400
 export const dynamicParams = true
 
 export function generateMetadata({ params }: PageProps): Metadata {
+  const nj = parseNJLaborSlug(params.slug)
+  if (nj) {
+    const title = nj.city ? njCityTitle(nj.city) : nj.service.title
+    const description = nj.city ? njCityMeta(nj.city) : nj.service.metaDescription
+    return {
+      title,
+      description,
+      alternates: { canonical: nj.url },
+      robots: { index: true, follow: true },
+      openGraph: { title, description, url: `https://haulkind.com${nj.url}`, type: 'website' },
+      twitter: { card: 'summary_large_image', title, description },
+    }
+  }
+
   const data = parseSlugNational(params.slug)
   if (!data) return {}
 
@@ -31,6 +48,11 @@ export function generateMetadata({ params }: PageProps): Metadata {
     title: page.title,
     description: page.metaDescription,
     alternates: { canonical: page.url },
+    // Disposal pages in a market state whose hauling is still off (DE behind
+    // feature flag) stay reachable but out of the index until confirmed.
+    ...(isDisposalPendingState(service.category, city.stateAbbr)
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       title: page.title,
       description: page.metaDescription,
@@ -46,6 +68,9 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default function LocalSEOPage({ params }: PageProps) {
+  const nj = parseNJLaborSlug(params.slug)
+  if (nj) return <NJLaborPage data={nj} />
+
   const data = parseSlugNational(params.slug)
   if (!data) notFound()
 
@@ -61,6 +86,7 @@ export default function LocalSEOPage({ params }: PageProps) {
   // Same service in other cities from same state
   const allCities = getAllCities()
   const sameCityState = allCities.filter((c) => c.stateAbbr === city.stateAbbr && c.slug !== city.slug)
+  const inMarket = isMarketState(city.stateAbbr) && !isDisposalPendingState(service.category, city.stateAbbr)
 
   // Schema markup
   const faqSchema = {
@@ -82,16 +108,10 @@ export default function LocalSEOPage({ params }: PageProps) {
     name: `${service.name} in ${city.name}, ${city.stateAbbr}`,
     description: page.metaDescription,
     provider: {
-      '@type': 'LocalBusiness',
+      '@type': 'Organization',
       name: 'HaulKind',
       url: 'https://haulkind.com',
-      telephone: '+1-267-434-7689',
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: city.name,
-        addressRegion: city.stateAbbr,
-        addressCountry: 'US',
-      },
+      telephone: '+1-609-456-8188',
       areaServed: {
         '@type': 'City',
         name: city.name,
@@ -99,11 +119,6 @@ export default function LocalSEOPage({ params }: PageProps) {
           '@type': 'State',
           name: city.state,
         },
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: city.lat,
-        longitude: city.lng,
       },
     },
     areaServed: {
@@ -227,8 +242,12 @@ export default function LocalSEOPage({ params }: PageProps) {
               <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">
                 <span className="text-2xl" aria-hidden="true">&#x1F69B;</span>
                 <div>
-                  <p className="font-semibold text-gray-900">Drivers Available</p>
-                  <p className="text-sm text-gray-600">We have drivers available near {city.name} today</p>
+                  <p className="font-semibold text-gray-900">{inMarket ? 'Drivers Available' : 'Check Availability'}</p>
+                  <p className="text-sm text-gray-600">
+                    {inMarket
+                      ? `Local pros available near ${city.name}`
+                      : `Enter your ${city.name} address in the quote tool to confirm coverage`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm">

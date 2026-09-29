@@ -5,6 +5,11 @@ import { SERVICES } from '@/lib/seo-data'
 import { getStateBySlug } from '@/lib/geo'
 import { generateCityDescription } from '@/lib/seo-data-national'
 import type { GeoCity } from '@/lib/geo'
+import { isDisposalPendingState } from '@/lib/service-availability'
+
+function laborOnlyCity(city: GeoCity): boolean {
+  return isDisposalPendingState('removal', city.stateAbbr)
+}
 
 interface PageProps {
   params: { state: string; city: string }
@@ -29,6 +34,19 @@ export function generateMetadata({ params }: PageProps): Metadata {
   if (!result) return { robots: { index: false, follow: false } }
   const { city } = result
 
+  if (laborOnlyCity(city)) {
+    return {
+      title: `Moving Help & Furniture Assembly in ${city.name}, ${city.stateAbbr} | HaulKind`,
+      description: `Hourly moving help, loading & unloading, furniture assembly and heavy lifting in ${city.name}, ${city.stateAbbr}. Serving ${city.neighborhoods.length}+ neighborhoods. Transparent pricing. Book online.`,
+      alternates: { canonical: `/service-areas/${city.stateSlug}/${city.slug}` },
+      openGraph: {
+        title: `HaulKind Moving Help in ${city.name}, ${city.stateAbbr}`,
+        description: `Moving labor and furniture assembly in ${city.name}, ${city.stateAbbr}.`,
+        url: `https://haulkind.com/service-areas/${city.stateSlug}/${city.slug}`,
+      },
+    }
+  }
+
   return {
     title: `Hauling & Moving Help in ${city.name}, ${city.stateAbbr} | HaulKind`,
     description: `Professional hauling, furniture pickup, moving help, and more in ${city.name}, ${city.stateAbbr}. Serving ${city.neighborhoods.length}+ neighborhoods. Transparent pricing, same-day service. Book online.`,
@@ -46,6 +64,8 @@ export default function CityPage({ params }: PageProps) {
   if (!result) notFound()
   const { state, city } = result
   const cityDescription = generateCityDescription(city)
+  const laborOnly = laborOnlyCity(city)
+  const listedServices = laborOnly ? SERVICES.filter((s) => s.category === 'moving') : SERVICES
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -60,16 +80,10 @@ export default function CityPage({ params }: PageProps) {
 
   const localBusinessSchema = {
     '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
+    '@type': 'Organization',
     name: 'HaulKind',
     url: 'https://haulkind.com',
-    telephone: '+1-267-434-7689',
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: city.name,
-      addressRegion: city.stateAbbr,
-      addressCountry: 'US',
-    },
+    telephone: '+1-609-456-8188',
     areaServed: {
       '@type': 'City',
       name: city.name,
@@ -77,11 +91,6 @@ export default function CityPage({ params }: PageProps) {
         '@type': 'State',
         name: city.state,
       },
-    },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: city.lat,
-      longitude: city.lng,
     },
   }
 
@@ -111,7 +120,9 @@ export default function CityPage({ params }: PageProps) {
               HaulKind Services in {city.name}, {city.stateAbbr}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              Professional hauling, furniture pickup, moving labor, and more in {city.name}. Serving {city.neighborhoods.length}+ neighborhoods with transparent pricing and same-day availability.
+              {laborOnly
+                ? `Hourly moving help, loading & unloading, furniture assembly and heavy lifting in ${city.name}. Serving ${city.neighborhoods.length}+ neighborhoods with transparent pricing. Hauling and junk removal are not currently offered in ${city.stateAbbr}.`
+                : `Professional hauling, furniture pickup, moving labor, and more in ${city.name}. Serving ${city.neighborhoods.length}+ neighborhoods with transparent pricing and same-day availability.`}
             </p>
             <Link
               href="/quote"
@@ -136,7 +147,7 @@ export default function CityPage({ params }: PageProps) {
               All Services in {city.name}, {city.stateAbbr}
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {SERVICES.map((service) => (
+              {listedServices.map((service) => (
                 <Link
                   key={service.slug}
                   href={`/${service.slug}-${city.slug}`}

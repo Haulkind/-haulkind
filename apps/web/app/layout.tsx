@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import PhoneBar from '@/components/PhoneBar'
 import { QuoteProvider } from '@/lib/QuoteContext'
 import { TRPCProvider } from '@/lib/trpc-provider'
+import { HAULING_ABBR_LABEL, HAULING_NAMES_LABEL, HAULING_AREA_SERVED } from '@/lib/service-availability'
 
 // Lazy-load non-critical layout components to reduce initial JS bundle / TBT
 const StickyCTA = dynamic(() => import('@/components/StickyCTA'), { ssr: false })
@@ -18,15 +19,15 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'HaulKind - Fast Local Hauling & Moving Help | PA, NY',
+    default: `HaulKind | Moving Help NJ + Hauling ${HAULING_ABBR_LABEL}`,
     template: '%s | HaulKind',
   },
-  description: 'Affordable hauling, moving labor & furniture donation pickup in PA & NY. All-in pricing from $99. Same-day service. Get a free quote now!',
+  description: `Book moving labor, furniture assembly and heavy lifting in NJ. Hauling and junk removal are available in eligible ${HAULING_ABBR_LABEL} service areas. Upfront pricing and live GPS.`,
   keywords: [
-    'hauling service', 'moving help', 'labor only moving',
-    'furniture pickup', 'mattress swap',
-    'local moving help', 'loading unloading help',
-    'furniture donation pickup', 'moving labor',
+    'moving help New Jersey', 'moving labor NJ', 'furniture assembly NJ',
+    'loading unloading help', 'heavy lifting help', 'mattress swap',
+    'hauling service PA', 'junk removal Pennsylvania', 'junk removal New York',
+    'local moving help', 'furniture donation pickup', 'moving labor',
     'furniture assembly', 'donation pickup',
     'transparent pricing', 'track driver live',
     'HaulKind', 'same day service',
@@ -40,21 +41,21 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://haulkind.com',
     siteName: 'HaulKind',
-    title: 'HaulKind — Fast, Fair Hauling & Moving Help',
-    description: 'Same-day hauling, donation pickup & furniture assembly in PA & NY. Upfront pricing, GPS tracking, licensed & insured. Call (609) 456-8188',
+    title: `HaulKind | Moving Help NJ + Hauling ${HAULING_ABBR_LABEL}`,
+    description: `Moving labor, furniture assembly and heavy lifting in New Jersey. Hauling and junk removal in eligible ${HAULING_ABBR_LABEL} service areas. Upfront pricing, live GPS tracking. Call (609) 456-8188`,
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'HaulKind — Fast, Fair Hauling & Moving Help',
+        alt: `HaulKind — Moving Help in New Jersey. Hauling in ${HAULING_ABBR_LABEL}.`,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HaulKind — Fast, Fair Hauling & Moving Help',
-    description: 'Same-day hauling & moving help in PA & NY. Upfront pricing, GPS tracking.',
+    title: `HaulKind | Moving Help NJ + Hauling ${HAULING_ABBR_LABEL}`,
+    description: `Moving labor & furniture assembly in NJ. Hauling & junk removal in eligible ${HAULING_ABBR_LABEL} areas. Upfront pricing, live GPS.`,
     images: ['/og-image.png'],
   },
   robots: {
@@ -84,7 +85,7 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'HaulKind',
-    description: 'Fast local hauling, moving labor, and furniture donation pickup with transparent pricing. Serving Pennsylvania and New York.',
+    description: `Moving labor, loading and unloading, furniture assembly, heavy lifting and mattress swaps in New Jersey, Pennsylvania, Delaware and New York. Hauling and junk removal in eligible ${HAULING_NAMES_LABEL} service areas. Upfront pricing and live GPS tracking.`,
     url: 'https://haulkind.com',
     logo: 'https://haulkind.com/logo-full.svg',
     image: 'https://haulkind.com/og-image.png',
@@ -102,10 +103,12 @@ export default function RootLayout({
       longitude: -75.1652,
     },
     areaServed: [
+      { '@type': 'State', name: 'New Jersey' },
       { '@type': 'State', name: 'Pennsylvania' },
+      { '@type': 'State', name: 'Delaware' },
       { '@type': 'State', name: 'New York' },
     ],
-    serviceType: ['Hauling', 'Moving Labor', 'Donation Pickup', 'Furniture Assembly', 'Mattress Swap', 'Loading & Unloading'],
+    serviceType: ['Moving Labor', 'Loading & Unloading', 'Furniture Assembly', 'Heavy Lifting', 'Mattress Swap', 'Donation Pickup', 'Hauling', 'Junk Removal'],
     priceRange: '$79 - $529',
     openingHours: 'Mo-Su 07:00-19:00',
     aggregateRating: {
@@ -117,14 +120,15 @@ export default function RootLayout({
     sameAs: [],
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'Hauling & Moving Services',
+      name: 'Moving Help & Hauling Services',
       itemListElement: [
         {
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Hauling Service',
-            description: 'Professional hauling service. We load, transport, and handle your items with care.',
+            name: 'Hauling & Junk Removal',
+            description: `Professional hauling and junk removal in eligible ${HAULING_NAMES_LABEL} service areas. We load, transport, and handle your items with care.`,
+            areaServed: HAULING_AREA_SERVED,
           },
           priceSpecification: {
             '@type': 'PriceSpecification',
@@ -138,8 +142,14 @@ export default function RootLayout({
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
-            name: 'Labor Only (Moving Help)',
-            description: 'Hourly moving labor. Helpers to load, unload, and move heavy items.',
+            name: 'Moving Labor (Moving Help)',
+            description: 'Hourly moving labor in New Jersey, Pennsylvania, Delaware and New York. Helpers to load, unload, lift heavy items and rearrange furniture.',
+            areaServed: [
+              { '@type': 'State', name: 'New Jersey' },
+              { '@type': 'State', name: 'Pennsylvania' },
+              { '@type': 'State', name: 'Delaware' },
+              { '@type': 'State', name: 'New York' },
+            ],
           },
           priceSpecification: {
             '@type': 'PriceSpecification',

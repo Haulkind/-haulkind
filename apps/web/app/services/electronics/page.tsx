@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HAULING_NAMES_LABEL } from '@/lib/service-availability'
 
 export const metadata: Metadata = {
   title: 'Electronics Pickup & E-Waste Recycling in PA | HaulKind',
@@ -178,7 +179,7 @@ export default function ElectronicsPage() {
               </ul>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-6">Electronics pickup services are currently available in Pennsylvania and New York only.</p>
+          <p className="text-sm text-gray-500 mt-6">Electronics pickup services are available in eligible {HAULING_NAMES_LABEL} service areas only. Not offered in New Jersey.</p>
         </div>
       </section>
 

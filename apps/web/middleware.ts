@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { isAllowedNJPath } from '@/lib/nj-allowed-paths'
 
-// NJDEP compliance: any URL that ties HaulKind services to a New Jersey city
-// must return HTTP 410 Gone — NOT a redirect, NOT a 404. 410 tells crawlers
-// (and the NJDEP inspector) that the resource is permanently removed.
+// NJDEP compliance: any URL that ties HaulKind hauling/disposal services to a
+// New Jersey city must return HTTP 410 Gone — NOT a redirect, NOT a 404. 410
+// tells crawlers (and the NJDEP inspector) that the resource is permanently
+// removed. Labor-only NJ pages (moving help, assembly, lifting) are
+// whitelisted in lib/nj-allowed-paths.ts and served normally.
 //
 // Patterns covered:
 //   /service-areas/new-jersey
@@ -57,6 +60,7 @@ export function middleware(request: NextRequest) {
   }
 
   const pathname = url.pathname
+  if (isAllowedNJPath(pathname)) return NextResponse.next()
   for (const pattern of NJ_PATH_PATTERNS) {
     if (pattern.test(pathname)) {
       return gone()

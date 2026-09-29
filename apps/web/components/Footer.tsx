@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { HAULING_ABBR_LABEL, isHaulingState } from '@/lib/service-availability'
 
 export default function Footer() {
   return (
@@ -19,7 +20,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm mb-4">
-              Fast local moving help, furniture assembly &amp; donation pickups in Pennsylvania and New York. Hauling services available in PA only. No memberships. Track your driver live.
+              Moving labor, furniture assembly &amp; heavy lifting in New Jersey, Pennsylvania, Delaware and New York. Hauling &amp; junk removal in eligible {HAULING_ABBR_LABEL} service areas. No memberships. Track your driver live.
             </p>
             <a href="tel:+16094568188" className="text-teal-400 hover:text-teal-300 font-semibold text-sm transition">
               (609) 456-8188
@@ -80,18 +81,33 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Popular Service Areas - SEO internal links (PA & NY only — NJDEP compliance) */}
+        {/* Popular Service Areas - SEO internal links. NJ = moving/labor only; hauling links = PA/DE/NY only */}
         <div className="border-t border-gray-800 mt-8 pt-8">
-          <h4 className="text-white font-semibold mb-3 text-sm">Popular Service Areas</h4>
+          <h4 className="text-white font-semibold mb-3 text-sm">Moving Help in New Jersey</h4>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mb-5">
+            <Link href="/moving-help-new-jersey" className="hover:text-white transition">Moving Help NJ</Link>
+            <Link href="/moving-labor-new-jersey" className="hover:text-white transition">Moving Labor NJ</Link>
+            <Link href="/loading-unloading-new-jersey" className="hover:text-white transition">Loading &amp; Unloading NJ</Link>
+            <Link href="/furniture-assembly-new-jersey" className="hover:text-white transition">Furniture Assembly NJ</Link>
+            <Link href="/heavy-lifting-new-jersey" className="hover:text-white transition">Heavy Lifting NJ</Link>
+            <Link href="/moving-help-jersey-city-nj" className="hover:text-white transition">Jersey City</Link>
+            <Link href="/moving-help-newark-nj" className="hover:text-white transition">Newark</Link>
+            <Link href="/moving-help-trenton-nj" className="hover:text-white transition">Trenton</Link>
+            <Link href="/moving-help-cherry-hill-nj" className="hover:text-white transition">Cherry Hill</Link>
+            <Link href="/mattress-swap" className="hover:text-white transition">Mattress Swap NJ</Link>
+            <Link href="/quote/labor-only/hours" className="hover:text-white transition">Hourly Help NJ</Link>
+          </div>
+          <h4 className="text-white font-semibold mb-3 text-sm">Hauling &amp; Junk Removal in {HAULING_ABBR_LABEL}</h4>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <Link href="/junk-removal-philadelphia-pa" className="hover:text-white transition">Hauling Philadelphia</Link>
             <Link href="/furniture-removal-philadelphia-pa" className="hover:text-white transition">Furniture Pickup Philadelphia</Link>
             <Link href="/couch-removal-philadelphia-pa" className="hover:text-white transition">Couch Pickup Philadelphia</Link>
             <Link href="/junk-removal-pittsburgh-pa" className="hover:text-white transition">Hauling Pittsburgh</Link>
             <Link href="/junk-removal-allentown-pa" className="hover:text-white transition">Hauling Allentown</Link>
-            <Link href="/junk-removal-king-of-prussia-pa" className="hover:text-white transition">Hauling King of Prussia</Link>
-            <Link href="/junk-removal-new-york-ny" className="hover:text-white transition">Hauling New York City</Link>
-            <Link href="/junk-removal-brooklyn-ny" className="hover:text-white transition">Hauling Brooklyn</Link>
+            {isHaulingState('DE') && <Link href="/junk-removal-wilmington-de" className="hover:text-white transition">Hauling Wilmington</Link>}
+            {isHaulingState('DE') && <Link href="/junk-removal-dover-de" className="hover:text-white transition">Hauling Dover</Link>}
+            <Link href="/junk-removal-new-york-city-ny" className="hover:text-white transition">Hauling New York City</Link>
+            <Link href="/junk-removal-yonkers-ny" className="hover:text-white transition">Hauling Yonkers</Link>
             <Link href="/junk-removal-buffalo-ny" className="hover:text-white transition">Hauling Buffalo</Link>
             <Link href="/junk-removal-rochester-ny" className="hover:text-white transition">Hauling Rochester</Link>
             <Link href="/become-a-driver" className="text-primary-400 hover:text-white transition font-medium">HaulKind Driver Jobs</Link>

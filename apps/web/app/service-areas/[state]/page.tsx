@@ -3,6 +3,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SERVICES } from '@/lib/seo-data'
 import { getStateBySlug } from '@/lib/geo'
+import { HAULING_ELIGIBILITY_NOTICE, isMarketState, isHaulingState } from '@/lib/service-availability'
+
+const LABOR_SERVICE_SLUGS = ['moving-help', 'labor-only-moving-help']
+const FEATURED_SERVICE_SLUGS = ['junk-removal', 'furniture-removal', 'mattress-removal', 'appliance-removal', 'garage-cleanout', 'moving-help']
+
+function stateTitle(name: string, laborOnly: boolean): string {
+  return laborOnly ? `Moving Help & Furniture Assembly in ${name}` : `Hauling & Moving Help in ${name}`
+}
 
 interface PageProps {
   params: { state: string }
@@ -18,13 +26,23 @@ export function generateMetadata({ params }: PageProps): Metadata {
   const state = getStateBySlug(params.state)
   if (!state) return {}
 
+  const inMarket = isMarketState(state.abbr)
+  const laborOnly = inMarket && !isHaulingState(state.abbr)
+  const title = stateTitle(state.name, laborOnly)
+  const description = laborOnly
+    ? `Moving help, loading & unloading, furniture assembly and heavy lifting in ${state.name}. ${state.cities.length} cities with upfront pricing and live GPS tracking. Book online in 60 seconds.`
+    : inMarket
+      ? `Moving help, furniture assembly, loading & unloading, hauling and junk removal in eligible ${state.name} service areas. ${state.cities.length} cities with upfront pricing and live GPS tracking. Book online in 60 seconds.`
+      : `Hauling, furniture pickup and moving help in ${state.name}. Limited availability — check coverage for your address and get an upfront quote online.`
   return {
-    title: `Hauling & Moving Help in ${state.name} | HaulKind`,
-    description: `Professional hauling, furniture pickup, moving help, and more across ${state.name}. Serving ${state.cities.length} cities with transparent pricing and same-day service. Book online in 60 seconds.`,
+    title,
+    description,
     alternates: { canonical: `/service-areas/${state.slug}` },
     openGraph: {
-      title: `Hauling & Moving Help in ${state.name} | HaulKind`,
-      description: `Professional hauling and moving help in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`,
+      title: `${title} | HaulKind`,
+      description: laborOnly
+        ? `Moving help and furniture assembly in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`
+        : `Professional hauling and moving help in ${state.cities.length} cities across ${state.name}. Book online in 60 seconds.`,
       url: `https://haulkind.com/service-areas/${state.slug}`,
     },
   }
@@ -38,9 +56,15 @@ export default function StatePage({ params }: PageProps) {
   const state = getStateBySlug(params.state)
   if (!state) notFound()
 
+  const inMarket = isMarketState(state.abbr)
+  const laborOnly = inMarket && !isHaulingState(state.abbr)
+
   const featuredServices = SERVICES.filter((s) =>
-    ['junk-removal', 'furniture-removal', 'mattress-removal', 'appliance-removal', 'garage-cleanout', 'moving-help'].includes(s.slug)
+    (laborOnly ? LABOR_SERVICE_SLUGS : FEATURED_SERVICE_SLUGS).includes(s.slug)
   )
+  const listedServices = laborOnly
+    ? SERVICES.filter((s) => LABOR_SERVICE_SLUGS.includes(s.slug))
+    : SERVICES.slice(0, 8)
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -72,11 +96,20 @@ export default function StatePage({ params }: PageProps) {
         <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-20">
           <div className="container mx-auto px-4 text-center max-w-4xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Hauling &amp; Moving Help in {state.name}
+              {stateTitle(state.name, laborOnly)}
             </h1>
             <p className="text-xl text-primary-100 max-w-3xl mx-auto mb-8">
-              HaulKind provides professional hauling, furniture pickup, moving labor, and more across {state.cities.length} cities in {state.name}. Find your city below and book online in 60 seconds.
+              {laborOnly
+                ? `Moving help, loading & unloading, furniture assembly and heavy lifting in ${state.name}. Find your city below and book online in 60 seconds.`
+                : inMarket
+                  ? `Moving help, furniture assembly, loading & unloading, hauling and junk removal in eligible ${state.name} service areas. Find your city below and book online in 60 seconds.`
+                  : `HaulKind offers hauling, furniture pickup and moving labor in ${state.name} with limited availability. Find your city below and check coverage for your address before booking.`}
             </p>
+            {laborOnly ? (
+              <p className="text-sm text-primary-200 max-w-2xl mx-auto mb-8">Hauling and junk removal are not currently offered in {state.name}.</p>
+            ) : (
+              <p className="text-sm text-primary-200 max-w-2xl mx-auto mb-8">{HAULING_ELIGIBILITY_NOTICE}</p>
+            )}
             <Link
               href="/quote"
               className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
@@ -135,7 +168,7 @@ export default function StatePage({ params }: PageProps) {
               Browse our services by city. Click any combination to learn more and get an instant quote.
             </p>
             <div className="space-y-8">
-              {SERVICES.slice(0, 8).map((service) => (
+              {listedServices.map((service) => (
                 <div key={service.slug}>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">{service.name}</h3>
                   <div className="flex flex-wrap gap-2">
