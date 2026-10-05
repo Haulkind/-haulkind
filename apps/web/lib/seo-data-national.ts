@@ -4,6 +4,7 @@ import type { GeoCity } from './geo'
 import { STATES, getAllCities, getCityBySlug } from './geo'
 import { SERVICES } from './seo-data'
 import type { ServiceData } from './seo-data'
+import { isHaulingState, isMarketState } from './service-availability'
 
 // ----- City description generator (unique per city to avoid thin content) -----
 
@@ -20,12 +21,15 @@ export function generateCityDescription(city: GeoCity): string {
 
   // NJ compliance: No "Junk Removal" or "Solid Waste Disposal" wording for New Jersey cities
   const isNJ = city.stateAbbr === 'NJ'
-  const serviceLabel = isNJ ? 'furniture donation pickup, moving labor, and furniture assembly' : 'junk removal and hauling services'
-  const serviceLabel2 = isNJ ? 'furniture donation pickup, moving labor, and furniture assembly' : 'same-day junk removal, furniture pickup, and moving help'
+  const laborOnly = !isNJ && isMarketState(city.stateAbbr) && !isHaulingState(city.stateAbbr)
+  const laborLabel = 'moving help, loading and unloading, and furniture assembly'
+  const serviceLabel = isNJ ? 'furniture donation pickup, moving labor, and furniture assembly' : laborOnly ? laborLabel : 'junk removal and hauling services'
+  const serviceLabel2 = isNJ ? 'furniture donation pickup, moving labor, and furniture assembly' : laborOnly ? laborLabel : 'same-day junk removal, furniture pickup, and moving help'
+  const serviceLabel3 = isNJ ? 'moving labor, furniture assembly, and donation pickup' : laborOnly ? laborLabel : 'hauling, cleanout, and moving labor'
 
   const templates = [
-    `With a population of ${pop}, ${city.name} is a vibrant community in ${city.county}, ${city.state}. From ${neighborhoodList} and beyond, residents and businesses need reliable ${serviceLabel} they can trust. HaulKind provides fast, affordable pickup and moving help throughout ${city.name} and surrounding ${city.stateAbbr} areas.`,
-    `${city.name}, ${city.stateAbbr} is home to ${pop} residents across diverse neighborhoods including ${neighborhoodList}. Whether you are moving, decluttering, or renovating, HaulKind delivers professional ${isNJ ? 'moving labor, furniture assembly, and donation pickup' : 'hauling, cleanout, and moving labor'} services with transparent pricing and live GPS tracking.`,
+    `With a population of ${pop}, ${city.name} is a vibrant community in ${city.county}, ${city.state}. From ${neighborhoodList} and beyond, residents and businesses need reliable ${serviceLabel} they can trust. HaulKind provides fast, affordable ${laborOnly ? 'moving help' : 'pickup and moving help'} throughout ${city.name} and surrounding ${city.stateAbbr} areas.`,
+    `${city.name}, ${city.stateAbbr} is home to ${pop} residents across diverse neighborhoods including ${neighborhoodList}. Whether you are moving, decluttering, or renovating, HaulKind delivers professional ${serviceLabel3} services with transparent pricing and live GPS tracking.`,
     `Located in ${city.county}, ${city.name} is one of ${city.state}'s thriving communities with ${pop} residents. From ${city.neighborhoods[0]} to ${city.neighborhoods[Math.min(city.neighborhoods.length - 1, 5)]}, HaulKind provides ${serviceLabel2} across the entire ${city.name} area.`,
   ]
 
