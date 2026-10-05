@@ -13,6 +13,7 @@ import {
 import { isMarketState, isDisposalPendingState } from '@/lib/service-availability'
 import { parseNJLaborSlug, njCityTitle, njCityMeta } from '@/lib/nj-labor-pages'
 import NJLaborPage from '@/components/seo/NJLaborPage'
+import DisposalPendingPage from '@/components/seo/DisposalPendingPage'
 
 interface PageProps {
   params: { slug: string }
@@ -43,6 +44,19 @@ export function generateMetadata({ params }: PageProps): Metadata {
 
   const { service, city } = data
   const page = generatePageContentNational(service, city)
+
+  if (isDisposalPendingState(service.category, city.stateAbbr)) {
+    const title = `${service.name} in ${city.name}, ${city.stateAbbr} | Not Yet Available | HaulKind`
+    const description = `${service.name} is not yet available in ${city.state}. HaulKind offers moving help and furniture assembly in ${city.name}, ${city.stateAbbr}.`
+    return {
+      title,
+      description,
+      alternates: { canonical: page.url },
+      robots: { index: false, follow: true },
+      openGraph: { title, description, url: `https://haulkind.com${page.url}`, type: 'website' },
+      twitter: { card: 'summary_large_image', title, description },
+    }
+  }
 
   return {
     title: page.title,
@@ -75,6 +89,9 @@ export default function LocalSEOPage({ params }: PageProps) {
   if (!data) notFound()
 
   const { service, city } = data
+  if (isDisposalPendingState(service.category, city.stateAbbr)) {
+    return <DisposalPendingPage service={service} city={city} />
+  }
   const page = generatePageContentNational(service, city)
   const faqs = generateFAQsNational(service, city)
   const cityDescription = generateCityDescription(city)
@@ -84,12 +101,11 @@ export default function LocalSEOPage({ params }: PageProps) {
     (s) => s.slug !== service.slug && !isDisposalPendingState(s.category, city.stateAbbr)
   ).slice(0, 5)
   // Nearby cities for cross-linking
-  const nearbyCities = isDisposalPendingState(service.category, city.stateAbbr) ? [] : getNearbyCities(city, 5)
+  const nearbyCities = getNearbyCities(city, 5)
   // Same service in other cities from same state
   const allCities = getAllCities()
   const sameCityState = allCities.filter((c) => c.stateAbbr === city.stateAbbr && c.slug !== city.slug)
-  const disposalPending = isDisposalPendingState(service.category, city.stateAbbr)
-  const inMarket = isMarketState(city.stateAbbr) && !disposalPending
+  const inMarket = isMarketState(city.stateAbbr) && !isDisposalPendingState(service.category, city.stateAbbr)
 
   // Schema markup
   const faqSchema = {
@@ -158,9 +174,7 @@ export default function LocalSEOPage({ params }: PageProps) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      {!disposalPending && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
-      )}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
       <div className="bg-white">
@@ -185,13 +199,6 @@ export default function LocalSEOPage({ params }: PageProps) {
                 <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
                   {page.h1}
                 </h1>
-                {disposalPending && (
-                  <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-900">
-                    {service.name} is not yet available in {city.state}. In {city.name}, HaulKind currently offers{' '}
-                    <Link href={`/moving-help-${city.slug}`} className="underline">moving help</Link> and{' '}
-                    <Link href="/quote/assembly" className="underline">furniture assembly</Link>.
-                  </p>
-                )}
                 <p className="text-lg md:text-xl text-primary-100 mb-6">
                   {service.description}
                 </p>
@@ -219,9 +226,7 @@ export default function LocalSEOPage({ params }: PageProps) {
                     {service.category === 'removal' ? '🚛' : service.category === 'cleanout' ? '🧹' : service.category === 'moving' ? '💪' : '📦'}
                   </div>
                   <h2 className="text-xl font-bold mb-2">Fast & Reliable</h2>
-                  <p className="text-primary-100">
-                    {disposalPending ? `Check availability in ${city.name}` : `Same-day service available in ${city.name}`}
-                  </p>
+                  <p className="text-primary-100">Same-day service available in {city.name}</p>
                   <div className="mt-4 space-y-2 text-sm text-left text-primary-100">
                     <div className="flex items-center gap-2">
                       <span className="text-green-300">&#10003;</span> Transparent upfront pricing
@@ -347,7 +352,7 @@ export default function LocalSEOPage({ params }: PageProps) {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Book Online</h3>
                 <p className="text-gray-600">
-                  Pick a time that works for you. {disposalPending ? `Availability in ${city.name} is confirmed when you enter your address.` : `Same-day and next-day appointments are available in ${city.name} when crews are open.`}
+                  Pick a time that works for you. Same-day and next-day appointments are available in {city.name} when crews are open.
                 </p>
               </div>
               <div className="text-center">
@@ -536,7 +541,7 @@ export default function LocalSEOPage({ params }: PageProps) {
               Get Your Free Quote Now
             </Link>
             <p className="text-primary-200 text-sm mt-4">
-              No credit card required &middot; Free estimate{!disposalPending && <> &middot; Same-day service available</>}
+              No credit card required &middot; Free estimate &middot; Same-day service available
             </p>
           </div>
         </section>
