@@ -259,7 +259,7 @@ export default function PriceCalculator() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="inline-block mb-1 lg:mb-0 lg:absolute lg:top-2 lg:right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{HAULING_STATES.join(' · ')}</span>
+                  <span className="inline-block mb-1 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{HAULING_STATES.join(' · ')}</span>
                   <div className="font-semibold text-gray-900">Hauling (Haul Away) <span className="text-xs text-orange-600 font-bold">({HAULING_ABBR_LABEL})</span></div>
                   <div className="text-sm text-gray-500">Haul away old furniture, appliances, and other items</div>
                 </button>
@@ -272,7 +272,7 @@ export default function PriceCalculator() {
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <span className="inline-block mb-1 lg:mb-0 lg:absolute lg:top-2 lg:right-2 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">New</span>
+                <span className="inline-block mb-1 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">New</span>
                 <div className="font-semibold text-gray-900">Donation Pickup</div>
                 <div className="text-sm text-gray-500">We deliver to local charities. Tax receipt available</div>
               </button>
@@ -284,7 +284,7 @@ export default function PriceCalculator() {
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <span className="inline-block mb-1 lg:mb-0 lg:absolute lg:top-2 lg:right-2 bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Hassle-Free</span>
+                <span className="inline-block mb-1 bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Hassle-Free</span>
                 <div className="font-semibold text-gray-900">Mattress Swap</div>
                 <div className="text-sm text-gray-500">We handle the heavy lifting — remove old, set up new</div>
               </button>
@@ -296,7 +296,7 @@ export default function PriceCalculator() {
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <span className="inline-block mb-1 lg:mb-0 lg:absolute lg:top-2 lg:right-2 bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Hourly</span>
+                <span className="inline-block mb-1 bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Hourly</span>
                 <div className="font-semibold text-gray-900">Moving Labor</div>
                 <div className="text-sm text-gray-500">On-demand muscle for heavy lifting and loading</div>
               </button>
@@ -308,7 +308,7 @@ export default function PriceCalculator() {
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <span className="inline-block mb-1 lg:mb-0 lg:absolute lg:top-2 lg:right-2 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">New</span>
+                <span className="inline-block mb-1 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">New</span>
                 <div className="font-semibold text-gray-900">Furniture Assembly</div>
                 <div className="text-sm text-gray-500">Professional assembly for IKEA, Wayfair &amp; more</div>
               </button>
