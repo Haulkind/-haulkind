@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { isNJZip } from '@/lib/service-availability'
 
 interface LeadCaptureModalProps {
   selectedItems: string[]
@@ -23,14 +24,6 @@ function formatPhone(value: string): string {
 
 function unformatPhone(value: string): string {
   return value.replace(/\D/g, '')
-}
-
-// NJ ZIP code check: NJ ZIPs are 07001-08999 (start with 07 or 08)
-function isNJZip(zip: string): boolean {
-  const z = zip.replace(/\D/g, '').slice(0, 5)
-  if (z.length !== 5) return false
-  const num = parseInt(z, 10)
-  return num >= 7001 && num <= 8999
 }
 
 // Items BLOCKED for NJ ZIP codes (solid waste / entulho — regulated by NJDEP)
@@ -195,7 +188,7 @@ export default function LeadCaptureModal({
             {hasRegulatedItems && (
               <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg">
                 <p className="text-sm text-red-700 font-medium">
-                  We do not handle solid waste removal (Yard Debris, Garage Clearing) in New Jersey. Please go back and remove those items. Furniture, appliances, and electronics are available for Donation Pickup in NJ.
+                  Hauling, junk removal and debris removal (Yard Debris, Garage Clearing) are not offered in New Jersey. Please go back and remove those items. Furniture, appliances, and electronics are available for Donation Pickup in NJ.
                 </p>
               </div>
             )}

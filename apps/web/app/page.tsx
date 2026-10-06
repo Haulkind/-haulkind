@@ -7,6 +7,7 @@ import {
   CTASection,
   OurStory,
   ComparisonTable,
+  MarketSplit,
 } from '@/components/landing'
 
 // Lazy-load heavy interactive components below the fold to reduce TBT
@@ -47,6 +48,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* NJ moving help vs PA/DE/NY hauling */}
+      <MarketSplit />
 
       {/* Why HaulKind is Different - 4 feature cards */}
       <WhyDifferent />
